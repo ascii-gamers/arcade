@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "github.com/ascii-arcade/asciiarcade/arcade"
 
 func main() {
-    fmt.Println("hello world!")
+    arcade.Start()
 }
