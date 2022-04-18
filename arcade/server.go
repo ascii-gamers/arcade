@@ -25,12 +25,29 @@ func NewServer(addr string) *Server {
 	}
 }
 
+func (s *Server) connectToNextOpenPort() {
+	for port := 6824; port < 6824+10; port++ {
+		if port == hostPort {
+			port++
+			continue
+		}
+
+		client := NewClient(fmt.Sprintf("127.0.0.1:%d", port))
+
+		if err := server.connect(client); err != nil {
+			continue
+		}
+
+		client.send(NewHelloMessage())
+	}
+}
+
 // connect connects to a client at a given address.
-func (s *Server) connect(c *Client) {
+func (s *Server) connect(c *Client) error {
 	sess, err := kcp.Dial(c.Addr)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	c.start(sess)
@@ -38,14 +55,27 @@ func (s *Server) connect(c *Client) {
 	s.Lock()
 	s.clients = append(s.clients, c)
 	s.Unlock()
+
+	return nil
+}
+
+func (s *Server) startWithNextOpenPort() {
+	hostPort = 6824
+
+	for {
+		s.Addr = fmt.Sprintf("127.0.0.1:%d", hostPort)
+		s.start()
+
+		hostPort++
+	}
 }
 
 // startServer starts listening for connections on a given address.
-func (s *Server) start() {
+func (s *Server) start() error {
 	listener, err := kcp.Listen(s.Addr)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Printf("Listening at %s...\n", s.Addr)

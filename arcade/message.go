@@ -16,14 +16,7 @@ func processMessage(from *Client, data []byte) interface{} {
 		return err
 	}
 
-	switch p := p.(type) {
-	case ErrorMessage:
-		return ErrorMessageHandler(from, p)
-	case HelloMessage:
-		return HelloMessageHandler(from, p)
-	}
-
-	return nil
+	return mgr.view.ProcessPacket(p)
 }
 
 func parseMessage(data []byte) (interface{}, error) {
@@ -42,6 +35,10 @@ func parseMessage(data []byte) (interface{}, error) {
 		return p, nil
 	case "hello":
 		p := HelloMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "lobby_info":
+		p := LobbyInfoMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	default:

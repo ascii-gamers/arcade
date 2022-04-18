@@ -25,6 +25,7 @@ func (mgr *ViewManager) SetView(v View) {
 
 	// Save view
 	mgr.view = v
+	mgr.view.Init()
 }
 
 func (mgr *ViewManager) Start(v View) {

@@ -2,12 +2,13 @@ module github.com/ascii-arcade/asciiarcade
 
 go 1.18
 
-require github.com/xtaci/kcp-go/v5 v5.6.1
+require (
+	github.com/gdamore/tcell/v2 v2.4.0
+	github.com/xtaci/kcp-go/v5 v5.6.1
+)
 
 require (
 	github.com/gdamore/encoding v1.0.0 // indirect
-	github.com/gdamore/tcell/v2 v2.4.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/klauspost/reedsolomon v1.9.9 // indirect
 	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
