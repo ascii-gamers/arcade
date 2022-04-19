@@ -10,7 +10,9 @@ import (
 type GamesListView struct {
 	View
 
-	servers     sync.Map
+	mu sync.RWMutex
+
+	servers     map[string]LobbyInfoMessage
 	selectedRow int
 }
 
@@ -37,7 +39,7 @@ const (
 
 func NewGamesListView() *GamesListView {
 	return &GamesListView{
-		selectedRow: tableY1,
+		servers: make(map[string]LobbyInfoMessage),
 	}
 }
 
@@ -52,14 +54,16 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 		case tcell.KeyDown:
 			v.selectedRow++
 
-			if v.selectedRow > tableY2 {
-				v.selectedRow = tableY2
+			v.mu.RLock()
+			if v.selectedRow > len(v.servers)-1 {
+				v.selectedRow = len(v.servers) - 1
 			}
+			v.mu.RUnlock()
 		case tcell.KeyUp:
 			v.selectedRow--
 
-			if v.selectedRow <= tableY1 {
-				v.selectedRow = tableY1
+			if v.selectedRow < 0 {
+				v.selectedRow = 0
 			}
 		case tcell.KeyRune:
 			switch evt.Rune() {
@@ -73,7 +77,9 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 func (v *GamesListView) ProcessPacket(p interface{}) interface{} {
 	switch p := p.(type) {
 	case LobbyInfoMessage:
-		v.servers.Store(p.IP, p)
+		v.mu.Lock()
+		v.servers[p.IP] = p
+		v.mu.Unlock()
 	}
 
 	return nil
@@ -108,38 +114,40 @@ func (v *GamesListView) Render(s *Screen) {
 	s.DrawText(width-3, 6, sty, "╣")
 
 	// Draw selected row
-	selectedSty := tcell.StyleDefault.Background(tcell.ColorGray).Foreground(tcell.ColorGreen)
+	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
 
 	i := 0
-	v.servers.Range(func(ip, value any) bool {
-		lobby := value.(LobbyInfoMessage)
+	v.mu.RLock()
 
+	for _, lobby := range v.servers {
 		if lobby.IP == server.Addr {
-			return true
+			continue
 		}
 
-		row := tableY1 + i
+		y := tableY1 + i
 		rowSty := sty
 
-		if row == v.selectedRow {
+		if i == v.selectedRow {
 			rowSty = selectedSty
-			// s.DrawEmpty(tableX1, row, tableX2, row, rowSty)
 		}
 
-		s.DrawText(nameColX, row, rowSty, lobby.IP)
-		s.DrawText(gameColX, row, rowSty, "Pong")
-		s.DrawText(playersColX, row, rowSty, "1/2")
-		s.DrawText(pingColX, row, rowSty, "25ms")
+		name := lobby.IP
+		game := "Pong"
+		players := "1/2"
+		ping := "25ms"
+
+		s.DrawEmpty(tableX1, y, nameColX-1, y, rowSty)
+		s.DrawText(nameColX, y, rowSty, name)
+		s.DrawEmpty(nameColX+len(name), y, gameColX-1, y, rowSty)
+		s.DrawText(gameColX, y, rowSty, game)
+		s.DrawEmpty(gameColX+len(game), y, playersColX-1, y, rowSty)
+		s.DrawText(playersColX, y, rowSty, players)
+		s.DrawEmpty(playersColX+len(players), y, pingColX-1, y, rowSty)
+		s.DrawText(pingColX, y, rowSty, ping)
+		s.DrawEmpty(pingColX+len(ping), y, tableX2, y, rowSty)
 
 		i++
-		return true
-	})
+	}
 
-	// for row := tableY1; row <= tableY2; row++ {
-	// 	if row == v.selectedRow {
-	// 		s.DrawEmpty(tableX1, row, tableX2, row, selectedSty)
-	// 	} else {
-	// 		s.DrawEmpty(tableX1, row, tableX2, row, sty)
-	// 	}
-	// }
+	v.mu.RUnlock()
 }

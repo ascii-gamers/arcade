@@ -16,7 +16,12 @@ func processMessage(from *Client, data []byte) interface{} {
 		return err
 	}
 
-	return mgr.view.ProcessPacket(p)
+	ret := mgr.view.ProcessPacket(p)
+
+	mgr.view.Render(mgr.screen)
+	mgr.screen.Show()
+
+	return ret
 }
 
 func parseMessage(data []byte) (interface{}, error) {
