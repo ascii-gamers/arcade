@@ -1,7 +1,6 @@
 package arcade
 
 import (
-	"strconv"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -34,70 +33,13 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 	switch evt := evt.(type) {
 	case *tcell.EventKey:
 		switch evt.Key() {
-		case tcell.KeyDown:
-			v.selectedRow++
-			if v.selectedRow > len(game_input_categories)-1 {
-				v.selectedRow = len(game_input_categories) - 1
-			}
-			editing = false
-		case tcell.KeyUp:
-			v.selectedRow--
-
-			if v.selectedRow < 0 {
-				v.selectedRow = 0
-			}
-			editing = false
-		case tcell.KeyEnter:
-			game_name = inputString
-			editing = false
-			inputString = ""
-		case tcell.KeyLeft:
-			game_user_input_indices[v.selectedRow]--
-			if game_user_input_indices[v.selectedRow] < 0 {
-				game_user_input_indices[v.selectedRow] = 0
-			}
-			// if game type changes, reset player num
-			if v.selectedRow == 2{
-				game_user_input_indices[3] = 0
-			}
-		case tcell.KeyRight:
-			game_user_input_indices[v.selectedRow]++
-			// all other selectors have 2 choices
-			maxLength := 2
-			if v.selectedRow == 3 {
-				// dependent on game type
-				maxLength = len(playerOpt[game_user_input_indices[v.selectedRow-1]])
-			}
-			if game_user_input_indices[v.selectedRow] > maxLength-1 {
-				game_user_input_indices[v.selectedRow] = maxLength - 1
-			}
-			// if game type changes, reset player num
-			if v.selectedRow == 2{
-				game_user_input_indices[3] = 0
-			}
 		case tcell.KeyRune:
-			if !editing {
-				switch evt.Rune() {
-				case 'c':
-					mgr.SetView(NewGamesListView())
-				case 'p':
-					// save things
-					if game_name == "" {
-						v.selectedRow = 0
-						if game_input_default[0] != '*' {
-							game_input_default = "*" + game_input_default
-						}
-					}
-					intVar, _ := strconv.Atoi(playerOpt[game_user_input_indices[2]][game_user_input_indices[3]])
-					game = CreateGame(game_name, (game_user_input_indices[1] == 1), gameOpt[game_user_input_indices[2]], intVar)
-				case 'i':
-					editing = true
-					inputString = ""
-				}
-			} else {
-				inputString += string(evt.Rune())
-			}
-			
+			switch evt.Rune() {
+			case 'c':
+				mgr.SetView(NewGamesListView())
+			case 's':
+				//start game
+			}			
 		}
 	}
 }

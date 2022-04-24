@@ -11,29 +11,29 @@ type LobbyCreateView struct {
 	View
 	selectedRow int	
 }
-var borderIndex = 28
+const lcv_borderIndex = 28
 
-var game_input_default = "[i] to edit, [enter] to save"
+var lcv_game_input_default = "[i] to edit, [enter] to save"
 
-var privateOpt = [2]string {"no", "yes"}
-var gameOpt = [2]string {"tron", "pong"}
+var lcv_privateOpt = [2]string {"no", "yes"}
+var lcv_gameOpt = [2]string {"tron", "pong"}
 
-var tronPlayerOpt = [7]string {"2","3","4","5","6","7","8"}
-var pongPlayerOpt = [1]string {"2"}
-var playerOpt = [2][]string {tronPlayerOpt[:], pongPlayerOpt[:]}
+var lcv_tronPlayerOpt = [7]string {"2","3","4","5","6","7","8"}
+var lcv_pongPlayerOpt = [1]string {"2"}
+var lcv_playerOpt = [2][]string {lcv_tronPlayerOpt[:], lcv_pongPlayerOpt[:]}
 
-var game_name = ""
-var game_user_input_indices = [4]int{-1, 0, 0, 0}
-var game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
-var editing = false
-var inputString = ""
+var lcv_game_name = ""
+var lcv_game_user_input_indices = [4]int{-1, 0, 0, 0}
+var lcv_game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
+var lcv_editing = false
+var lcv_inputString = ""
 
 
 const (
-	lobbyTableX1 = 16
-	lobbyTableY1 = 7
-	lobbyTableX2 = 63
-	lobbyTableY2 = 18
+	lcv_lobbyTableX1 = 16
+	lcv_lobbyTableY1 = 7
+	lcv_lobbyTableX2 = 63
+	lcv_lobbyTableY2 = 18
 )
 
 var create_game_header = []string{
@@ -41,7 +41,7 @@ var create_game_header = []string{
 	"| █▄▄ █▀▄ ██▄ █▀█  █  ██▄   █▄█ █▀█ █ █ ██▄ |",										  
 }
 
-var game_footer = []string{
+var lcv_game_footer = []string{
 	"[P]ublish game       [C]ancel",
 }
 
@@ -58,67 +58,67 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 		switch evt.Key() {
 		case tcell.KeyDown:
 			v.selectedRow++
-			if v.selectedRow > len(game_input_categories)-1 {
-				v.selectedRow = len(game_input_categories) - 1
+			if v.selectedRow > len(lcv_game_input_categories)-1 {
+				v.selectedRow = len(lcv_game_input_categories) - 1
 			}
-			editing = false
+			lcv_editing = false
 		case tcell.KeyUp:
 			v.selectedRow--
 
 			if v.selectedRow < 0 {
 				v.selectedRow = 0
 			}
-			editing = false
+			lcv_editing = false
 		case tcell.KeyEnter:
-			game_name = inputString
-			editing = false
-			inputString = ""
+			lcv_game_name = lcv_inputString
+			lcv_editing = false
+			lcv_inputString = ""
 		case tcell.KeyLeft:
-			game_user_input_indices[v.selectedRow]--
-			if game_user_input_indices[v.selectedRow] < 0 {
-				game_user_input_indices[v.selectedRow] = 0
+			lcv_game_user_input_indices[v.selectedRow]--
+			if lcv_game_user_input_indices[v.selectedRow] < 0 {
+				lcv_game_user_input_indices[v.selectedRow] = 0
 			}
 			// if game type changes, reset player num
 			if v.selectedRow == 2{
-				game_user_input_indices[3] = 0
+				lcv_game_user_input_indices[3] = 0
 			}
 		case tcell.KeyRight:
-			game_user_input_indices[v.selectedRow]++
+			lcv_game_user_input_indices[v.selectedRow]++
 			// all other selectors have 2 choices
 			maxLength := 2
 			if v.selectedRow == 3 {
 				// dependent on game type
-				maxLength = len(playerOpt[game_user_input_indices[v.selectedRow-1]])
+				maxLength = len(lcv_playerOpt[lcv_game_user_input_indices[v.selectedRow-1]])
 			}
-			if game_user_input_indices[v.selectedRow] > maxLength-1 {
-				game_user_input_indices[v.selectedRow] = maxLength - 1
+			if lcv_game_user_input_indices[v.selectedRow] > maxLength-1 {
+				lcv_game_user_input_indices[v.selectedRow] = maxLength - 1
 			}
 			// if game type changes, reset player num
 			if v.selectedRow == 2{
-				game_user_input_indices[3] = 0
+				lcv_game_user_input_indices[3] = 0
 			}
 		case tcell.KeyRune:
-			if !editing {
+			if !lcv_editing {
 				switch evt.Rune() {
 				case 'c':
 					mgr.SetView(NewGamesListView())
 				case 'p':
 					// save things
-					if game_name == "" {
+					if lcv_game_name == "" {
 						v.selectedRow = 0
-						if game_input_default[0] != '*' {
-							game_input_default = "*" + game_input_default
+						if lcv_game_input_default[0] != '*' {
+							lcv_game_input_default = "*" + lcv_game_input_default
 						}
 					}
-					intVar, _ := strconv.Atoi(playerOpt[game_user_input_indices[2]][game_user_input_indices[3]])
-					game = CreateGame(game_name, (game_user_input_indices[1] == 1), gameOpt[game_user_input_indices[2]], intVar)
+					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
+					game = CreateGame(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar)
 					mgr.SetView(NewLobbyView())
 				case 'i':
-					editing = true
-					inputString = ""
+					lcv_editing = true
+					lcv_inputString = ""
 				}
 			} else {
-				inputString += string(evt.Rune())
+				lcv_inputString += string(evt.Rune())
 			}
 			
 		}
@@ -132,7 +132,7 @@ func (v *LobbyCreateView) ProcessPacket(p interface{}) interface{} {
 func (v *LobbyCreateView) Render(s *Screen) {
 	width, height := s.Size()
 
-	if editing {
+	if lcv_editing {
 		s.SetCursorStyle(tcell.CursorStyleBlinkingBlock)
 	} else {
 		s.SetCursorStyle(tcell.CursorStyleDefault)
@@ -154,10 +154,10 @@ func (v *LobbyCreateView) Render(s *Screen) {
 	s.DrawText(header2X, 5, sty_game, create_game_header[1])
 
 	// Draw box surrounding games list
-	s.DrawBox(lobbyTableX1-1, 7, lobbyTableX2+1, lobbyTableY2+1, sty_game, true)
+	s.DrawBox(lcv_lobbyTableX1-1, 7, lcv_lobbyTableX2+1, lcv_lobbyTableY2+1, sty_game, true)
 
 	// Draw footer with navigation keystrokes
-	s.DrawText((width-len(game_footer[0]))/2, height-2, sty_game, game_footer[0])
+	s.DrawText((width-len(lcv_game_footer[0]))/2, height-2, sty_game, lcv_game_footer[0])
 
 	// Draw column headers
 	
@@ -166,48 +166,48 @@ func (v *LobbyCreateView) Render(s *Screen) {
 	// s.DrawText(pingColX, 5, sty, "PING")
 
 	// // Draw border below column headers
-	s.DrawLine(borderIndex, 7, borderIndex, tableY2, sty_game, true)
-	s.DrawText(borderIndex, 7, sty_game, "╦")
-	s.DrawText(borderIndex, tableY2, sty_game, "╩")
+	s.DrawLine(lcv_borderIndex, 7, lcv_borderIndex, tableY2, sty_game, true)
+	s.DrawText(lcv_borderIndex, 7, sty_game, "╦")
+	s.DrawText(lcv_borderIndex, tableY2, sty_game, "╩")
 
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
 
 	i := 0
-	for index, inputField := range game_input_categories {
+	for index, inputField := range lcv_game_input_categories {
 
-		y := lobbyTableY1 + i + 1
+		y := lcv_lobbyTableY1 + i + 1
 		rowSty := sty_game
 
 		if i == v.selectedRow {
 			rowSty = selectedSty
 		}
 
-		s.DrawEmpty(lobbyTableX1, y, lobbyTableX1, y, rowSty)
-		s.DrawText(lobbyTableX1 + 1, y, rowSty, inputField)
-		s.DrawEmpty(lobbyTableX1+len(inputField)+1, y, borderIndex-1, y, rowSty)
+		s.DrawEmpty(lcv_lobbyTableX1, y, lcv_lobbyTableX1, y, rowSty)
+		s.DrawText(lcv_lobbyTableX1 + 1, y, rowSty, inputField)
+		s.DrawEmpty(lcv_lobbyTableX1+len(inputField)+1, y, lcv_borderIndex-1, y, rowSty)
 
-		categoryInputString := game_name
-		categoryIndex := game_user_input_indices[index]
+		categoryInputString := lcv_game_name
+		categoryIndex := lcv_game_user_input_indices[index]
 		thisCategoryMaxLength := 1
 
 		// regarding name
 		switch inputField {
 		case "NAME":
-			if editing && i == v.selectedRow{
-				categoryInputString = inputString
-			} else if game_name == ""{
-				categoryInputString = game_input_default
+			if lcv_editing && i == v.selectedRow{
+				categoryInputString = lcv_inputString
+			} else if lcv_game_name == ""{
+				categoryInputString = lcv_game_input_default
 			}
 		case "PRIVATE?":
-			categoryInputString = privateOpt[categoryIndex]
-			thisCategoryMaxLength = len(privateOpt)
+			categoryInputString = lcv_privateOpt[categoryIndex]
+			thisCategoryMaxLength = len(lcv_privateOpt)
 		case "GAME TYPE":
-			categoryInputString = gameOpt[categoryIndex]
-			thisCategoryMaxLength = len(gameOpt)
+			categoryInputString = lcv_gameOpt[categoryIndex]
+			thisCategoryMaxLength = len(lcv_gameOpt)
 		case "CAPACITY":
-			categoryInputString = playerOpt[game_user_input_indices[index-1]][categoryIndex]
-			thisCategoryMaxLength = len(playerOpt[game_user_input_indices[index-1]])
+			categoryInputString = lcv_playerOpt[lcv_game_user_input_indices[index-1]][categoryIndex]
+			thisCategoryMaxLength = len(lcv_playerOpt[lcv_game_user_input_indices[index-1]])
 		}
 
 		if categoryIndex != -1 {
@@ -219,10 +219,10 @@ func (v *LobbyCreateView) Render(s *Screen) {
 			}
 		}
 
-		categoryX := (lobbyTableX2 - borderIndex - utf8.RuneCountInString(categoryInputString)) / 2 + borderIndex
-		s.DrawEmpty(borderIndex+1, y, categoryX-1, y, rowSty)
+		categoryX := (lcv_lobbyTableX2 - lcv_borderIndex - utf8.RuneCountInString(categoryInputString)) / 2 + lcv_borderIndex
+		s.DrawEmpty(lcv_borderIndex+1, y, categoryX-1, y, rowSty)
 		s.DrawText(categoryX, y, rowSty, categoryInputString)
-		s.DrawEmpty(categoryX+utf8.RuneCountInString(categoryInputString), y, lobbyTableX2-1, y, rowSty)
+		s.DrawEmpty(categoryX+utf8.RuneCountInString(categoryInputString), y, lcv_lobbyTableX2-1, y, rowSty)
 
 		i++
 	}
