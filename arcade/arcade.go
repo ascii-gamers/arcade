@@ -5,6 +5,7 @@ import "time"
 var mgr = NewViewManager()
 var server *Server
 var hostPort int
+var game *Game
 
 func Start() {
 	// Start host server

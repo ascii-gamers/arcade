@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -12,7 +13,7 @@ type LobbyCreateView struct {
 }
 var borderIndex = 28
 
-const game_input_default = "[i] to edit, [enter] to save"
+var game_input_default = "[i] to edit, [enter] to save"
 
 var privateOpt = [2]string {"no", "yes"}
 var gameOpt = [2]string {"tron", "pong"}
@@ -21,7 +22,7 @@ var tronPlayerOpt = [7]string {"2","3","4","5","6","7","8"}
 var pongPlayerOpt = [1]string {"2"}
 var playerOpt = [2][]string {tronPlayerOpt[:], pongPlayerOpt[:]}
 
-var game_user_input = ""
+var game_name = ""
 var game_user_input_indices = [4]int{-1, 0, 0, 0}
 var game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
 var editing = false
@@ -69,7 +70,7 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 			}
 			editing = false
 		case tcell.KeyEnter:
-			game_user_input = inputString
+			game_name = inputString
 			editing = false
 			inputString = ""
 		case tcell.KeyLeft:
@@ -103,7 +104,15 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 					mgr.SetView(NewGamesListView())
 				case 'p':
 					// save things
-					mgr.SetView(NewLobbyCreateView())
+					if game_name == "" {
+						v.selectedRow = 0
+						if game_input_default[0] != '*' {
+							game_input_default = "*" + game_input_default
+						}
+					}
+					intVar, _ := strconv.Atoi(playerOpt[game_user_input_indices[2]][game_user_input_indices[3]])
+					game = CreateGame(game_name, (game_user_input_indices[1] == 1), gameOpt[game_user_input_indices[2]], intVar)
+					mgr.SetView(NewLobbyView())
 				case 'i':
 					editing = true
 					inputString = ""
@@ -117,11 +126,6 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 }
 
 func (v *LobbyCreateView) ProcessPacket(p interface{}) interface{} {
-	switch p.(type) {
-	case HelloMessage:
-		return NewLobbyInfoMessage(server.Addr)
-	}
-
 	return nil
 }
 
@@ -183,7 +187,7 @@ func (v *LobbyCreateView) Render(s *Screen) {
 		s.DrawText(lobbyTableX1 + 1, y, rowSty, inputField)
 		s.DrawEmpty(lobbyTableX1+len(inputField)+1, y, borderIndex-1, y, rowSty)
 
-		categoryInputString := game_user_input
+		categoryInputString := game_name
 		categoryIndex := game_user_input_indices[index]
 		thisCategoryMaxLength := 1
 
@@ -192,7 +196,7 @@ func (v *LobbyCreateView) Render(s *Screen) {
 		case "NAME":
 			if editing && i == v.selectedRow{
 				categoryInputString = inputString
-			} else if game_user_input == ""{
+			} else if game_name == ""{
 				categoryInputString = game_input_default
 			}
 		case "PRIVATE?":

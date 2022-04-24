@@ -10,9 +10,10 @@ const (
 )
 
 type Player struct {
+	Client
 	Username string
 	Status   string
-	IP       string
+	Host bool
 }
 
 func PlayerStart() {
