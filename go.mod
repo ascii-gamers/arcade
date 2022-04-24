@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/gdamore/tcell/v2 v2.4.0
+	github.com/google/uuid v1.3.0
 	github.com/xtaci/kcp-go/v5 v5.6.1
 )
 

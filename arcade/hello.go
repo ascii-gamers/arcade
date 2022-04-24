@@ -10,7 +10,7 @@ type HelloMessage struct {
 
 func NewHelloMessage() *HelloMessage {
 	return &HelloMessage{
-		Message: Message{"hello"},
+		Message: Message{Type: "hello"},
 	}
 }
 

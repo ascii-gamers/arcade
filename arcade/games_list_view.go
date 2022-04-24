@@ -34,7 +34,7 @@ const (
 	tableX1 = 3
 	tableY1 = 7
 	tableX2 = 76
-	tableY2 = 18
+	tableY2 = 19
 )
 
 func NewGamesListView() *GamesListView {

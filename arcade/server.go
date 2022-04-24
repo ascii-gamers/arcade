@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -52,9 +53,17 @@ func (s *Server) connect(c *Client) error {
 
 	c.start(sess)
 
+	c.connectedCh = make(chan bool)
+	c.send(NewPingMessage())
+
 	s.Lock()
 	s.clients = append(s.clients, c)
 	s.Unlock()
+
+	// TODO: timeout if no response
+	if !<-c.connectedCh {
+		return errors.New("client failed to connect")
+	}
 
 	return nil
 }
