@@ -10,6 +10,7 @@ type LobbyView struct {
 	View
 	selectedRow int	
 }
+var borderIndex = 28
 
 const game_input_default = "[i] to edit, [enter] to save"
 
@@ -24,13 +25,13 @@ var game_user_input = ""
 var game_user_input_indices = [4]int{-1, 0, 0, 0}
 var game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
 var editing = false
-var selectingIndex = -1
 var inputString = ""
 
+
 const (
-	lobbyTableX1 = 17
+	lobbyTableX1 = 16
 	lobbyTableY1 = 7
-	lobbyTableX2 = 62
+	lobbyTableX2 = 63
 	lobbyTableY2 = 18
 )
 
@@ -71,6 +72,30 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 			game_user_input = inputString
 			editing = false
 			inputString = ""
+		case tcell.KeyLeft:
+			game_user_input_indices[v.selectedRow]--
+			if game_user_input_indices[v.selectedRow] < 0 {
+				game_user_input_indices[v.selectedRow] = 0
+			}
+			// if game type changes, reset player num
+			if v.selectedRow == 2{
+				game_user_input_indices[3] = 0
+			}
+		case tcell.KeyRight:
+			game_user_input_indices[v.selectedRow]++
+			// all other selectors have 2 choices
+			maxLength := 2
+			if v.selectedRow == 3 {
+				// dependent on game type
+				maxLength = len(playerOpt[game_user_input_indices[v.selectedRow-1]])
+			}
+			if game_user_input_indices[v.selectedRow] > maxLength-1 {
+				game_user_input_indices[v.selectedRow] = maxLength - 1
+			}
+			// if game type changes, reset player num
+			if v.selectedRow == 2{
+				game_user_input_indices[3] = 0
+			}
 		case tcell.KeyRune:
 			if !editing {
 				switch evt.Rune() {
@@ -137,9 +162,9 @@ func (v *LobbyView) Render(s *Screen) {
 	// s.DrawText(pingColX, 5, sty, "PING")
 
 	// // Draw border below column headers
-	s.DrawLine(34, 7, 34, tableY2, sty_game, true)
-	s.DrawText(34, 7, sty_game, "╦")
-	s.DrawText(34, tableY2, sty_game, "╩")
+	s.DrawLine(borderIndex, 7, borderIndex, tableY2, sty_game, true)
+	s.DrawText(borderIndex, 7, sty_game, "╦")
+	s.DrawText(borderIndex, tableY2, sty_game, "╩")
 
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
@@ -156,7 +181,7 @@ func (v *LobbyView) Render(s *Screen) {
 
 		s.DrawEmpty(lobbyTableX1, y, lobbyTableX1, y, rowSty)
 		s.DrawText(lobbyTableX1 + 1, y, rowSty, inputField)
-		s.DrawEmpty(lobbyTableX1+len(inputField)+1, y, 33, y, rowSty)
+		s.DrawEmpty(lobbyTableX1+len(inputField)+1, y, borderIndex-1, y, rowSty)
 
 		categoryInputString := game_user_input
 		categoryIndex := game_user_input_indices[index]
@@ -177,8 +202,16 @@ func (v *LobbyView) Render(s *Screen) {
 			categoryInputString = playerOpt[game_user_input_indices[index-1]][categoryIndex]
 		}
 
-		s.DrawText(35, y, rowSty, categoryInputString)
-		s.DrawEmpty(35+len(categoryInputString), y, lobbyTableX2-1, y, rowSty)
+		// if categoryIndex != -1 {
+		// 	if categoryIndex == 0 {
+
+		// 	}
+		// }
+
+		categoryX := (lobbyTableX2 - borderIndex - utf8.RuneCountInString(categoryInputString)) / 2 + borderIndex
+		s.DrawEmpty(borderIndex+1, y, categoryX-1, y, rowSty)
+		s.DrawText(categoryX, y, rowSty, categoryInputString)
+		s.DrawEmpty(categoryX+len(categoryInputString), y, lobbyTableX2-1, y, rowSty)
 
 		// name := lobby.IP
 		// game := "Pong"
