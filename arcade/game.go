@@ -23,6 +23,7 @@ var tron_header = []string{
 
 type Game struct {
 	Name         string
+	Code string
 	Private      bool
 	GameType     string
 	Capacity     int

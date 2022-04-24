@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"fmt"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -11,12 +12,12 @@ type LobbyView struct {
 	selectedRow int	
 }
 
-// const (
-// 	lobbyTableX1 = 16
-// 	lobbyTableY1 = 7
-// 	lobbyTableX2 = 63
-// 	lobbyTableY2 = 18
-// )
+const (
+	lv_TableX1 = 20
+	lv_TableY1 = 4
+	lv_TableX2 = 59
+	lv_TableY2 = 12
+)
 
 var lobby_footer = []string{
 	"[S]tart game       [C]ancel",
@@ -58,6 +59,7 @@ func (v *LobbyView) Render(s *Screen) {
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorGreen)
+	sty_bold := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorDarkGreen)
 
 	// Draw GAME header
 
@@ -70,7 +72,30 @@ func (v *LobbyView) Render(s *Screen) {
 	s.DrawText(headerX, 2, sty, game_header[1])
 
 	// Draw box surrounding games list
-	// s.DrawBox(lobbyTableX1-1, 7, lobbyTableX2+1, lobbyTableY2+1, sty, true)
+	s.DrawBox(lv_TableX1, lv_TableY1, lv_TableX2, lv_TableY2, sty, true)
+
+	// Draw game info 
+
+	// name
+	nameHeader := "Name: "
+	nameString := game.Name
+	s.DrawText((width-len(nameHeader + nameString))/2, lv_TableY1+1, sty, nameHeader)
+	s.DrawText((width-len(nameHeader + nameString))/2+utf8.RuneCountInString(nameHeader), lv_TableY1+1, sty_bold, nameString)
+
+	// private
+	privateHeader := "Visibility: "
+	privateString := "public"
+	if game.Private {
+		privateString = "private, Code: " + game.Code
+	} 
+	s.DrawText((width-len(privateHeader + privateString))/2, lv_TableY1+2, sty, privateHeader)
+	s.DrawText((width-len(privateHeader + privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)
+
+	// capacity
+	capacityHeader := "Game capacity: "
+	capacityString := fmt.Sprintf("(%v/%v)", game.NumFull, game.Capacity)
+	s.DrawText((width-len(capacityHeader + capacityString))/2, lv_TableY1+3, sty, capacityHeader)
+	s.DrawText((width-len(capacityHeader + capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 
 	// // Draw footer with navigation keystrokes
 	s.DrawText((width-len(lobby_footer[0]))/2, height-2, sty, lobby_footer[0])
