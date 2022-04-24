@@ -1,10 +1,14 @@
 package arcade
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"github.com/gdamore/tcell/v2"
+)
 
 type Screen struct {
 	tcell.Screen
 }
+
+type CursorStyle int
 
 func (s *Screen) DrawText(x, y int, style tcell.Style, text string) {
 	row := y
@@ -19,6 +23,10 @@ func (s *Screen) DrawText(x, y int, style tcell.Style, text string) {
 			col = x
 		}
 	}
+}
+
+func (s *Screen) SetCursorStyle(cs CursorStyle) {
+	s.cursorStyle = cs
 }
 
 func (s *Screen) DrawEmpty(x1, y1, x2, y2 int, style tcell.Style) {

@@ -22,7 +22,8 @@ type LobbyView struct {
 const game_input_default = "[i] to edit"
 var game_user_input = [4]string {"", "", "", ""}
 var game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
-
+var editing = false
+var inputString = ""
 
 const (
 	lobbyTableX1 = 20
@@ -53,31 +54,38 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 		switch evt.Key() {
 		case tcell.KeyDown:
 			v.selectedRow++
-
-			v.mu.RLock()
 			if v.selectedRow > len(game_input_categories)-1 {
 				v.selectedRow = len(game_input_categories) - 1
 			}
-			v.mu.RUnlock()
+			editing = false
 		case tcell.KeyUp:
 			v.selectedRow--
 
 			if v.selectedRow < 0 {
 				v.selectedRow = 0
 			}
+			editing = false
+		case tcell.KeyEnter:
+			editing = false
 		case tcell.KeyRune:
-			switch evt.Rune() {
-			case 'c':
-				mgr.SetView(NewGamesListView())
-			case 'p':
-				// save things
-				mgr.SetView(NewLobbyView())
-			case 'i':
-				reader := bufio.NewReader(os.Stdin)
-				i, _ := reader.ReadString('\n')
-				fmt.Println(i)
-
+			if !editing {
+				switch evt.Rune() {
+				case 'c':
+					mgr.SetView(NewGamesListView())
+				case 'p':
+					// save things
+					mgr.SetView(NewLobbyView())
+				case 'i':
+					editing = true
+					reader := bufio.NewReader(os.Stdin)
+					i, _ := reader.ReadString('\n')
+					fmt.Println(i)
+	
+				}
+			} else {
+				
 			}
+			
 		}
 	}
 }
@@ -93,6 +101,12 @@ func (v *LobbyView) ProcessPacket(p interface{}) interface{} {
 
 func (v *LobbyView) Render(s *Screen) {
 	width, height := s.Size()
+
+	if editing {
+		s.SetCursorStyle(tcell.CursorStyleBlinkingBlock)
+	} else {
+		s.SetCursorStyle(tcell.CursorStyleDefault)
+	}
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorLightSlateGray)
