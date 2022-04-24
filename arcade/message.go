@@ -6,16 +6,11 @@ import (
 )
 
 type Message struct {
+	ID   string `json:"id"`
 	Type string `json:"type"`
 }
 
-func processMessage(from *Client, data []byte) interface{} {
-	p, err := parseMessage(data)
-
-	if err != nil {
-		return err
-	}
-
+func processMessage(from *Client, p interface{}) interface{} {
 	ret := mgr.view.ProcessPacket(p)
 
 	mgr.view.Render(mgr.screen)
@@ -44,6 +39,14 @@ func parseMessage(data []byte) (interface{}, error) {
 		return p, nil
 	case "lobby_info":
 		p := LobbyInfoMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "ping":
+		p := PingMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "pong":
+		p := PongMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	default:

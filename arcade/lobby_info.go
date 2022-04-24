@@ -12,7 +12,7 @@ type LobbyInfoMessage struct {
 
 func NewLobbyInfoMessage(ip string) *LobbyInfoMessage {
 	return &LobbyInfoMessage{
-		Message: Message{"lobby_info"},
+		Message: Message{Type: "lobby_info"},
 		IP:      ip,
 	}
 }

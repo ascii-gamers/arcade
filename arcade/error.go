@@ -18,7 +18,7 @@ func ErrorMessageHandler(client *Client, p ErrorMessage) interface{} {
 
 func NewErrorMessage(msg string) *ErrorMessage {
 	return &ErrorMessage{
-		Message: Message{"error"},
+		Message: Message{Type: "error"},
 		Text:    msg,
 	}
 }
