@@ -6,7 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type LobbyView struct {
+type LobbyCreateView struct {
 	View
 	selectedRow int	
 }
@@ -44,14 +44,14 @@ var game_footer = []string{
 	"[P]ublish game       [C]ancel",
 }
 
-func NewLobbyView() *LobbyView {
-	return &LobbyView{}
+func NewLobbyCreateView() *LobbyCreateView {
+	return &LobbyCreateView{}
 }
 
-func (v *LobbyView) Init() {
+func (v *LobbyCreateView) Init() {
 }
 
-func (v *LobbyView) ProcessEvent(evt tcell.Event) {
+func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 	switch evt := evt.(type) {
 	case *tcell.EventKey:
 		switch evt.Key() {
@@ -103,7 +103,7 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 					mgr.SetView(NewGamesListView())
 				case 'p':
 					// save things
-					mgr.SetView(NewLobbyView())
+					mgr.SetView(NewLobbyCreateView())
 				case 'i':
 					editing = true
 					inputString = ""
@@ -116,7 +116,7 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 	}
 }
 
-func (v *LobbyView) ProcessPacket(p interface{}) interface{} {
+func (v *LobbyCreateView) ProcessPacket(p interface{}) interface{} {
 	switch p.(type) {
 	case HelloMessage:
 		return NewLobbyInfoMessage(server.Addr)
@@ -125,7 +125,7 @@ func (v *LobbyView) ProcessPacket(p interface{}) interface{} {
 	return nil
 }
 
-func (v *LobbyView) Render(s *Screen) {
+func (v *LobbyCreateView) Render(s *Screen) {
 	width, height := s.Size()
 
 	if editing {
@@ -185,6 +185,7 @@ func (v *LobbyView) Render(s *Screen) {
 
 		categoryInputString := game_user_input
 		categoryIndex := game_user_input_indices[index]
+		thisCategoryMaxLength := 1
 
 		// regarding name
 		switch inputField {
@@ -196,37 +197,28 @@ func (v *LobbyView) Render(s *Screen) {
 			}
 		case "PRIVATE?":
 			categoryInputString = privateOpt[categoryIndex]
+			thisCategoryMaxLength = len(privateOpt)
 		case "GAME TYPE":
 			categoryInputString = gameOpt[categoryIndex]
+			thisCategoryMaxLength = len(gameOpt)
 		case "CAPACITY":
 			categoryInputString = playerOpt[game_user_input_indices[index-1]][categoryIndex]
+			thisCategoryMaxLength = len(playerOpt[game_user_input_indices[index-1]])
 		}
 
-		// if categoryIndex != -1 {
-		// 	if categoryIndex == 0 {
-
-		// 	}
-		// }
+		if categoryIndex != -1 {
+			if categoryIndex < thisCategoryMaxLength - 1 {
+				categoryInputString += " →"
+			}
+			if categoryIndex > 0 {
+				categoryInputString = "← " + categoryInputString
+			}
+		}
 
 		categoryX := (lobbyTableX2 - borderIndex - utf8.RuneCountInString(categoryInputString)) / 2 + borderIndex
 		s.DrawEmpty(borderIndex+1, y, categoryX-1, y, rowSty)
 		s.DrawText(categoryX, y, rowSty, categoryInputString)
-		s.DrawEmpty(categoryX+len(categoryInputString), y, lobbyTableX2-1, y, rowSty)
-
-		// name := lobby.IP
-		// game := "Pong"
-		// players := "1/2"
-		// ping := "25ms"
-
-		// s.DrawEmpty(tableX1, y, nameColX-1, y, rowSty)
-		// s.DrawText(nameColX, y, rowSty, name)
-		// s.DrawEmpty(nameColX+len(name), y, gameColX-1, y, rowSty)
-		// s.DrawText(gameColX, y, rowSty, game)
-		// s.DrawEmpty(gameColX+len(game), y, playersColX-1, y, rowSty)
-		// s.DrawText(playersColX, y, rowSty, players)
-		// s.DrawEmpty(playersColX+len(players), y, pingColX-1, y, rowSty)
-		// s.DrawText(pingColX, y, rowSty, ping)
-		// s.DrawEmpty(pingColX+len(ping), y, tableX2, y, rowSty)
+		s.DrawEmpty(categoryX+utf8.RuneCountInString(categoryInputString), y, lobbyTableX2-1, y, rowSty)
 
 		i++
 	}
