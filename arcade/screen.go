@@ -25,10 +25,6 @@ func (s *Screen) DrawText(x, y int, style tcell.Style, text string) {
 	}
 }
 
-func (s *Screen) SetCursorStyle(cs CursorStyle) {
-	s.cursorStyle = cs
-}
-
 func (s *Screen) DrawEmpty(x1, y1, x2, y2 int, style tcell.Style) {
 	for row := y1; row <= y2; row++ {
 		for col := x1; col <= x2; col++ {
