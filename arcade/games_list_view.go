@@ -44,7 +44,18 @@ func NewGamesListView() *GamesListView {
 }
 
 func (v *GamesListView) Init() {
-	go server.connectToNextOpenPort()
+	server.RLock()
+	clients := server.clients
+	server.RUnlock()
+
+	for _, client := range clients {
+		if client.Distributor {
+			continue
+		}
+
+		client.send(NewHelloMessage())
+	}
+	// go server.connectToNextOpenPort()
 }
 
 func (v *GamesListView) ProcessEvent(evt tcell.Event) {
