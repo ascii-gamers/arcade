@@ -1,6 +1,9 @@
 package arcade
 
 import (
+	"bufio"
+	"fmt"
+	"os"
 	"sync"
 	"unicode/utf8"
 
@@ -13,11 +16,20 @@ type LobbyView struct {
 	mu sync.RWMutex
 	servers     map[string]LobbyInfoMessage
 	selectedRow int
-	name string
-	game int
-	players int 
+	newGame *Game
 	
 }
+const game_input_default = "[i] to edit"
+var game_user_input = [4]string {"", "", "", ""}
+var game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
+
+
+const (
+	lobbyTableX1 = 20
+	lobbyTableY1 = 7
+	lobbyTableX2 = 59
+	lobbyTableY2 = 18
+)
 
 var create_game_header = []string{
 	"| █▀▀ █▀█ █▀▀ ▄▀█ ▀█▀ █▀▀   █▀▀ ▄▀█ █▄█ █▀▀ |",
@@ -43,8 +55,8 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 			v.selectedRow++
 
 			v.mu.RLock()
-			if v.selectedRow > len(v.servers)-1 {
-				v.selectedRow = len(v.servers) - 1
+			if v.selectedRow > len(game_input_categories)-1 {
+				v.selectedRow = len(game_input_categories) - 1
 			}
 			v.mu.RUnlock()
 		case tcell.KeyUp:
@@ -59,7 +71,12 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 				mgr.SetView(NewGamesListView())
 			case 'p':
 				// save things
-				// mgr.SetView(NewLobbyView())
+				mgr.SetView(NewLobbyView())
+			case 'i':
+				reader := bufio.NewReader(os.Stdin)
+				i, _ := reader.ReadString('\n')
+				fmt.Println(i)
+
 			}
 		}
 	}
@@ -93,7 +110,7 @@ func (v *LobbyView) Render(s *Screen) {
 	s.DrawText(header2X, 5, sty_game, create_game_header[1])
 
 	// Draw box surrounding games list
-	// s.DrawBox(tableX1-1, 5, tableX2+1, tableY2+1, sty, true)
+	s.DrawBox(lobbyTableX1-1, 7, lobbyTableX2+1, lobbyTableY2+1, sty_game, true)
 
 	// Draw footer with navigation keystrokes
 	s.DrawText((width-len(game_footer[0]))/2, height-2, sty_game, game_footer[0])
@@ -105,45 +122,54 @@ func (v *LobbyView) Render(s *Screen) {
 	// s.DrawText(pingColX, 5, sty, "PING")
 
 	// // Draw border below column headers
-	// s.DrawLine(3, 6, tableX2, 6, sty, true)
-	// s.DrawText(2, 6, sty, "╠")
-	// s.DrawText(width-3, 6, sty, "╣")
+	s.DrawLine(34, 7, 34, tableY2, sty_game, true)
+	s.DrawText(34, 7, sty_game, "╦")
+	s.DrawText(34, tableY2+1, sty_game, "╩")
+
+	// Draw selected row
+	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
+
+	i := 0
+	for index, inputField := range game_input_categories {
+
+		y := lobbyTableY1 + i + 1
+		rowSty := sty_game
+
+		if i == v.selectedRow {
+			rowSty = selectedSty
+		}
+
+		s.DrawEmpty(lobbyTableX1, y, lobbyTableX1, y, rowSty)
+		s.DrawText(lobbyTableX1 + 1, y, rowSty, inputField)
+		s.DrawEmpty(lobbyTableX1+len(inputField)+1, y, 33, y, rowSty)
+
+		inputString := game_user_input[index]
+		if game_user_input[index] == "" {
+			inputString = game_input_default
+		}
+
+		s.DrawText(35, y, rowSty, inputString)
+		s.DrawEmpty(35+len(inputString), y, lobbyTableX2-1, y, rowSty)
+
+		// name := lobby.IP
+		// game := "Pong"
+		// players := "1/2"
+		// ping := "25ms"
+
+		// s.DrawEmpty(tableX1, y, nameColX-1, y, rowSty)
+		// s.DrawText(nameColX, y, rowSty, name)
+		// s.DrawEmpty(nameColX+len(name), y, gameColX-1, y, rowSty)
+		// s.DrawText(gameColX, y, rowSty, game)
+		// s.DrawEmpty(gameColX+len(game), y, playersColX-1, y, rowSty)
+		// s.DrawText(playersColX, y, rowSty, players)
+		// s.DrawEmpty(playersColX+len(players), y, pingColX-1, y, rowSty)
+		// s.DrawText(pingColX, y, rowSty, ping)
+		// s.DrawEmpty(pingColX+len(ping), y, tableX2, y, rowSty)
+
+		i++
+	}
 
 	// // Draw selected row
-	// selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
-
-	// i := 0
-	// v.mu.RLock()
-
-	// for _, lobby := range v.servers {
-	// 	if lobby.IP == server.Addr {
-	// 		continue
-	// 	}
-
-	// 	y := tableY1 + i
-	// 	rowSty := sty
-
-	// 	if i == v.selectedRow {
-	// 		rowSty = selectedSty
-	// 	}
-
-	// 	name := lobby.IP
-	// 	game := "Pong"
-	// 	players := "1/2"
-	// 	ping := "25ms"
-
-	// 	s.DrawEmpty(tableX1, y, nameColX-1, y, rowSty)
-	// 	s.DrawText(nameColX, y, rowSty, name)
-	// 	s.DrawEmpty(nameColX+len(name), y, gameColX-1, y, rowSty)
-	// 	s.DrawText(gameColX, y, rowSty, game)
-	// 	s.DrawEmpty(gameColX+len(game), y, playersColX-1, y, rowSty)
-	// 	s.DrawText(playersColX, y, rowSty, players)
-	// 	s.DrawEmpty(playersColX+len(players), y, pingColX-1, y, rowSty)
-	// 	s.DrawText(pingColX, y, rowSty, ping)
-	// 	s.DrawEmpty(pingColX+len(ping), y, tableX2, y, rowSty)
-
-	// 	i++
-	// }
-
+	
 	// v.mu.RUnlock()
 }

@@ -10,7 +10,7 @@ const (
 	Tron = "Tron"
 )
 
-type GameInfo struct {
+type Game struct {
 	Name         string
 	Private      bool
 	GameType     string
@@ -27,6 +27,10 @@ type Lobby struct {
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
+func CreateGame(name string, private bool, gameType string, capacity int ) *Game {
+	return &Game{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
+}
+
 func GameStart() {
 	fmt.Println("hello world")
 }
@@ -35,7 +39,7 @@ func GenerateCode() {
 	fmt.Println("hello world")
 }
 
-func (g *GameInfo) AddPlayer(newPlayer Player) {
+func (g *Game) AddPlayer(newPlayer Player) {
 	g.mu.Lock()
 	g.PlayerList = append(g.PlayerList, newPlayer)
 	g.mu.Unlock()
