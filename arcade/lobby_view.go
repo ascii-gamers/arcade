@@ -1,10 +1,6 @@
 package arcade
 
 import (
-	"bufio"
-	"fmt"
-	"os"
-	"sync"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -12,23 +8,29 @@ import (
 
 type LobbyView struct {
 	View
-
-	mu sync.RWMutex
-	servers     map[string]LobbyInfoMessage
-	selectedRow int
-	newGame *Game
-	
+	selectedRow int	
 }
-const game_input_default = "[i] to edit"
-var game_user_input = [4]string {"", "", "", ""}
+
+const game_input_default = "[i] to edit, [enter] to save"
+
+var privateOpt = [2]string {"no", "yes"}
+var gameOpt = [2]string {"tron", "pong"}
+
+var tronPlayerOpt = [7]string {"2","3","4","5","6","7","8"}
+var pongPlayerOpt = [1]string {"2"}
+var playerOpt = [2][]string {tronPlayerOpt[:], pongPlayerOpt[:]}
+
+var game_user_input = ""
+var game_user_input_indices = [4]int{-1, 0, 0, 0}
 var game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
 var editing = false
+var selectingIndex = -1
 var inputString = ""
 
 const (
-	lobbyTableX1 = 20
+	lobbyTableX1 = 17
 	lobbyTableY1 = 7
-	lobbyTableX2 = 59
+	lobbyTableX2 = 62
 	lobbyTableY2 = 18
 )
 
@@ -66,7 +68,9 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 			}
 			editing = false
 		case tcell.KeyEnter:
+			game_user_input = inputString
 			editing = false
+			inputString = ""
 		case tcell.KeyRune:
 			if !editing {
 				switch evt.Rune() {
@@ -77,13 +81,10 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 					mgr.SetView(NewLobbyView())
 				case 'i':
 					editing = true
-					reader := bufio.NewReader(os.Stdin)
-					i, _ := reader.ReadString('\n')
-					fmt.Println(i)
-	
+					inputString = ""
 				}
 			} else {
-				
+				inputString += string(evt.Rune())
 			}
 			
 		}
@@ -138,7 +139,7 @@ func (v *LobbyView) Render(s *Screen) {
 	// // Draw border below column headers
 	s.DrawLine(34, 7, 34, tableY2, sty_game, true)
 	s.DrawText(34, 7, sty_game, "╦")
-	s.DrawText(34, tableY2+1, sty_game, "╩")
+	s.DrawText(34, tableY2, sty_game, "╩")
 
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
@@ -157,13 +158,27 @@ func (v *LobbyView) Render(s *Screen) {
 		s.DrawText(lobbyTableX1 + 1, y, rowSty, inputField)
 		s.DrawEmpty(lobbyTableX1+len(inputField)+1, y, 33, y, rowSty)
 
-		inputString := game_user_input[index]
-		if game_user_input[index] == "" {
-			inputString = game_input_default
+		categoryInputString := game_user_input
+		categoryIndex := game_user_input_indices[index]
+
+		// regarding name
+		switch inputField {
+		case "NAME":
+			if editing && i == v.selectedRow{
+				categoryInputString = inputString
+			} else if game_user_input == ""{
+				categoryInputString = game_input_default
+			}
+		case "PRIVATE?":
+			categoryInputString = privateOpt[categoryIndex]
+		case "GAME TYPE":
+			categoryInputString = gameOpt[categoryIndex]
+		case "CAPACITY":
+			categoryInputString = playerOpt[game_user_input_indices[index-1]][categoryIndex]
 		}
 
-		s.DrawText(35, y, rowSty, inputString)
-		s.DrawEmpty(35+len(inputString), y, lobbyTableX2-1, y, rowSty)
+		s.DrawText(35, y, rowSty, categoryInputString)
+		s.DrawEmpty(35+len(categoryInputString), y, lobbyTableX2-1, y, rowSty)
 
 		// name := lobby.IP
 		// game := "Pong"
