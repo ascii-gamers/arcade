@@ -79,7 +79,7 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 		case tcell.KeyRune:
 			switch evt.Rune() {
 			case 'c':
-				mgr.SetView(NewLobbyView())
+				mgr.SetView(NewLobbyCreateView())
 			}
 		}
 	}
