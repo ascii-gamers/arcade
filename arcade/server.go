@@ -135,3 +135,16 @@ func (s *Server) AddClients(distributor *Client, clients map[string]float64) {
 		}
 	}
 }
+
+func (s *Server) SendToAllClients(msg interface{}) {
+	s.RLock()
+	defer s.Unlock()
+
+	for _, client := range s.clients {
+		if client.Distributor {
+			continue
+		}
+		client.send(msg)
+	}
+}
+

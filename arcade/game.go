@@ -43,10 +43,10 @@ var pong_graphic_single_2 = []string{
 var tron_graphic = []string{
 	"						 ____		 ",
 	"________________________/ O  \\___/",
-    "<_____________________________/   \\",
+	"<_____________________________/   \\",
 }
 
-var pong_header = []string{	
+var pong_header = []string{
 	"█▀█ █▀█ █▄░█ █▀▀",
 	"█▀▀ █▄█ █░▀█ █▄█",
 }
@@ -57,36 +57,36 @@ var tron_header = []string{
 }
 
 type PendingGame struct {
-	Name string
-	Code string
-	Private bool
-	GameType string 
-	Capacity int
-	NumFull      int
-	PlayerList   []*Player
-	mu           sync.Mutex
-	Host string
+	Name       string
+	Code       string
+	Private    bool
+	GameType   string
+	Capacity   int
+	NumFull    int
+	PlayerList []*Player
+	mu         sync.Mutex
+	Host       string
 }
 
 type Game[GS any, CS any] struct {
-	Name         string
-	PlayerList   []*Player
-	mu           sync.Mutex
+	Name       string
+	PlayerList []*Player
+	mu         sync.Mutex
 
-	Me string
+	Me        string
 	GameState GS
 	// clientIps []string
-	ClientStates map[string]CS
-	Started bool
-	Host string
-	HostSyncPeriod int 
+	ClientStates   map[string]CS
+	Started        bool
+	Host           string
+	HostSyncPeriod int
 	TimestepPeriod int
-	Timestep int
+	Timestep       int
 }
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func CreatePendingGame(name string, private bool, gameType string, capacity int ) *PendingGame {
+func CreatePendingGame(name string, private bool, gameType string, capacity int) *PendingGame {
 	game := PendingGame{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
 	if private {
 		game.GenerateCode()
@@ -98,7 +98,7 @@ func GameStart() {
 	fmt.Println("hello world")
 }
 
-func (g *PendingGame) GenerateCode() string{
+func (g *PendingGame) GenerateCode() string {
 	// see if code already exists
 	g.mu.Lock()
 	code := g.Code
@@ -106,7 +106,7 @@ func (g *PendingGame) GenerateCode() string{
 	if len(code) > 0 {
 		return code
 	}
-	for i:= 0; i < 4; i ++ {
+	for i := 0; i < 4; i++ {
 		v := rand.Intn(25)
 		code += string(letters[v])
 	}
@@ -122,7 +122,6 @@ func (g *PendingGame) AddPlayer(newPlayer Player) {
 	g.mu.Unlock()
 }
 
-
 func CreateGame(pendingGame *PendingGame) {
 	switch pendingGame.GameType {
 	case Tron:
@@ -130,23 +129,14 @@ func CreateGame(pendingGame *PendingGame) {
 	}
 }
 
-type Networking struct {
-
-}
-
-var n = Networking{}
-
-func (n Networking) send(ip string, data any) {
-	return;
-}
-
 type ClientUpdateData[CS any] struct {
-	update CS
+	Id     string
+	Update CS
 }
 
 type GameUpdateData[GS any, CS any] struct {
-	gameUpdate GS
-	clientStates map[string]CS
+	GameUpdate   GS
+	ClientStates map[string]CS
 }
 
 func (g *Game[GS, CS]) start() {
@@ -165,27 +155,32 @@ func (g *Game[GS, CS]) startHostSync() {
 
 func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 	g.ClientStates[g.Me] = update
-	for clientIp := range g.ClientStates {
-		n.send(clientIp, update)
+	clientUpdate := ClientUpdateData[CS]{g.Me, update}
+	for clientId := range g.ClientStates {
+		if client, ok := server.clients[clientId]; ok && clientId != g.Me {
+			client.send(clientUpdate)
+		}
 	}
 }
 
 func (g *Game[GS, CS]) sendGameUpdate() {
 	if g.Me == g.Host {
-		for clientIp := range g.ClientStates {
-			if clientIp != g.Me {
+		server.RLock()
+		for clientId := range g.ClientStates {
+			if client, ok := server.clients[clientId]; ok {
 				data := GameUpdateData[GS, CS]{g.GameState, g.ClientStates}
-				n.send(clientIp, data)
+				client.send(data)
 			}
 		}
+		server.RUnlock()
 	}
 }
 
 func (g *Game[GS, CS]) handleClientUpdate(clientIp string, data ClientUpdateData[CS]) {
-	g.ClientStates[clientIp] = data.update
+	g.ClientStates[clientIp] = data.Update
 }
 
 func (g *Game[GS, CS]) handleGameUpdate(clientIp string, data GameUpdateData[GS, CS]) {
-	g.GameState = data.gameUpdate
-	g.ClientStates = data.clientStates
+	g.GameState = data.GameUpdate
+	g.ClientStates = data.ClientStates
 }

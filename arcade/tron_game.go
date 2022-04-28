@@ -68,6 +68,8 @@ func (tg *TronGame) Init() {
 	tg.state = clientState[tg.Me]
 	tg.renderCh = make(chan int)
 
+	tg.start()
+
 	go func() {
 		for {
 			tg.updateSelf()
