@@ -101,7 +101,7 @@ func (tg *TronGame) ProcessEventKey(ev *tcell.EventKey) {
 	}
 }
 
-func ProcessPacket(from *Client, p interface{}) {
+func ProcessMessage(from *Client, p interface{}) {
 	return
 }
 

@@ -133,7 +133,7 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 	}
 }
 
-func (v *LobbyCreateView) ProcessPacket(from *Client, p interface{}) interface{} {
+func (v *LobbyCreateView) ProcessMessage(from *Client, p interface{}) interface{} {
 	return nil
 }
 

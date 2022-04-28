@@ -3,6 +3,7 @@ package arcade
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 )
 
 type Message struct {
@@ -13,7 +14,11 @@ type Message struct {
 }
 
 func processMessage(from *Client, p interface{}) interface{} {
-	ret := mgr.view.ProcessPacket(from, p)
+	// Get sender ID
+	senderID := reflect.ValueOf(p).FieldByName("Message").FieldByName("SenderID").String()
+	sender := server.clients[senderID]
+
+	ret := mgr.view.ProcessMessage(sender, p)
 
 	mgr.view.Render(mgr.screen)
 	mgr.screen.Show()

@@ -57,7 +57,7 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 	}
 }
 
-func (v *LobbyView) ProcessPacket(from *Client, p interface{}) interface{} {
+func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case HelloMessage:
 		return NewLobbyInfoMessage(pendingGame, server.Addr)
