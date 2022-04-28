@@ -53,9 +53,8 @@ func (v *GamesListView) Init() {
 			continue
 		}
 
-		client.send(NewHelloMessage())
+		client.Send(NewHelloMessage())
 	}
-	// go server.connectToNextOpenPort()
 }
 
 func (v *GamesListView) ProcessEvent(evt tcell.Event) {
@@ -90,21 +89,16 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 					Username: "joiningjoanna",
 					Host:     false,
 				}
-				v.mu.Lock()
-				var firstKey string
-				var firstValue *Lobby
-				for key, value := range v.lobbies {
-					firstKey = key
-					firstValue = value
+
+				v.mu.RLock()
+
+				for _, lobby := range v.lobbies {
+					self, _ := server.GetClient(lobby.HostID)
+					go self.Send(NewJoinMessage(lobby.Code, joinPlayer))
 					break
 				}
-				if firstKey != "" {
-					thisClient, _ := server.GetClient(firstValue.HostID)
-					v.mu.Unlock()
-					thisClient.send(NewJoinMessage(firstValue.Code, joinPlayer))
-				} else {
-					v.mu.Unlock()
-				}
+
+				v.mu.RUnlock()
 			}
 		}
 	}

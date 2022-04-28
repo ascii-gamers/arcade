@@ -104,30 +104,34 @@ func (g *Game[GS, CS]) start() {
 func (g *Game[GS, CS]) startHostSync() {
 	for g.Started {
 		time.Sleep(time.Duration(g.HostSyncPeriod))
-		g.sendGameUpdate()
+		g.SendGameUpdate()
 	}
 }
 
 func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 	g.ClientStates[g.Me] = update
 	clientUpdate := ClientUpdateData[CS]{g.Me, update}
+
 	for clientId := range g.ClientStates {
 		if client, ok := server.clients[clientId]; ok && clientId != g.Me {
-			client.send(clientUpdate)
+			client.Send(clientUpdate)
 		}
 	}
 }
 
-func (g *Game[GS, CS]) sendGameUpdate() {
-	if g.Me == g.HostID {
-		server.RLock()
-		for clientId := range g.ClientStates {
-			if client, ok := server.clients[clientId]; ok {
-				data := GameUpdateData[GS, CS]{g.GameState, g.ClientStates}
-				client.send(data)
-			}
+func (g *Game[GS, CS]) SendGameUpdate() {
+	if g.Me != g.HostID {
+		return
+	}
+
+	server.RLock()
+	defer server.RUnlock()
+
+	for clientID := range g.ClientStates {
+		if client, ok := server.GetClient(clientID); ok {
+			data := GameUpdateData[GS, CS]{g.GameState, g.ClientStates}
+			client.Send(data)
 		}
-		server.RUnlock()
 	}
 }
 

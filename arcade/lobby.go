@@ -8,6 +8,8 @@ import (
 )
 
 type Lobby struct {
+	sync.RWMutex
+
 	ID        string
 	Name      string
 	Code      string
@@ -16,7 +18,6 @@ type Lobby struct {
 	Capacity  int
 	NumFull   int
 	PlayerIDs []string
-	mu        sync.Mutex
 	HostID    string
 }
 
@@ -40,9 +41,6 @@ func NewLobby(name string, private bool, gameType string, capacity int, hostID s
 }
 
 func (l *Lobby) AddPlayer(playerID string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	l.PlayerIDs = append(l.PlayerIDs, playerID)
 }
 

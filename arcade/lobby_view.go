@@ -62,10 +62,10 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	case HelloMessage:
 		return NewLobbyInfoMessage(lobby)
 	case JoinMessage:
-		lobby.mu.Lock()
+		lobby.Lock()
 		lobby.AddPlayer(p.Player.ClientID)
 		lobby.NumFull++
-		lobby.mu.Unlock()
+		lobby.Unlock()
 		// deal with private games later
 		// if p.Code != pendingGame.Code {
 		// 	return NewJoinReplyMessage(ErrWrongCode)
