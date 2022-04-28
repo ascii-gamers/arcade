@@ -80,6 +80,10 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 			switch evt.Rune() {
 			case 'c':
 				mgr.SetView(NewLobbyCreateView())
+			case 't':
+				// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
+				// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
+				// mgr.SetView(tg)
 			}
 		}
 	}

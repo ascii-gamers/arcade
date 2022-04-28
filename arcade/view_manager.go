@@ -66,6 +66,6 @@ func (mgr *ViewManager) Start(v View) {
 			}
 		}
 
-		mgr.view.ProcessEvent(ev)
+		mgr.view.ProcessEvent(ev)		
 	}
 }

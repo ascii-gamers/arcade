@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"time"
 )
 
 const (
@@ -55,23 +56,38 @@ var tron_header = []string{
 	"░█░ █▀▄ █▄█ █░▀█",
 }
 
-
-type Game struct {
-	Name         string
+type PendingGame struct {
+	Name string
 	Code string
-	Private      bool
-	GameType     string
-	Capacity     int
+	Private bool
+	GameType string 
+	Capacity int
 	NumFull      int
-	TerminalSize int
 	PlayerList   []*Player
 	mu           sync.Mutex
+	Host string
+}
+
+type Game[GS any, CS any] struct {
+	Name         string
+	PlayerList   []*Player
+	mu           sync.Mutex
+
+	Me string
+	GameState GS
+	// clientIps []string
+	ClientStates map[string]CS
+	Started bool
+	Host string
+	HostSyncPeriod int 
+	TimestepPeriod int
+	Timestep int
 }
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func CreateGame(name string, private bool, gameType string, capacity int ) *Game {
-	game := Game{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
+func CreatePendingGame(name string, private bool, gameType string, capacity int ) *PendingGame {
+	game := PendingGame{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
 	if private {
 		game.GenerateCode()
 	}
@@ -82,7 +98,7 @@ func GameStart() {
 	fmt.Println("hello world")
 }
 
-func (g *Game) GenerateCode() string{
+func (g *PendingGame) GenerateCode() string{
 	// see if code already exists
 	g.mu.Lock()
 	code := g.Code
@@ -100,8 +116,76 @@ func (g *Game) GenerateCode() string{
 	return code
 }
 
-func (g *Game) AddPlayer(newPlayer *Player) {
+func (g *PendingGame) AddPlayer(newPlayer *Player) {
 	g.mu.Lock()
 	g.PlayerList = append(g.PlayerList, newPlayer)
 	g.mu.Unlock()
+}
+
+
+func CreateGame(pendingGame *PendingGame) {
+	switch pendingGame.GameType {
+	case Tron:
+		mgr.SetView(NewTronGame(pendingGame))
+	}
+}
+
+type Networking struct {
+
+}
+
+var n = Networking{}
+
+func (n Networking) send(ip string, data any) {
+	return;
+}
+
+type ClientUpdateData[CS any] struct {
+	update CS
+}
+
+type GameUpdateData[GS any, CS any] struct {
+	gameUpdate GS
+	clientStates map[string]CS
+}
+
+func (g *Game[GS, CS]) start() {
+	g.Started = true
+	if g.Me == g.Host && g.HostSyncPeriod > 0 {
+		go g.startHostSync()
+	}
+}
+
+func (g *Game[GS, CS]) startHostSync() {
+	for g.Started {
+		time.Sleep(time.Duration(g.HostSyncPeriod))
+		g.sendGameUpdate()
+	}
+}
+
+func (g *Game[GS, CS]) sendClientUpdate(update CS) {
+	g.ClientStates[g.Me] = update
+	for clientIp := range g.ClientStates {
+		n.send(clientIp, update)
+	}
+}
+
+func (g *Game[GS, CS]) sendGameUpdate() {
+	if g.Me == g.Host {
+		for clientIp := range g.ClientStates {
+			if clientIp != g.Me {
+				data := GameUpdateData[GS, CS]{g.GameState, g.ClientStates}
+				n.send(clientIp, data)
+			}
+		}
+	}
+}
+
+func (g *Game[GS, CS]) handleClientUpdate(clientIp string, data ClientUpdateData[CS]) {
+	g.ClientStates[clientIp] = data.update
+}
+
+func (g *Game[GS, CS]) handleGameUpdate(clientIp string, data GameUpdateData[GS, CS]) {
+	g.GameState = data.gameUpdate
+	g.ClientStates = data.clientStates
 }
