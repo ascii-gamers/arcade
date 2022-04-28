@@ -28,8 +28,7 @@ type Client struct {
 	// another client or a distributor.
 	Neighbor bool
 
-	conn    net.Conn
-	connMux sync.Mutex
+	conn net.Conn
 
 	sendCh chan []byte
 
