@@ -104,7 +104,7 @@ func (g *Game[GS, CS]) start() {
 func (g *Game[GS, CS]) startHostSync() {
 	for g.Started {
 		time.Sleep(time.Duration(g.HostSyncPeriod))
-		g.SendGameUpdate()
+		g.sendGameUpdate()
 	}
 }
 
@@ -119,7 +119,7 @@ func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 	}
 }
 
-func (g *Game[GS, CS]) SendGameUpdate() {
+func (g *Game[GS, CS]) sendGameUpdate() {
 	if g.Me != g.HostID {
 		return
 	}
