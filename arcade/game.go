@@ -11,19 +11,27 @@ const (
 	Tron = "Tron"
 )
 
+var pong_header = []string{	
+	"█▀█ █▀█ █▄░█ █▀▀",
+	"█▀▀ █▄█ █░▀█ █▄█",
+}
+
+var tron_header = []string{
+	"▀█▀ █▀█ █▀█ █▄░█",
+	"░█░ █▀▄ █▄█ █░▀█",
+}
+
+
 type Game struct {
 	Name         string
+	Code string
 	Private      bool
 	GameType     string
 	Capacity     int
 	NumFull      int
 	TerminalSize int
-	PlayerList   []Player
+	PlayerList   []*Player
 	mu           sync.Mutex
-}
-
-type Lobby struct {
-	mu sync.Mutex
 }
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -40,7 +48,7 @@ func GenerateCode() {
 	fmt.Println("hello world")
 }
 
-func (g *Game) AddPlayer(newPlayer Player) {
+func (g *Game) AddPlayer(newPlayer *Player) {
 	g.mu.Lock()
 	g.PlayerList = append(g.PlayerList, newPlayer)
 	g.mu.Unlock()

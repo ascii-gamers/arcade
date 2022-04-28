@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"encoding"
+	"fmt"
 	"log"
 	"net"
 	"reflect"
@@ -10,9 +11,26 @@ import (
 	"github.com/google/uuid"
 )
 
+const maxBufferSize = 1024
+
 type Client struct {
-	Addr   string
-	conn   net.Conn
+	// The address to which to send messages in order to reach this client. If
+	// this client is reached through a distributor, this address will be the
+	// address of the distributor.
+	Addr string
+
+	// ID uniquely identifying the client.
+	ID string
+
+	Distributor bool
+
+	// True if this client is directly connected to us, e.g. not through
+	// another client or a distributor.
+	Neighbor bool
+
+	conn    net.Conn
+	connMux sync.Mutex
+
 	sendCh chan []byte
 
 	connectedCh chan bool
@@ -57,10 +75,23 @@ func (c *Client) readPump(startedCh chan bool) {
 			log.Fatal(err)
 		}
 
-		p, err := parseMessage(buf[:n])
+		data := make([]byte, n)
+		copy(data, buf[:n])
+
+		p, err := parseMessage(data)
 
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
+
+		if distributor {
+			fmt.Printf("Received '%s' from %s\n", msg.Type, msg.SenderID[:4])
+
+			if msg.Type == "error" {
+				fmt.Println(p)
+			}
 		}
 
 		// Get message ID and send signal if we're waiting on this one
@@ -77,13 +108,55 @@ func (c *Client) readPump(startedCh chan bool) {
 		// Process message and prepare response
 		var res interface{}
 
-		switch p.(type) {
+		switch p := p.(type) {
+		case GetClientsMessage:
+			res = NewClientsMessage(server.getClients())
 		case PingMessage:
-			res = NewPongMessage()
+			c.ID = p.ID
+			c.Neighbor = true
+
+			server.Lock()
+			server.clients[c.ID] = c
+			server.Unlock()
+
+			res = NewPongMessage(server.ID, server.getClients(), distributor)
 		case PongMessage:
+			c.ID = p.ID
+			c.Distributor = p.Distributor
+			c.Neighbor = true
+
+			server.Lock()
+			server.clients[c.ID] = c
+			server.Unlock()
+
+			server.AddClients(c, p.Clients)
 			c.connectedCh <- true
 		default:
-			res = processMessage(c, p)
+			if msg.RecipientID != server.ID {
+				if !distributor {
+					panic("Uh oh")
+				}
+
+				fmt.Println("Forwarding message to", msg.RecipientID[:4])
+				fmt.Println(p)
+
+				server.RLock()
+				recipient, ok := server.clients[msg.RecipientID]
+				server.RUnlock()
+
+				if ok {
+					recipient.sendCh <- data
+					continue
+				} else {
+					res = NewErrorMessage("Invalid recipient")
+				}
+			} else {
+				if distributor {
+					panic("Recipient: " + msg.RecipientID + ", self: " + server.ID)
+				}
+
+				res = processMessage(c, p)
+			}
 		}
 
 		if res == nil {
@@ -92,17 +165,21 @@ func (c *Client) readPump(startedCh chan bool) {
 			res = NewErrorMessage(err.Error())
 		}
 
+		// Set sender and recipient IDs
+		reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(msg.SenderID))
+		reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(server.ID))
+
 		// Set message ID if there was one in the sent packet
 		reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("ID").Set(reflect.ValueOf(messageID))
 
-		data, err := res.(encoding.BinaryMarshaler).MarshalBinary()
+		resData, err := res.(encoding.BinaryMarshaler).MarshalBinary()
 
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
 
-		c.sendCh <- data
+		c.sendCh <- resData
 	}
 }
 
@@ -111,7 +188,9 @@ func (c *Client) writePump(startedCh chan bool) {
 	startedCh <- true
 
 	for {
-		if _, err := c.conn.Write(<-c.sendCh); err != nil {
+		_, err := c.conn.Write(<-c.sendCh)
+
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -119,6 +198,12 @@ func (c *Client) writePump(startedCh chan bool) {
 
 // send sends a message to the client.
 func (c *Client) send(msg interface{}) {
+	// Set sender ID
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(server.ID))
+
+	// Set recipient ID
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(c.ID))
+
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data
 }

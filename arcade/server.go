@@ -6,23 +6,25 @@ import (
 	"log"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/xtaci/kcp-go/v5"
 )
-
-const maxBufferSize = 1024
 
 type Server struct {
 	sync.RWMutex
 
-	Addr    string
-	clients []*Client
+	Addr string
+	ID   string
+
+	clients map[string]*Client
 }
 
 // NewServer creates the server with a given address.
 func NewServer(addr string) *Server {
 	return &Server{
 		Addr:    addr,
-		clients: make([]*Client, 0),
+		ID:      uuid.NewString(),
+		clients: make(map[string]*Client, 0),
 	}
 }
 
@@ -54,11 +56,7 @@ func (s *Server) connect(c *Client) error {
 	c.start(sess)
 
 	c.connectedCh = make(chan bool)
-	c.send(NewPingMessage())
-
-	s.Lock()
-	s.clients = append(s.clients, c)
-	s.Unlock()
+	c.send(NewPingMessage(server.ID))
 
 	// TODO: timeout if no response
 	if !<-c.connectedCh {
@@ -103,5 +101,37 @@ func (s *Server) start() error {
 		}
 
 		client.start(s)
+	}
+}
+
+func (s *Server) getClients() map[string]float64 {
+	s.RLock()
+	defer s.RUnlock()
+
+	clients := server.clients
+	clientPings := make(map[string]float64, len(clients))
+
+	for i := range clients {
+		if !clients[i].Neighbor || clients[i].Distributor {
+			continue
+		}
+
+		clientPings[clients[i].ID] = 1
+	}
+
+	return clientPings
+}
+
+func (s *Server) AddClients(distributor *Client, clients map[string]float64) {
+	s.Lock()
+	defer s.Unlock()
+
+	for clientID := range clients {
+		s.clients[clientID] = &Client{
+			Addr:            distributor.Addr,
+			ID:              clientID,
+			sendCh:          distributor.sendCh,
+			pendingMessages: make(map[string]chan interface{}),
+		}
 	}
 }

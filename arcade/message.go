@@ -6,8 +6,10 @@ import (
 )
 
 type Message struct {
-	ID   string `json:"id"`
-	Type string `json:"type"`
+	SenderID    string `json:"sender_id"`
+	RecipientID string `json:"recipient_id"`
+	ID          string `json:"id"`
+	Type        string `json:"type"`
 }
 
 func processMessage(from *Client, p interface{}) interface{} {
@@ -29,8 +31,16 @@ func parseMessage(data []byte) (interface{}, error) {
 	}
 
 	switch res.Type {
+	case "clients":
+		p := ClientsMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
 	case "error":
 		p := ErrorMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "get_clients":
+		p := GetClientsMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "hello":
