@@ -3,6 +3,7 @@ package arcade
 import (
 <<<<<<< Updated upstream
 	"fmt"
+	"math/rand"
 	"sync"
 )
 
@@ -37,15 +38,33 @@ type Game struct {
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func CreateGame(name string, private bool, gameType string, capacity int ) *Game {
-	return &Game{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
+	game := Game{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
+	if private {
+		game.GenerateCode()
+	}
+	return &game
 }
 
 func GameStart() {
 	fmt.Println("hello world")
 }
 
-func GenerateCode() {
-	fmt.Println("hello world")
+func (g *Game) GenerateCode() string{
+	// see if code already exists
+	g.mu.Lock()
+	code := g.Code
+	g.mu.Unlock()
+	if len(code) > 0 {
+		return code
+	}
+	for i:= 0; i < 4; i ++ {
+		v := rand.Intn(25)
+		code += string(letters[v])
+	}
+	g.mu.Lock()
+	g.Code = code
+	g.mu.Unlock()
+	return code
 }
 
 func (g *Game) AddPlayer(newPlayer *Player) {
