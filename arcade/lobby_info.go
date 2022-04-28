@@ -6,13 +6,15 @@ import (
 
 type LobbyInfoMessage struct {
 	Message
+	GameInfo *Game
 
 	IP string
 }
 
-func NewLobbyInfoMessage(ip string) *LobbyInfoMessage {
+func NewLobbyInfoMessage(game *Game, ip string) *LobbyInfoMessage {
 	return &LobbyInfoMessage{
 		Message: Message{Type: "lobby_info"},
+		GameInfo: game,
 		IP:      ip,
 	}
 }

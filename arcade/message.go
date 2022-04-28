@@ -51,6 +51,10 @@ func parseMessage(data []byte) (interface{}, error) {
 		p := LobbyInfoMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
+	case "join":
+		p := JoinMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
 	case "ping":
 		p := PingMessage{}
 		json.Unmarshal(data, &p)

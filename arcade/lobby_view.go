@@ -20,7 +20,7 @@ type LobbyView struct {
 
 // const stickmen_list = [][]string{{" o ","/|\\","/ \\"}, {"\\ o /","  |  "," / \\ "}, }
 
-var simple_man = []string {" o ","/|\\","/ \\"};
+// var simple_man = []string {" o ","/|\\","/ \\"};
 
 const (
 	lv_TableX1 = 20
@@ -48,6 +48,7 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 			switch evt.Rune() {
 			case 'c':
 				mgr.SetView(NewGamesListView())
+				// delete game? 
 			case 's':
 				//start game
 			}			
@@ -56,11 +57,15 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 }
 
 func (v *LobbyView) ProcessPacket(p interface{}) interface{} {
-	switch p.(type) {
+	switch p := p.(type) {
 	case HelloMessage:
-		return NewLobbyInfoMessage(server.Addr)
+		return NewLobbyInfoMessage(game, server.Addr)
+	case JoinMessage:
+		if p.Code != game.Code {
+			return NewJoinReplyMessage(ErrWrongCode)
+		} 
+		// add capacity branch
 	}
-
 	return nil
 }
 
