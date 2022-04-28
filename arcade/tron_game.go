@@ -9,7 +9,8 @@ import (
 
 var TRON_COLORS = [8]string{"blue", "red", "green", "purple", "yellow", "orange", "white", "teal"}
 
-type TronDirection int64 
+type TronDirection int64
+
 const (
 	TronUp TronDirection = iota
 	TronRight
@@ -17,22 +18,21 @@ const (
 	TronLeft
 )
 
-
 type TronGameState struct {
-	width int
-	height int
-	ended bool
+	width      int
+	height     int
+	ended      bool
 	collisions [][]bool
 }
 
 type TronClientState struct {
-	timestep int
-	alive bool 
-	color string 
-	pathX []int
-	pathY []int
-	x int 
-	y int
+	timestep  int
+	alive     bool
+	color     string
+	pathX     []int
+	pathY     []int
+	x         int
+	y         int
 	direction TronDirection
 }
 
@@ -40,12 +40,12 @@ type TronGame struct {
 	View
 
 	Game[TronGameState, TronClientState]
-	state TronClientState
+	state    TronClientState
 	renderCh chan int
 }
 
 func NewTronGame(pendingGame *PendingGame) *TronGame {
-	return &TronGame{Game: Game[TronGameState, TronClientState]{PlayerList: pendingGame.PlayerList, Name: pendingGame.Name, Me: server.ID, Host: pendingGame.Host, HostSyncPeriod: 1000, TimestepPeriod: 100, Timestep: 0 }}
+	return &TronGame{Game: Game[TronGameState, TronClientState]{PlayerList: pendingGame.PlayerList, Name: pendingGame.Name, Me: server.ID, Host: pendingGame.Host, HostSyncPeriod: 1000, TimestepPeriod: 100, Timestep: 0}}
 }
 
 func (tg *TronGame) Init() {
@@ -68,7 +68,7 @@ func (tg *TronGame) Init() {
 	tg.state = clientState[tg.Me]
 	tg.renderCh = make(chan int)
 
-	go func () {
+	go func() {
 		for {
 			tg.updateSelf()
 			time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
@@ -79,11 +79,10 @@ func (tg *TronGame) Init() {
 	}()
 }
 
-func (tg *TronGame) ProcessEvent(ev tcell.Event){
+func (tg *TronGame) ProcessEvent(ev tcell.Event) {
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
 		tg.ProcessEventKey(ev)
-
 
 	}
 }
@@ -102,8 +101,8 @@ func (tg *TronGame) ProcessEventKey(ev *tcell.EventKey) {
 	}
 }
 
-func ProcessPacket(p interface{}) {
-	return 
+func ProcessPacket(from *Client, p interface{}) {
+	return
 }
 
 func (tg *TronGame) Render(s *Screen) {
@@ -111,8 +110,8 @@ func (tg *TronGame) Render(s *Screen) {
 
 	s.DrawLine(0, 0, tg.GameState.width, 0, style, true)
 	s.DrawLine(tg.GameState.width, 0, tg.GameState.width, tg.GameState.height, style, true)
-	s.DrawLine( 0, tg.GameState.height, tg.GameState.width, tg.GameState.height,style, true)
-	s.DrawLine( 0, 0, 0, tg.GameState.height, style, true)
+	s.DrawLine(0, tg.GameState.height, tg.GameState.width, tg.GameState.height, style, true)
+	s.DrawLine(0, 0, 0, tg.GameState.height, style, true)
 
 	for _, client := range tg.ClientStates {
 		for i := 0; i < len(client.pathX); i++ {
@@ -123,7 +122,7 @@ func (tg *TronGame) Render(s *Screen) {
 		} else {
 			s.SetContent(client.x, client.y, '😵', nil, style)
 		}
-		
+
 	}
 }
 
@@ -145,7 +144,7 @@ func (tg *TronGame) updateSelf() {
 	case TronLeft:
 		x -= 1
 	}
-	if tg.isOutOfBounds(x, y) || tg.GameState.collisions[x][y]{
+	if tg.isOutOfBounds(x, y) || tg.GameState.collisions[x][y] {
 		tg.state.alive = false
 	}
 
@@ -179,35 +178,35 @@ func (tg *TronGame) updateOthers() {
 
 func (tg *TronGame) clientPredict(state TronClientState, targetTimestep int) TronClientState {
 	if targetTimestep <= state.timestep {
-		return state 
+		return state
 	}
 	delta := targetTimestep - state.timestep
 
 	newPathX := []int{}
 	newPathY := []int{}
-	
-	lastX := state.pathX[len(state.pathX) - 1]
-	lastY := state.pathY[len(state.pathY) - 1]
+
+	lastX := state.pathX[len(state.pathX)-1]
+	lastY := state.pathY[len(state.pathY)-1]
 	for i := 1; i <= delta; i++ {
 		switch state.direction {
 		case TronUp:
 			newPathX = append(newPathX, lastX)
-			newPathY = append(newPathY, lastY - i)
+			newPathY = append(newPathY, lastY-i)
 		case TronRight:
-			newPathX = append(newPathX, lastX + i)
+			newPathX = append(newPathX, lastX+i)
 			newPathY = append(newPathY, lastY)
 		case TronDown:
 			newPathX = append(newPathX, lastX)
-			newPathY = append(newPathY, lastY + i)
+			newPathY = append(newPathY, lastY+i)
 		case TronLeft:
-			newPathX = append(newPathX, lastX - i)
+			newPathX = append(newPathX, lastX-i)
 			newPathY = append(newPathY, lastY)
 		}
 	}
 	// fmt.Print(newPathX, newPathY)
 	state.pathX = append(state.pathX, newPathX...)
 	state.pathY = append(state.pathY, newPathY...)
-	state.x = newPathX[len(newPathX) - 1]
-	state.y = newPathY[len(newPathY) - 1]
+	state.x = newPathX[len(newPathX)-1]
+	state.y = newPathY[len(newPathY)-1]
 	return state
 }

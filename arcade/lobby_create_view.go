@@ -10,25 +10,25 @@ import (
 
 type LobbyCreateView struct {
 	View
-	selectedRow int	
+	selectedRow int
 }
+
 const lcv_borderIndex = 28
 
 var lcv_game_input_default = "[i] to edit, [enter] to save"
 
-var lcv_privateOpt = [2]string {"no", "yes"}
-var lcv_gameOpt = [2]string {Tron, Pong}
+var lcv_privateOpt = [2]string{"no", "yes"}
+var lcv_gameOpt = [2]string{Tron, Pong}
 
-var lcv_tronPlayerOpt = [7]string {"2","3","4","5","6","7","8"}
-var lcv_pongPlayerOpt = [1]string {"2"}
-var lcv_playerOpt = [2][]string {lcv_tronPlayerOpt[:], lcv_pongPlayerOpt[:]}
+var lcv_tronPlayerOpt = [7]string{"2", "3", "4", "5", "6", "7", "8"}
+var lcv_pongPlayerOpt = [1]string{"2"}
+var lcv_playerOpt = [2][]string{lcv_tronPlayerOpt[:], lcv_pongPlayerOpt[:]}
 
 var lcv_game_name = ""
 var lcv_game_user_input_indices = [4]int{-1, 0, 0, 0}
-var lcv_game_input_categories = [4]string {"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
+var lcv_game_input_categories = [4]string{"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
 var lcv_editing = false
 var lcv_inputString = ""
-
 
 const (
 	lcv_lobbyTableX1 = 16
@@ -39,7 +39,7 @@ const (
 
 var create_game_header = []string{
 	"| █▀▀ █▀█ █▀▀ ▄▀█ ▀█▀ █▀▀   █▀▀ ▄▀█ █▄█ █▀▀ |",
-	"| █▄▄ █▀▄ ██▄ █▀█  █  ██▄   █▄█ █▀█ █ █ ██▄ |",										  
+	"| █▄▄ █▀▄ ██▄ █▀█  █  ██▄   █▄█ █▀█ █ █ ██▄ |",
 }
 
 var lcv_game_footer = []string{
@@ -80,7 +80,7 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 				lcv_game_user_input_indices[v.selectedRow] = 0
 			}
 			// if game type changes, reset player num
-			if v.selectedRow == 2{
+			if v.selectedRow == 2 {
 				lcv_game_user_input_indices[3] = 0
 			}
 		case tcell.KeyRight:
@@ -95,7 +95,7 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 				lcv_game_user_input_indices[v.selectedRow] = maxLength - 1
 			}
 			// if game type changes, reset player num
-			if v.selectedRow == 2{
+			if v.selectedRow == 2 {
 				lcv_game_user_input_indices[3] = 0
 			}
 		case tcell.KeyRune:
@@ -115,9 +115,9 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 					pendingGame = CreatePendingGame(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar)
 					fmt.Println(server.clients)
 					hostPlayer := Player{
-						Client: *server.clients[server.ID],
+						Client:   *server.clients[server.ID],
 						Username: "bob123",
-						Host: true,
+						Host:     true,
 					}
 					pendingGame.AddPlayer(&hostPlayer)
 					mgr.SetView(NewLobbyView())
@@ -128,12 +128,12 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 			} else {
 				lcv_inputString += string(evt.Rune())
 			}
-			
+
 		}
 	}
 }
 
-func (v *LobbyCreateView) ProcessPacket(p interface{}) interface{} {
+func (v *LobbyCreateView) ProcessPacket(from *Client, p interface{}) interface{} {
 	return nil
 }
 
@@ -168,7 +168,7 @@ func (v *LobbyCreateView) Render(s *Screen) {
 	s.DrawText((width-len(lcv_game_footer[0]))/2, height-2, sty_game, lcv_game_footer[0])
 
 	// Draw column headers
-	
+
 	// s.DrawText(gameColX, 5, sty, "GAME")
 	// s.DrawText(playersColX, 5, sty, "PLAYERS")
 	// s.DrawText(pingColX, 5, sty, "PING")
@@ -192,7 +192,7 @@ func (v *LobbyCreateView) Render(s *Screen) {
 		}
 
 		s.DrawEmpty(lcv_lobbyTableX1, y, lcv_lobbyTableX1, y, rowSty)
-		s.DrawText(lcv_lobbyTableX1 + 1, y, rowSty, inputField)
+		s.DrawText(lcv_lobbyTableX1+1, y, rowSty, inputField)
 		s.DrawEmpty(lcv_lobbyTableX1+len(inputField)+1, y, lcv_borderIndex-1, y, rowSty)
 
 		categoryInputString := lcv_game_name
@@ -202,9 +202,9 @@ func (v *LobbyCreateView) Render(s *Screen) {
 		// regarding name
 		switch inputField {
 		case "NAME":
-			if lcv_editing && i == v.selectedRow{
+			if lcv_editing && i == v.selectedRow {
 				categoryInputString = lcv_inputString
-			} else if lcv_game_name == ""{
+			} else if lcv_game_name == "" {
 				categoryInputString = lcv_game_input_default
 			}
 		case "PRIVATE?":
@@ -219,7 +219,7 @@ func (v *LobbyCreateView) Render(s *Screen) {
 		}
 
 		if categoryIndex != -1 {
-			if categoryIndex < thisCategoryMaxLength - 1 {
+			if categoryIndex < thisCategoryMaxLength-1 {
 				categoryInputString += " →"
 			}
 			if categoryIndex > 0 {
@@ -227,7 +227,7 @@ func (v *LobbyCreateView) Render(s *Screen) {
 			}
 		}
 
-		categoryX := (lcv_lobbyTableX2 - lcv_borderIndex - utf8.RuneCountInString(categoryInputString)) / 2 + lcv_borderIndex
+		categoryX := (lcv_lobbyTableX2-lcv_borderIndex-utf8.RuneCountInString(categoryInputString))/2 + lcv_borderIndex
 		s.DrawEmpty(lcv_borderIndex+1, y, categoryX-1, y, rowSty)
 		s.DrawText(categoryX, y, rowSty, categoryInputString)
 		s.DrawEmpty(categoryX+utf8.RuneCountInString(categoryInputString), y, lcv_lobbyTableX2-1, y, rowSty)
@@ -236,6 +236,6 @@ func (v *LobbyCreateView) Render(s *Screen) {
 	}
 
 	// // Draw selected row
-	
+
 	// v.mu.RUnlock()
 }

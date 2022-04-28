@@ -7,6 +7,6 @@ import (
 type View interface {
 	Init()
 	ProcessEvent(ev tcell.Event)
-	ProcessPacket(p interface{}) interface{}
+	ProcessPacket(from *Client, p interface{}) interface{}
 	Render(s *Screen)
 }

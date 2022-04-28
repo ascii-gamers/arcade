@@ -100,7 +100,7 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 	}
 }
 
-func (v *GamesListView) ProcessPacket(p interface{}) interface{} {
+func (v *GamesListView) ProcessPacket(from *Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case LobbyInfoMessage:
 		v.mu.Lock()

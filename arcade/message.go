@@ -13,7 +13,7 @@ type Message struct {
 }
 
 func processMessage(from *Client, p interface{}) interface{} {
-	ret := mgr.view.ProcessPacket(p)
+	ret := mgr.view.ProcessPacket(from, p)
 
 	mgr.view.Render(mgr.screen)
 	mgr.screen.Show()
