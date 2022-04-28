@@ -84,6 +84,17 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 				// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
 				// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
 				// mgr.SetView(tg)
+			case 'j':
+				// v.mu.Lock()
+				// firstKey := ""
+				// firstValue := LobbyInfoMessage{}
+				// for key, value := range v.servers {
+				// 	firstKey = key
+				// 	firstValue = value
+				// 	break
+				// }
+				// v.mu.Unlock()
+				// client.send(NewJoinMessage(""))
 			}
 		}
 	}

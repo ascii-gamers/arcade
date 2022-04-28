@@ -60,9 +60,9 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 func (v *LobbyView) ProcessPacket(p interface{}) interface{} {
 	switch p := p.(type) {
 	case HelloMessage:
-		return NewLobbyInfoMessage(game, server.Addr)
+		return NewLobbyInfoMessage(pendingGame, server.Addr)
 	case JoinMessage:
-		if p.Code != game.Code {
+		if p.Code != pendingGame.Code {
 			return NewJoinReplyMessage(ErrWrongCode)
 		} 
 		// add capacity branch
