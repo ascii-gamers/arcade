@@ -6,11 +6,18 @@ import (
 
 type PongMessage struct {
 	Message
+
+	ID          string             `json:"id"`
+	Clients     map[string]float64 `json:"clients"`
+	Distributor bool               `json:"distributor"`
 }
 
-func NewPongMessage() *PongMessage {
+func NewPongMessage(id string, clients map[string]float64, distributor bool) *PongMessage {
 	return &PongMessage{
-		Message: Message{Type: "pong"},
+		Message:     Message{Type: "pong"},
+		ID:          id,
+		Clients:     clients,
+		Distributor: distributor,
 	}
 }
 
