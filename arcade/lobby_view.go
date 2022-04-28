@@ -50,6 +50,7 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 				mgr.SetView(NewGamesListView())
 			case 's':
 				//start game
+				CreateGame(pendingGame)
 			}			
 		}
 	}
@@ -74,7 +75,7 @@ func (v *LobbyView) Render(s *Screen) {
 	// Draw GAME header
 
 	game_header := pong_header
-	if game.GameType == "tron" {
+	if pendingGame.GameType == Tron {
 		game_header = tron_header
 	}  
 	headerX := (width - utf8.RuneCountInString(game_header[0])) / 2
@@ -88,22 +89,22 @@ func (v *LobbyView) Render(s *Screen) {
 
 	// name
 	nameHeader := "Name: "
-	nameString := game.Name
+	nameString := pendingGame.Name
 	s.DrawText((width-len(nameHeader + nameString))/2, lv_TableY1+1, sty, nameHeader)
 	s.DrawText((width-len(nameHeader + nameString))/2+utf8.RuneCountInString(nameHeader), lv_TableY1+1, sty_bold, nameString)
 
 	// private
 	privateHeader := "Visibility: "
 	privateString := "public"
-	if game.Private {
-		privateString = "private, Join Code: " + game.Code
+	if pendingGame.Private {
+		privateString = "private, Join Code: " + pendingGame.Code
 	} 
 	s.DrawText((width-len(privateHeader + privateString))/2, lv_TableY1+2, sty, privateHeader)
 	s.DrawText((width-len(privateHeader + privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)
 
 	// capacity
 	capacityHeader := "Game capacity: "
-	capacityString := fmt.Sprintf("(%v/%v)", game.NumFull, game.Capacity)
+	capacityString := fmt.Sprintf("(%v/%v)", pendingGame.NumFull, pendingGame.Capacity)
 	s.DrawText((width-len(capacityHeader + capacityString))/2, lv_TableY1+3, sty, capacityHeader)
 	s.DrawText((width-len(capacityHeader + capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 

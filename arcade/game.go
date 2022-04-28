@@ -1,10 +1,10 @@
 package arcade
 
 import (
-<<<<<<< Updated upstream
 	"fmt"
 	"math/rand"
 	"sync"
+	"time"
 )
 
 const (
@@ -22,23 +22,38 @@ var tron_header = []string{
 	"░█░ █▀▄ █▄█ █░▀█",
 }
 
-
-type Game struct {
-	Name         string
+type PendingGame struct {
+	Name string
 	Code string
-	Private      bool
-	GameType     string
-	Capacity     int
+	Private bool
+	GameType string 
+	Capacity int
 	NumFull      int
-	TerminalSize int
 	PlayerList   []*Player
 	mu           sync.Mutex
+	Host string
+}
+
+type Game[GS any, CS any] struct {
+	Name         string
+	PlayerList   []*Player
+	mu           sync.Mutex
+
+	Me string
+	GameState GS
+	// clientIps []string
+	ClientStates map[string]CS
+	Started bool
+	Host string
+	HostSyncPeriod int 
+	TimestepPeriod int
+	Timestep int
 }
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func CreateGame(name string, private bool, gameType string, capacity int ) *Game {
-	game := Game{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
+func CreatePendingGame(name string, private bool, gameType string, capacity int ) *PendingGame {
+	game := PendingGame{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
 	if private {
 		game.GenerateCode()
 	}
@@ -49,7 +64,7 @@ func GameStart() {
 	fmt.Println("hello world")
 }
 
-func (g *Game) GenerateCode() string{
+func (g *PendingGame) GenerateCode() string{
 	// see if code already exists
 	g.mu.Lock()
 	code := g.Code
@@ -67,14 +82,19 @@ func (g *Game) GenerateCode() string{
 	return code
 }
 
-func (g *Game) AddPlayer(newPlayer *Player) {
+func (g *PendingGame) AddPlayer(newPlayer *Player) {
 	g.mu.Lock()
 	g.PlayerList = append(g.PlayerList, newPlayer)
 	g.mu.Unlock()
 }
-=======
-	"time"
-)
+
+
+func CreateGame(pendingGame *PendingGame) {
+	switch pendingGame.GameType {
+	case Tron:
+		mgr.SetView(NewTronGame(pendingGame))
+	}
+}
 
 type Networking struct {
 
@@ -95,45 +115,32 @@ type GameUpdateData[GS any, CS any] struct {
 	clientStates map[string]CS
 }
 
-type Game[GS any, CS any] struct {
-	me string
-	gameState GS
-	clientIps []string
-	clientStates map[string]CS
-	started bool
-	capacity int
-	host string
-	hostSyncPeriod int 
-	timestepPeriod int
-	timestep int
-}
-
 func (g *Game[GS, CS]) start() {
-	g.started = true
-	if g.me == g.host && g.hostSyncPeriod > 0 {
+	g.Started = true
+	if g.Me == g.Host && g.HostSyncPeriod > 0 {
 		go g.startHostSync()
 	}
 }
 
 func (g *Game[GS, CS]) startHostSync() {
-	for g.started {
-		time.Sleep(time.Duration(g.hostSyncPeriod))
+	for g.Started {
+		time.Sleep(time.Duration(g.HostSyncPeriod))
 		g.sendGameUpdate()
 	}
 }
 
 func (g *Game[GS, CS]) sendClientUpdate(update CS) {
-	g.clientStates[g.me] = update
-	for _, clientIp := range g.clientIps {
+	g.ClientStates[g.Me] = update
+	for clientIp := range g.ClientStates {
 		n.send(clientIp, update)
 	}
 }
 
 func (g *Game[GS, CS]) sendGameUpdate() {
-	if g.me == g.host {
-		for _, clientIp := range g.clientIps {
-			if clientIp != g.me {
-				data := GameUpdateData[GS, CS]{g.gameState, g.clientStates}
+	if g.Me == g.Host {
+		for clientIp := range g.ClientStates {
+			if clientIp != g.Me {
+				data := GameUpdateData[GS, CS]{g.GameState, g.ClientStates}
 				n.send(clientIp, data)
 			}
 		}
@@ -141,11 +148,10 @@ func (g *Game[GS, CS]) sendGameUpdate() {
 }
 
 func (g *Game[GS, CS]) handleClientUpdate(clientIp string, data ClientUpdateData[CS]) {
-	g.clientStates[clientIp] = data.update
+	g.ClientStates[clientIp] = data.update
 }
 
 func (g *Game[GS, CS]) handleGameUpdate(clientIp string, data GameUpdateData[GS, CS]) {
-	g.gameState = data.gameUpdate
-	g.clientStates = data.clientStates
+	g.GameState = data.gameUpdate
+	g.ClientStates = data.clientStates
 }
->>>>>>> Stashed changes

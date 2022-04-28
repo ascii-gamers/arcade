@@ -9,7 +9,7 @@ var distributor = false
 var mgr = NewViewManager()
 var server *Server
 var hostPort int
-var game *Game
+var pendingGame *PendingGame
 
 func Start() {
 	if len(os.Args) > 1 && (os.Args[1] == "-d" || os.Args[1] == "--distributor") {

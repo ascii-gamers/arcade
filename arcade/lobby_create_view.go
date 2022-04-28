@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"fmt"
 	"strconv"
 	"unicode/utf8"
 
@@ -16,7 +17,7 @@ const lcv_borderIndex = 28
 var lcv_game_input_default = "[i] to edit, [enter] to save"
 
 var lcv_privateOpt = [2]string {"no", "yes"}
-var lcv_gameOpt = [2]string {"tron", "pong"}
+var lcv_gameOpt = [2]string {Tron, Pong}
 
 var lcv_tronPlayerOpt = [7]string {"2","3","4","5","6","7","8"}
 var lcv_pongPlayerOpt = [1]string {"2"}
@@ -111,7 +112,14 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 						}
 					}
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
-					game = CreateGame(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar)
+					pendingGame = CreatePendingGame(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar)
+					fmt.Println(server.clients)
+					hostPlayer := Player{
+						Client: *server.clients[server.ID],
+						Username: "bob123",
+						Host: true,
+					}
+					pendingGame.AddPlayer(&hostPlayer)
 					mgr.SetView(NewLobbyView())
 				case 'i':
 					lcv_editing = true
