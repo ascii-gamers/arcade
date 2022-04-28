@@ -116,9 +116,9 @@ func (g *PendingGame) GenerateCode() string{
 	return code
 }
 
-func (g *PendingGame) AddPlayer(newPlayer *Player) {
+func (g *PendingGame) AddPlayer(newPlayer Player) {
 	g.mu.Lock()
-	g.PlayerList = append(g.PlayerList, newPlayer)
+	g.PlayerList = append(g.PlayerList, &newPlayer)
 	g.mu.Unlock()
 }
 

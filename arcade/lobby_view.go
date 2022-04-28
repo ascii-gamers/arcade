@@ -62,9 +62,14 @@ func (v *LobbyView) ProcessPacket(from *Client, p interface{}) interface{} {
 	case HelloMessage:
 		return NewLobbyInfoMessage(pendingGame, server.Addr)
 	case JoinMessage:
-		if p.Code != pendingGame.Code {
-			return NewJoinReplyMessage(ErrWrongCode)
-		}
+		pendingGame.mu.Lock()
+		pendingGame.AddPlayer(p.Player)
+		pendingGame.NumFull++
+		pendingGame.mu.Unlock()
+		// deal with private games later
+		// if p.Code != pendingGame.Code {
+		// 	return NewJoinReplyMessage(ErrWrongCode)
+		// }
 		// add capacity branch
 	}
 	return nil

@@ -119,7 +119,7 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 						Username: "bob123",
 						Host:     true,
 					}
-					pendingGame.AddPlayer(&hostPlayer)
+					pendingGame.AddPlayer(hostPlayer)
 					mgr.SetView(NewLobbyView())
 				case 'i':
 					lcv_editing = true

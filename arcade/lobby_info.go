@@ -13,9 +13,9 @@ type LobbyInfoMessage struct {
 
 func NewLobbyInfoMessage(game *PendingGame, ip string) *LobbyInfoMessage {
 	return &LobbyInfoMessage{
-		Message: Message{Type: "lobby_info"},
+		Message:  Message{Type: "lobby_info"},
 		GameInfo: game,
-		IP:      ip,
+		IP:       ip,
 	}
 }
 

@@ -13,6 +13,7 @@ type GamesListView struct {
 	mu sync.RWMutex
 
 	servers     map[string]LobbyInfoMessage
+	clientsByIP map[string]*Client
 	selectedRow int
 }
 
@@ -39,7 +40,8 @@ const (
 
 func NewGamesListView() *GamesListView {
 	return &GamesListView{
-		servers: make(map[string]LobbyInfoMessage),
+		servers:     make(map[string]LobbyInfoMessage),
+		clientsByIP: make(map[string]*Client),
 	}
 }
 
@@ -85,16 +87,24 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 				// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
 				// mgr.SetView(tg)
 			case 'j':
-				// v.mu.Lock()
-				// firstKey := ""
-				// firstValue := LobbyInfoMessage{}
-				// for key, value := range v.servers {
-				// 	firstKey = key
-				// 	firstValue = value
-				// 	break
-				// }
-				// v.mu.Unlock()
-				// client.send(NewJoinMessage(""))
+				joinPlayer := Player{
+					Client:   *server.clients[server.ID],
+					Username: "joiningjoanna",
+					Host:     false,
+				}
+				v.mu.Lock()
+				firstKey := ""
+				firstValue := LobbyInfoMessage{}
+				for key, value := range v.servers {
+					firstKey = key
+					firstValue = value
+					break
+				}
+				if firstKey != "" {
+					thisClient := v.clientsByIP[firstKey]
+					v.mu.Unlock()
+					thisClient.send(NewJoinMessage(firstValue.GameInfo.Code, joinPlayer))
+				}
 			}
 		}
 	}
@@ -105,6 +115,7 @@ func (v *GamesListView) ProcessPacket(from *Client, p interface{}) interface{} {
 	case LobbyInfoMessage:
 		v.mu.Lock()
 		v.servers[p.IP] = p
+		v.clientsByIP[p.IP] = from
 		v.mu.Unlock()
 	}
 
