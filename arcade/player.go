@@ -10,13 +10,12 @@ const (
 )
 
 type Player struct {
-	Client
+	ClientID string
 	Username string
 	Status   string
-	Host bool
+	Host     bool
 }
 
 func PlayerStart() {
 	fmt.Println("hello world")
 }
-

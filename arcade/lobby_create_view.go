@@ -112,14 +112,8 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 						}
 					}
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
-					pendingGame = CreatePendingGame(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar)
+					lobby = NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, server.ID)
 					fmt.Println(server.clients)
-					hostPlayer := Player{
-						Client:   *server.clients[server.ID],
-						Username: "bob123",
-						Host:     true,
-					}
-					pendingGame.AddPlayer(hostPlayer)
 					mgr.SetView(NewLobbyView())
 				case 'i':
 					lcv_editing = true

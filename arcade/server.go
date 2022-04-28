@@ -77,6 +77,19 @@ func (s *Server) startWithNextOpenPort() {
 	}
 }
 
+func (s *Server) GetClient(clientID string) (*Client, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	client, ok := s.clients[clientID]
+
+	if !ok {
+		return nil, errors.New("Client not found")
+	}
+
+	return client, nil
+}
+
 // startServer starts listening for connections on a given address.
 func (s *Server) start() error {
 	listener, err := kcp.Listen(s.Addr)
@@ -147,4 +160,3 @@ func (s *Server) SendToAllClients(msg interface{}) {
 		client.send(msg)
 	}
 }
-

@@ -6,16 +6,13 @@ import (
 
 type LobbyInfoMessage struct {
 	Message
-	GameInfo *PendingGame
-
-	IP string
+	Lobby *Lobby
 }
 
-func NewLobbyInfoMessage(game *PendingGame, ip string) *LobbyInfoMessage {
+func NewLobbyInfoMessage(lobby *Lobby) *LobbyInfoMessage {
 	return &LobbyInfoMessage{
-		Message:  Message{Type: "lobby_info"},
-		GameInfo: game,
-		IP:       ip,
+		Message: Message{Type: "lobby_info"},
+		Lobby:   lobby,
 	}
 }
 

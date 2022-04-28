@@ -2,7 +2,6 @@ package arcade
 
 import (
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 )
@@ -56,29 +55,17 @@ var tron_header = []string{
 	"░█░ █▀▄ █▄█ █░▀█",
 }
 
-type PendingGame struct {
-	Name       string
-	Code       string
-	Private    bool
-	GameType   string
-	Capacity   int
-	NumFull    int
-	PlayerList []*Player
-	mu         sync.Mutex
-	Host       string
-}
-
 type Game[GS any, CS any] struct {
-	Name       string
-	PlayerList []*Player
-	mu         sync.Mutex
+	Name      string
+	PlayerIDs []string
+	mu        sync.Mutex
 
 	Me        string
 	GameState GS
 	// clientIps []string
 	ClientStates   map[string]CS
 	Started        bool
-	Host           string
+	HostID         string
 	HostSyncPeriod int
 	TimestepPeriod int
 	Timestep       int
@@ -86,46 +73,14 @@ type Game[GS any, CS any] struct {
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func CreatePendingGame(name string, private bool, gameType string, capacity int) *PendingGame {
-	game := PendingGame{Name: name, Private: private, GameType: gameType, Capacity: capacity, NumFull: 1}
-	if private {
-		game.GenerateCode()
-	}
-	return &game
-}
-
 func GameStart() {
 	fmt.Println("hello world")
 }
 
-func (g *PendingGame) GenerateCode() string {
-	// see if code already exists
-	g.mu.Lock()
-	code := g.Code
-	g.mu.Unlock()
-	if len(code) > 0 {
-		return code
-	}
-	for i := 0; i < 4; i++ {
-		v := rand.Intn(25)
-		code += string(letters[v])
-	}
-	g.mu.Lock()
-	g.Code = code
-	g.mu.Unlock()
-	return code
-}
-
-func (g *PendingGame) AddPlayer(newPlayer Player) {
-	g.mu.Lock()
-	g.PlayerList = append(g.PlayerList, &newPlayer)
-	g.mu.Unlock()
-}
-
-func CreateGame(pendingGame *PendingGame) {
-	switch pendingGame.GameType {
+func NewGame(lobby *Lobby) {
+	switch lobby.GameType {
 	case Tron:
-		mgr.SetView(NewTronGame(pendingGame))
+		mgr.SetView(NewTronGame(lobby))
 	}
 }
 
@@ -141,7 +96,7 @@ type GameUpdateData[GS any, CS any] struct {
 
 func (g *Game[GS, CS]) start() {
 	g.Started = true
-	if g.Me == g.Host && g.HostSyncPeriod > 0 {
+	if g.Me == g.HostID && g.HostSyncPeriod > 0 {
 		go g.startHostSync()
 	}
 }
@@ -164,7 +119,7 @@ func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 }
 
 func (g *Game[GS, CS]) sendGameUpdate() {
-	if g.Me == g.Host {
+	if g.Me == g.HostID {
 		server.RLock()
 		for clientId := range g.ClientStates {
 			if client, ok := server.clients[clientId]; ok {
