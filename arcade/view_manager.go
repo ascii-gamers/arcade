@@ -31,11 +31,12 @@ func (mgr *ViewManager) SetView(v View) {
 
 func (mgr *ViewManager) Start(v View) {
 	s, err := tcell.NewScreen()
-	mgr.screen = &Screen{s}
 
 	if err != nil {
 		panic(err)
 	}
+
+	mgr.screen = &Screen{s}
 
 	if err := mgr.screen.Init(); err != nil {
 		panic(err)
@@ -67,6 +68,7 @@ func (mgr *ViewManager) Start(v View) {
 			}
 		}
 
+		// Send event to current view
 		mgr.view.ProcessEvent(ev)
 	}
 }
@@ -77,11 +79,7 @@ func (mgr *ViewManager) RequestRender() {
 
 	if width < displayWidth || height < displayHeight {
 		warning := "Please make your terminal window larger!"
-		warningX := (width - len(warning)) / 2
-
-		for col := range warning {
-			mgr.screen.SetContent(warningX+col, height/2-1, rune(warning[col]), nil, tcell.StyleDefault)
-		}
+		mgr.screen.DrawText((displayWidth-len(warning))/2, displayHeight/2-1, tcell.StyleDefault, warning)
 	} else {
 		mgr.view.Render(mgr.screen)
 	}

@@ -80,7 +80,7 @@ func GameStart() {
 func NewGame(lobby *Lobby) {
 	switch lobby.GameType {
 	case Tron:
-		mgr.SetView(NewTronGame(lobby))
+		mgr.SetView(NewTronGameView(lobby))
 	}
 }
 
