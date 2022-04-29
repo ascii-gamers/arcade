@@ -39,7 +39,16 @@ const (
 	tableY1 = 7
 	tableX2 = 76
 	tableY2 = 19
+
+	joinbox_X1 = 20
+	joinbox_Y1 = 9
+	joinbox_X2 = 59
+	joinbox_Y2 = 12
 )
+
+var glv_code_input_string = ""
+var glv_code = ""
+var glv_code_editing = false
 
 func NewGamesListView() *GamesListView {
 	return &GamesListView{
@@ -79,57 +88,72 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 			if v.selectedRow < 0 {
 				v.selectedRow = 0
 			}
+		case tcell.KeyBackspace:
+			if glv_join_box != "" {
+				glv_code_input_string = glv_code_input_string[:len(glv_code_input_string)-1]
+			}
 		case tcell.KeyEnter:
 			if glv_join_box == "join_code" {
-				code := "hello"
-				//blahblah 
-				selectedLobby := v.lobbies[selectedLobbyKey]
-				self, _ := server.GetClient(selectedLobby.HostID)
+				if len(glv_code_input_string) == 4 {
+					glv_code = glv_code_input_string
+					selectedLobby := v.lobbies[selectedLobbyKey]
+					self, _ := server.GetClient(selectedLobby.HostID)
 
-				joinPlayer := Player{
-					ClientID: server.ID,
-					Username: "joiningjoanna",
-					Host:     false,
+					joinPlayer := Player{
+						ClientID: server.ID,
+						Username: "joiningjoanna",
+						Host:     false,
+					}
+					go self.Send(NewJoinMessage(glv_code, joinPlayer))
+				} else {
+					glv_join_box = "join_code_short"
 				}
-				go self.Send(NewJoinMessage(code, joinPlayer))
+
 			}
 		case tcell.KeyRune:
-			switch evt.Rune() {
-			case 'c':
-				mgr.SetView(NewLobbyCreateView())
-			case 't':
-				// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
-				// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
-				// mgr.SetView(tg)
-			case 'j':
-				if len(v.lobbies) != 0 {
-					v.mu.RLock()
+			if glv_join_box != "" {
+				switch evt.Rune() {
+				case 'c':
+					glv_join_box = ""
+					mgr.SetView(NewLobbyCreateView())
+				case 't':
+					// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
+					// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
+					// mgr.SetView(tg)
+				case 'j':
+					if len(v.lobbies) != 0 {
+						v.mu.RLock()
 
-					keys := make([]string, 0, len(v.lobbies))
+						keys := make([]string, 0, len(v.lobbies))
 
-					for k := range v.lobbies{
-						keys = append(keys, k)
-					}
-					sort.Strings(keys)
-
-					selectedLobbyKey = keys[v.selectedRow]
-					selectedLobby := v.lobbies[keys[v.selectedRow]]
-					if selectedLobby.Private {
-						glv_join_box = "join_code"
-					} else {
-						self, _ := server.GetClient(selectedLobby.HostID)
-
-						joinPlayer := Player{
-							ClientID: server.ID,
-							Username: "joiningjoanna",
-							Host:     false,
+						for k := range v.lobbies {
+							keys = append(keys, k)
 						}
-						go self.Send(NewJoinMessage("", joinPlayer))
+						sort.Strings(keys)
+
+						selectedLobbyKey = keys[v.selectedRow]
+						selectedLobby := v.lobbies[keys[v.selectedRow]]
+						if selectedLobby.Private {
+							glv_join_box = "join_code"
+						} else {
+							self, _ := server.GetClient(selectedLobby.HostID)
+
+							joinPlayer := Player{
+								ClientID: server.ID,
+								Username: "joiningjoanna",
+								Host:     false,
+							}
+							go self.Send(NewJoinMessage("", joinPlayer))
+						}
+						v.mu.RUnlock()
+
 					}
-					v.mu.RUnlock()
 
 				}
-				
+			} else {
+				if len(glv_code_input_string) < 4 {
+					glv_code_input_string += string(evt.Rune())
+				}
 			}
 		}
 	}
@@ -176,18 +200,19 @@ func (v *GamesListView) Render(s *Screen) {
 
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
+	sty_bold := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorDarkGreen)
 
 	i := 0
 	v.mu.RLock()
 
 	keys := make([]string, 0, len(v.lobbies))
 
-	for k := range v.lobbies{
-        keys = append(keys, k)
-    }
-    sort.Strings(keys)
+	for k := range v.lobbies {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-	for _,lobbyID := range keys {
+	for _, lobbyID := range keys {
 		lobby := v.lobbies[lobbyID]
 		y := tableY1 + i
 		rowSty := sty
@@ -214,5 +239,16 @@ func (v *GamesListView) Render(s *Screen) {
 		i++
 	}
 
+	if glv_join_box == "join_code" {
+		selectedLobby := v.lobbies[selectedLobbyKey]
+		// Draw box surrounding games list
+		s.DrawBox(joinbox_X1, joinbox_Y1, joinbox_X2, joinbox_Y2, sty, true)
+
+		joinheader := "Joining private game " + selectedLobby.Name
+		s.DrawText((width - len(joinheader)), joinbox_Y1+1, sty_bold, joinheader)
+		codeHeader := "Enter code: "
+		s.DrawText((width-len(codeHeader)-5)/2, joinbox_Y1+2, sty, codeHeader)
+		s.DrawText((width-len(codeHeader)-5)/2+5, joinbox_Y1+2, sty_bold, glv_code_input_string)
+	}
 	v.mu.RUnlock()
 }
