@@ -43,7 +43,7 @@ const (
 	joinbox_X1 = 20
 	joinbox_Y1 = 9
 	joinbox_X2 = 59
-	joinbox_Y2 = 12
+	joinbox_Y2 = 15
 )
 
 var glv_code_input_string = ""
@@ -111,7 +111,7 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 
 			}
 		case tcell.KeyRune:
-			if glv_join_box != "" {
+			if glv_join_box == "" {
 				switch evt.Rune() {
 				case 'c':
 					glv_join_box = ""
@@ -239,16 +239,21 @@ func (v *GamesListView) Render(s *Screen) {
 		i++
 	}
 
-	if glv_join_box == "join_code" {
+	if glv_join_box != "" {
 		selectedLobby := v.lobbies[selectedLobbyKey]
 		// Draw box surrounding games list
 		s.DrawBox(joinbox_X1, joinbox_Y1, joinbox_X2, joinbox_Y2, sty, true)
 
 		joinheader := "Joining private game " + selectedLobby.Name
-		s.DrawText((width - len(joinheader)), joinbox_Y1+1, sty_bold, joinheader)
+		s.DrawText((width-len(joinheader))/2, joinbox_Y1+1, sty, "Joining private game ")
+		s.DrawText((width-len(joinheader))/2+len(selectedLobby.Name), joinbox_Y1+1, sty_bold, selectedLobby.Name)
 		codeHeader := "Enter code: "
 		s.DrawText((width-len(codeHeader)-5)/2, joinbox_Y1+2, sty, codeHeader)
-		s.DrawText((width-len(codeHeader)-5)/2+5, joinbox_Y1+2, sty_bold, glv_code_input_string)
+		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader), joinbox_Y1+2, sty_bold, glv_code_input_string)
+		if glv_join_box == "join_code_short" {
+			shortString := "Code must be four characters long."
+			s.DrawText((width-len(shortString))/2, joinbox_Y1+3, sty_bold, shortString)
+		}
 	}
 	v.mu.RUnlock()
 }
