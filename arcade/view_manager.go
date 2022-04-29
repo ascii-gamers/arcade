@@ -72,6 +72,19 @@ func (mgr *ViewManager) Start(v View) {
 }
 
 func (mgr *ViewManager) RequestRender() {
-	mgr.view.Render(mgr.screen)
+	displayWidth, displayHeight := mgr.screen.displaySize()
+	width, height := mgr.screen.Size()
+
+	if width < displayWidth || height < displayHeight {
+		warning := "Please make your terminal window larger!"
+		warningX := (width - len(warning)) / 2
+
+		for col := range warning {
+			mgr.screen.SetContent(warningX+col, height/2-1, rune(warning[col]), nil, tcell.StyleDefault)
+		}
+	} else {
+		mgr.view.Render(mgr.screen)
+	}
+
 	mgr.screen.Show()
 }
