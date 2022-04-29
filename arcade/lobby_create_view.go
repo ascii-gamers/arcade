@@ -71,9 +71,11 @@ func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
 			}
 			lcv_editing = false
 		case tcell.KeyEnter:
-			lcv_game_name = lcv_inputString
-			lcv_editing = false
-			lcv_inputString = ""
+			if v.selectedRow ==  0 {
+				lcv_game_name = lcv_inputString
+				lcv_editing = false
+				lcv_inputString = ""
+			}
 		case tcell.KeyLeft:
 			lcv_game_user_input_indices[v.selectedRow]--
 			if lcv_game_user_input_indices[v.selectedRow] < 0 {
