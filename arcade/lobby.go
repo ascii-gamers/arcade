@@ -12,7 +12,7 @@ type Lobby struct {
 
 	ID        string
 	Name      string
-	Code      string
+	code      string
 	Private   bool
 	GameType  string
 	Capacity  int
@@ -34,7 +34,7 @@ func NewLobby(name string, private bool, gameType string, capacity int, hostID s
 	}
 
 	if private {
-		lobby.Code = generateCode()
+		lobby.code = generateCode()
 	}
 
 	return lobby

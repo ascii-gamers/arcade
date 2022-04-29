@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"sort"
 	"sync"
 	"unicode/utf8"
 
@@ -22,8 +23,11 @@ var header = []string{
 }
 
 var footer = []string{
-	"[C]reate new lobby      [J]oin lobby by IP address",
+	"[C]reate new lobby      [J]oin selected lobby by IP address",
 }
+
+var glv_join_box = ""
+var selectedLobbyKey = ""
 
 const (
 	nameColX    = 4
@@ -75,6 +79,20 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 			if v.selectedRow < 0 {
 				v.selectedRow = 0
 			}
+		case tcell.KeyEnter:
+			if glv_join_box == "join_code" {
+				code := "hello"
+				//blahblah 
+				selectedLobby := v.lobbies[selectedLobbyKey]
+				self, _ := server.GetClient(selectedLobby.HostID)
+
+				joinPlayer := Player{
+					ClientID: server.ID,
+					Username: "joiningjoanna",
+					Host:     false,
+				}
+				go self.Send(NewJoinMessage(code, joinPlayer))
+			}
 		case tcell.KeyRune:
 			switch evt.Rune() {
 			case 'c':
@@ -84,21 +102,34 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 				// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
 				// mgr.SetView(tg)
 			case 'j':
-				joinPlayer := Player{
-					ClientID: server.ID,
-					Username: "joiningjoanna",
-					Host:     false,
+				if len(v.lobbies) != 0 {
+					v.mu.RLock()
+
+					keys := make([]string, 0, len(v.lobbies))
+
+					for k := range v.lobbies{
+						keys = append(keys, k)
+					}
+					sort.Strings(keys)
+
+					selectedLobbyKey = keys[v.selectedRow]
+					selectedLobby := v.lobbies[keys[v.selectedRow]]
+					if selectedLobby.Private {
+						glv_join_box = "join_code"
+					} else {
+						self, _ := server.GetClient(selectedLobby.HostID)
+
+						joinPlayer := Player{
+							ClientID: server.ID,
+							Username: "joiningjoanna",
+							Host:     false,
+						}
+						go self.Send(NewJoinMessage("", joinPlayer))
+					}
+					v.mu.RUnlock()
+
 				}
-
-				v.mu.RLock()
-
-				for _, lobby := range v.lobbies {
-					self, _ := server.GetClient(lobby.HostID)
-					go self.Send(NewJoinMessage(lobby.Code, joinPlayer))
-					break
-				}
-
-				v.mu.RUnlock()
+				
 			}
 		}
 	}
@@ -149,7 +180,15 @@ func (v *GamesListView) Render(s *Screen) {
 	i := 0
 	v.mu.RLock()
 
-	for _, lobby := range v.lobbies {
+	keys := make([]string, 0, len(v.lobbies))
+
+	for k := range v.lobbies{
+        keys = append(keys, k)
+    }
+    sort.Strings(keys)
+
+	for _,lobbyID := range keys {
+		lobby := v.lobbies[lobbyID]
 		y := tableY1 + i
 		rowSty := sty
 

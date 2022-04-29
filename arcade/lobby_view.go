@@ -107,7 +107,7 @@ func (v *LobbyView) Render(s *Screen) {
 	privateHeader := "Visibility: "
 	privateString := "public"
 	if lobby.Private {
-		privateString = "private, Join Code: " + lobby.Code
+		privateString = "private, Join Code: " + lobby.code
 	}
 	s.DrawText((width-len(privateHeader+privateString))/2, lv_TableY1+2, sty, privateHeader)
 	s.DrawText((width-len(privateHeader+privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)
