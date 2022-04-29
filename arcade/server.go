@@ -41,7 +41,7 @@ func (s *Server) connectToNextOpenPort() {
 			continue
 		}
 
-		client.send(NewHelloMessage())
+		client.Send(NewHelloMessage())
 	}
 }
 
@@ -56,7 +56,7 @@ func (s *Server) connect(c *Client) error {
 	c.start(sess)
 
 	c.connectedCh = make(chan bool)
-	c.send(NewPingMessage(server.ID))
+	c.Send(NewPingMessage(server.ID))
 
 	// TODO: timeout if no response
 	if !<-c.connectedCh {
@@ -75,6 +75,19 @@ func (s *Server) startWithNextOpenPort() {
 
 		hostPort++
 	}
+}
+
+func (s *Server) GetClient(clientID string) (*Client, bool) {
+	s.RLock()
+	defer s.RUnlock()
+
+	client, ok := s.clients[clientID]
+
+	if !ok {
+		return nil, false
+	}
+
+	return client, true
 }
 
 // startServer starts listening for connections on a given address.
@@ -138,13 +151,13 @@ func (s *Server) AddClients(distributor *Client, clients map[string]float64) {
 
 func (s *Server) SendToAllClients(msg interface{}) {
 	s.RLock()
-	defer s.Unlock()
+	defer s.RUnlock()
 
 	for _, client := range s.clients {
 		if client.Distributor {
 			continue
 		}
-		client.send(msg)
+
+		client.Send(msg)
 	}
 }
-

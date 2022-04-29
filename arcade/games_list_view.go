@@ -12,8 +12,7 @@ type GamesListView struct {
 
 	mu sync.RWMutex
 
-	servers     map[string]LobbyInfoMessage
-	clientsByIP map[string]*Client
+	lobbies     map[string]*Lobby
 	selectedRow int
 }
 
@@ -40,8 +39,7 @@ const (
 
 func NewGamesListView() *GamesListView {
 	return &GamesListView{
-		servers:     make(map[string]LobbyInfoMessage),
-		clientsByIP: make(map[string]*Client),
+		lobbies: make(map[string]*Lobby),
 	}
 }
 
@@ -55,9 +53,8 @@ func (v *GamesListView) Init() {
 			continue
 		}
 
-		client.send(NewHelloMessage())
+		client.Send(NewHelloMessage())
 	}
-	// go server.connectToNextOpenPort()
 }
 
 func (v *GamesListView) ProcessEvent(evt tcell.Event) {
@@ -68,8 +65,8 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 			v.selectedRow++
 
 			v.mu.RLock()
-			if v.selectedRow > len(v.servers)-1 {
-				v.selectedRow = len(v.servers) - 1
+			if v.selectedRow > len(v.lobbies)-1 {
+				v.selectedRow = len(v.lobbies) - 1
 			}
 			v.mu.RUnlock()
 		case tcell.KeyUp:
@@ -88,23 +85,20 @@ func (v *GamesListView) ProcessEvent(evt tcell.Event) {
 				// mgr.SetView(tg)
 			case 'j':
 				joinPlayer := Player{
-					Client:   *server.clients[server.ID],
+					ClientID: server.ID,
 					Username: "joiningjoanna",
 					Host:     false,
 				}
-				v.mu.Lock()
-				firstKey := ""
-				firstValue := LobbyInfoMessage{}
-				for key, value := range v.servers {
-					firstKey = key
-					firstValue = value
+
+				v.mu.RLock()
+
+				for _, lobby := range v.lobbies {
+					self, _ := server.GetClient(lobby.HostID)
+					go self.Send(NewJoinMessage(lobby.Code, joinPlayer))
 					break
 				}
-				if firstKey != "" {
-					thisClient := v.clientsByIP[firstKey]
-					v.mu.Unlock()
-					thisClient.send(NewJoinMessage(firstValue.GameInfo.Code, joinPlayer))
-				}
+
+				v.mu.RUnlock()
 			}
 		}
 	}
@@ -114,8 +108,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 	switch p := p.(type) {
 	case LobbyInfoMessage:
 		v.mu.Lock()
-		v.servers[p.IP] = p
-		v.clientsByIP[p.IP] = from
+		v.lobbies[p.Lobby.ID] = p.Lobby
 		v.mu.Unlock()
 	}
 
@@ -156,11 +149,7 @@ func (v *GamesListView) Render(s *Screen) {
 	i := 0
 	v.mu.RLock()
 
-	for _, lobby := range v.servers {
-		if lobby.IP == server.Addr {
-			continue
-		}
-
+	for _, lobby := range v.lobbies {
 		y := tableY1 + i
 		rowSty := sty
 
@@ -168,7 +157,7 @@ func (v *GamesListView) Render(s *Screen) {
 			rowSty = selectedSty
 		}
 
-		name := lobby.IP
+		name := lobby.Name
 		game := "Pong"
 		players := "1/2"
 		ping := "25ms"

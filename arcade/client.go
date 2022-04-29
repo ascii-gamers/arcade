@@ -196,7 +196,7 @@ func (c *Client) writePump(startedCh chan bool) {
 }
 
 // send sends a message to the client.
-func (c *Client) send(msg interface{}) {
+func (c *Client) Send(msg interface{}) {
 	// Set sender ID
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(server.ID))
 
@@ -207,7 +207,7 @@ func (c *Client) send(msg interface{}) {
 	c.sendCh <- data
 }
 
-func (c *Client) sendAndReceive(msg interface{}) interface{} {
+func (c *Client) SendAndReceive(msg interface{}) interface{} {
 	// Set message ID
 	messageID := uuid.NewString()
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("ID").Set(reflect.ValueOf(messageID))

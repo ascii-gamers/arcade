@@ -44,8 +44,18 @@ type TronGame struct {
 	renderCh chan int
 }
 
-func NewTronGame(pendingGame *PendingGame) *TronGame {
-	return &TronGame{Game: Game[TronGameState, TronClientState]{PlayerList: pendingGame.PlayerList, Name: pendingGame.Name, Me: server.ID, Host: pendingGame.Host, HostSyncPeriod: 1000, TimestepPeriod: 100, Timestep: 0}}
+func NewTronGame(lobby *Lobby) *TronGame {
+	return &TronGame{
+		Game: Game[TronGameState, TronClientState]{
+			PlayerIDs:      lobby.PlayerIDs,
+			Name:           lobby.Name,
+			Me:             server.ID,
+			HostID:         lobby.HostID,
+			HostSyncPeriod: 1000,
+			TimestepPeriod: 100,
+			Timestep:       0,
+		},
+	}
 }
 
 func (tg *TronGame) Init() {
@@ -58,10 +68,10 @@ func (tg *TronGame) Init() {
 	tg.GameState = TronGameState{width, height, false, collisions}
 
 	clientState := make(map[string]TronClientState)
-	for i, player := range tg.PlayerList {
+	for i, playerID := range tg.PlayerIDs {
 		x := 40 + rand.Intn(10) - 5
 		y := 12 + rand.Intn(10) - 5
-		clientState[player.Client.ID] = TronClientState{tg.Timestep, true, TRON_COLORS[i], []int{x}, []int{y}, x, y, TronDown}
+		clientState[playerID] = TronClientState{tg.Timestep, true, TRON_COLORS[i], []int{x}, []int{y}, x, y, TronDown}
 	}
 
 	tg.ClientStates = clientState

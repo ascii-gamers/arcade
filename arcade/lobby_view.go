@@ -51,7 +51,7 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 				// delete game?
 			case 's':
 				//start game
-				CreateGame(pendingGame)
+				NewGame(lobby)
 			}
 		}
 	}
@@ -60,12 +60,12 @@ func (v *LobbyView) ProcessEvent(evt tcell.Event) {
 func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case HelloMessage:
-		return NewLobbyInfoMessage(pendingGame, server.Addr)
+		return NewLobbyInfoMessage(lobby)
 	case JoinMessage:
-		pendingGame.mu.Lock()
-		pendingGame.AddPlayer(p.Player)
-		pendingGame.NumFull++
-		pendingGame.mu.Unlock()
+		lobby.Lock()
+		lobby.AddPlayer(p.Player.ClientID)
+		lobby.NumFull++
+		lobby.Unlock()
 		// deal with private games later
 		// if p.Code != pendingGame.Code {
 		// 	return NewJoinReplyMessage(ErrWrongCode)
@@ -85,7 +85,7 @@ func (v *LobbyView) Render(s *Screen) {
 	// Draw GAME header
 
 	game_header := pong_header
-	if pendingGame.GameType == Tron {
+	if lobby.GameType == Tron {
 		game_header = tron_header
 	}
 	headerX := (width - utf8.RuneCountInString(game_header[0])) / 2
@@ -99,22 +99,22 @@ func (v *LobbyView) Render(s *Screen) {
 
 	// name
 	nameHeader := "Name: "
-	nameString := pendingGame.Name
+	nameString := lobby.Name
 	s.DrawText((width-len(nameHeader+nameString))/2, lv_TableY1+1, sty, nameHeader)
 	s.DrawText((width-len(nameHeader+nameString))/2+utf8.RuneCountInString(nameHeader), lv_TableY1+1, sty_bold, nameString)
 
 	// private
 	privateHeader := "Visibility: "
 	privateString := "public"
-	if pendingGame.Private {
-		privateString = "private, Join Code: " + pendingGame.Code
+	if lobby.Private {
+		privateString = "private, Join Code: " + lobby.Code
 	}
 	s.DrawText((width-len(privateHeader+privateString))/2, lv_TableY1+2, sty, privateHeader)
 	s.DrawText((width-len(privateHeader+privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)
 
 	// capacity
 	capacityHeader := "Game capacity: "
-	capacityString := fmt.Sprintf("(%v/%v)", pendingGame.NumFull, pendingGame.Capacity)
+	capacityString := fmt.Sprintf("(%v/%v)", lobby.NumFull, lobby.Capacity)
 	s.DrawText((width-len(capacityHeader+capacityString))/2, lv_TableY1+3, sty, capacityHeader)
 	s.DrawText((width-len(capacityHeader+capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 
