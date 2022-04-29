@@ -53,8 +53,7 @@ func NewSplashView() *SplashView {
 				view.displayFooter = !view.displayFooter
 				view.mu.Unlock()
 
-				mgr.view.Render(mgr.screen)
-				mgr.screen.Show()
+				mgr.RequestRender()
 			case <-view.stopTickerCh:
 				ticker.Stop()
 			}
@@ -80,7 +79,7 @@ func (v *SplashView) ProcessMessage(from *Client, p interface{}) interface{} {
 }
 
 func (v *SplashView) Render(s *Screen) {
-	width, _ := s.Size()
+	width, _ := s.displaySize()
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)

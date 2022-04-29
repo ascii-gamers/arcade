@@ -21,15 +21,8 @@ func (mgr *ViewManager) SetView(v View) {
 		mgr.view.Unload()
 	}
 
-	// Set default text style
-	defStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
-	mgr.screen.SetStyle(defStyle)
-
-	// Clear screen
-	mgr.screen.Clear()
-
-	// Set black background
-	mgr.screen.Fill(' ', tcell.StyleDefault)
+	// Reset screen state
+	mgr.screen.Reset()
 
 	// Save view
 	mgr.view = v
@@ -58,8 +51,7 @@ func (mgr *ViewManager) Start(v View) {
 
 	for {
 		// Update screen
-		mgr.view.Render(mgr.screen)
-		mgr.screen.Show()
+		mgr.RequestRender()
 
 		// Poll event
 		ev := mgr.screen.PollEvent()
@@ -67,7 +59,8 @@ func (mgr *ViewManager) Start(v View) {
 		// Process event
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
-			mgr.screen.Sync()
+			mgr.screen.Reset()
+			mgr.RequestRender()
 		case *tcell.EventKey:
 			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
 				quit()
@@ -76,4 +69,9 @@ func (mgr *ViewManager) Start(v View) {
 
 		mgr.view.ProcessEvent(ev)
 	}
+}
+
+func (mgr *ViewManager) RequestRender() {
+	mgr.view.Render(mgr.screen)
+	mgr.screen.Show()
 }

@@ -85,8 +85,8 @@ func (tg *TronGame) Init() {
 			tg.updateSelf()
 			time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
 			tg.updateOthers()
-			mgr.view.Render(mgr.screen)
-			mgr.screen.Show()
+
+			mgr.RequestRender()
 		}
 	}()
 }

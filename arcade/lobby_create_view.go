@@ -132,7 +132,7 @@ func (v *LobbyCreateView) ProcessMessage(from *Client, p interface{}) interface{
 }
 
 func (v *LobbyCreateView) Render(s *Screen) {
-	width, height := s.Size()
+	width, height := s.displaySize()
 
 	if lcv_editing {
 		s.SetCursorStyle(tcell.CursorStyleBlinkingBlock)

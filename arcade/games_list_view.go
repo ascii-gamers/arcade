@@ -116,7 +116,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 }
 
 func (v *GamesListView) Render(s *Screen) {
-	width, height := s.Size()
+	width, height := s.displaySize()
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)

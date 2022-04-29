@@ -20,8 +20,7 @@ func processMessage(from *Client, p interface{}) interface{} {
 
 	ret := mgr.view.ProcessMessage(sender, p)
 
-	mgr.view.Render(mgr.screen)
-	mgr.screen.Show()
+	mgr.RequestRender()
 
 	return ret
 }
