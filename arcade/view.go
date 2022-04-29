@@ -9,4 +9,5 @@ type View interface {
 	ProcessEvent(ev tcell.Event)
 	ProcessMessage(from *Client, p interface{}) interface{}
 	Render(s *Screen)
+	Unload()
 }

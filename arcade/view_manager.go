@@ -16,12 +16,20 @@ func NewViewManager() *ViewManager {
 }
 
 func (mgr *ViewManager) SetView(v View) {
+	// Unload existing view
+	if mgr.view != nil {
+		mgr.view.Unload()
+	}
+
 	// Set default text style
-	defStyle := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
+	defStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 	mgr.screen.SetStyle(defStyle)
 
 	// Clear screen
 	mgr.screen.Clear()
+
+	// Set black background
+	mgr.screen.Fill(' ', tcell.StyleDefault)
 
 	// Save view
 	mgr.view = v
@@ -66,6 +74,6 @@ func (mgr *ViewManager) Start(v View) {
 			}
 		}
 
-		mgr.view.ProcessEvent(ev)		
+		mgr.view.ProcessEvent(ev)
 	}
 }
