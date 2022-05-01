@@ -59,30 +59,46 @@ func NewGamesListView() *GamesListView {
 }
 
 func (v *GamesListView) Init() {
+	actions := make([]func(), 0)
+
 	server.RLock()
 	clients := server.clients
-	server.RUnlock()
 
 	for _, client := range clients {
 		if !client.Distributor {
 			continue
 		}
 
-		client.Send(NewGetClientsMessage())
+		actions = append(actions, func() {
+			client.Send(NewGetClientsMessage())
+		})
 	}
+	server.RUnlock()
+
+	for _, action := range actions {
+		action()
+	}
+
+	actions = make([]func(), 0)
 
 	time.Sleep(100 * time.Millisecond)
 
 	server.RLock()
 	clients = server.clients
-	server.RUnlock()
 
 	for _, client := range clients {
 		if client.Distributor {
 			continue
 		}
 
-		client.Send(NewHelloMessage())
+		actions = append(actions, func() {
+			client.Send(NewHelloMessage())
+		})
+	}
+	server.RUnlock()
+
+	for _, action := range actions {
+		action()
 	}
 }
 
