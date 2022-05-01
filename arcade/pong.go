@@ -7,12 +7,12 @@ import (
 type PongMessage struct {
 	Message
 
-	ID          string             `json:"id"`
-	Clients     map[string]float64 `json:"clients"`
-	Distributor bool               `json:"distributor"`
+	ID          string
+	Clients     map[string]int
+	Distributor bool
 }
 
-func NewPongMessage(id string, clients map[string]float64, distributor bool) *PongMessage {
+func NewPongMessage(id string, clients map[string]int, distributor bool) *PongMessage {
 	return &PongMessage{
 		Message:     Message{Type: "pong"},
 		ID:          id,

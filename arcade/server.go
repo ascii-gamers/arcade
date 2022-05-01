@@ -115,22 +115,22 @@ func (s *Server) start() error {
 	}
 }
 
-func (s *Server) getClients() map[string]float64 {
+func (s *Server) getClients() map[string]int {
 	s.RLock()
 	defer s.RUnlock()
 
 	clients := server.clients
-	clientPings := make(map[string]float64, len(clients))
+	clientDists := make(map[string]int, len(clients))
 
 	for i := range clients {
-		if !clients[i].Neighbor || clients[i].Distributor {
+		if clients[i].Distributor {
 			continue
 		}
 
-		clientPings[clients[i].ID] = 1
+		clientDists[clients[i].ID] = clients[i].Distance
 	}
 
-	return clientPings
+	return clientDists
 }
 
 func (s *Server) SendAll(msg interface{}, distributors bool) {

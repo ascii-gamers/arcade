@@ -19,9 +19,12 @@ type Client struct {
 	// address of the distributor.
 	Addr string
 
-	// ID uniquely identifying the client.
-	ID string
+	// Distance to this client. Right now, this is just the number of nodes
+	// packets need to travel through in order to reach this client. In the
+	// future, we can consider replacing this with ping times.
+	Distance int
 
+	// True if this client is a distributor.
 	Distributor bool
 
 	// True if this client is directly connected to us, e.g. not through
@@ -30,6 +33,11 @@ type Client struct {
 
 	// should be set at the beginning and saved
 	Username string
+	// ID uniquely identifying the client.
+	ID string
+
+	// ID of the client through which this client is reached.
+	ServicerID string
 
 	conn net.Conn
 
@@ -97,7 +105,7 @@ func (c *Client) readPump(startedCh chan bool) {
 		}
 
 		// Get message ID and send signal if we're waiting on this one
-		messageID := reflect.ValueOf(p).FieldByName("Message").FieldByName("ID").String()
+		messageID := reflect.ValueOf(p).FieldByName("Message").FieldByName("MessageID").String()
 
 		c.pendingMessagesMux.RLock()
 		recvCh, ok := c.pendingMessages[messageID]
@@ -113,7 +121,7 @@ func (c *Client) readPump(startedCh chan bool) {
 		switch p := p.(type) {
 		case DisconnectMessage:
 			mgr.ProcessEvent(&ClientDisconnectEvent{
-				ClientID: p.SenderID,
+				ClientID: c.ID,
 			})
 
 			server.Lock()
@@ -132,26 +140,63 @@ func (c *Client) readPump(startedCh chan bool) {
 			res = NewPongMessage(server.ID, server.getClients(), distributor)
 		case PongMessage:
 			c.ID = p.ID
+			c.Distance = 1
 			c.Distributor = p.Distributor
 			c.Neighbor = true
+			c.ServicerID = p.ID
 
-			server.Lock()
-			server.clients[c.ID] = c
+			// Don't process client updates on the server immediately, as this
+			// may crash views. Instead, let views process client update events
+			// and then process these actions on the server afterward.
+			pendingServerActions := make([]func(), 0)
 
-			for clientID := range p.Clients {
+			pendingServerActions = append(pendingServerActions, func() {
+				server.clients[c.ID] = c
+			})
+
+			existingClients := make(map[string]bool)
+
+			for clientID, client := range server.clients {
+				if client.ServicerID == p.ID {
+					existingClients[clientID] = true
+				}
+			}
+
+			for clientID, distance := range p.Clients {
+				delete(existingClients, clientID)
+
 				if clientID == server.ID {
 					continue
 				}
 
-				server.clients[clientID] = &Client{
-					Addr:            c.Addr,
-					ID:              clientID,
-					sendCh:          c.sendCh,
-					pendingMessages: make(map[string]chan interface{}),
-				}
+				pendingServerActions = append(pendingServerActions, func() {
+					server.clients[clientID] = &Client{
+						Addr:            c.Addr,
+						Distance:        distance + 1,
+						ID:              clientID,
+						ServicerID:      c.ID,
+						sendCh:          c.sendCh,
+						pendingMessages: make(map[string]chan interface{}),
+					}
+				})
 			}
 
+			for clientID := range existingClients {
+				mgr.ProcessEvent(&ClientDisconnectEvent{
+					ClientID: clientID,
+				})
+
+				pendingServerActions = append(pendingServerActions, func() {
+					delete(server.clients, clientID)
+				})
+			}
+
+			server.Lock()
+			for _, action := range pendingServerActions {
+				action()
+			}
 			server.Unlock()
+
 			c.connectedCh <- true
 		default:
 			if msg.RecipientID != server.ID {
@@ -193,7 +238,7 @@ func (c *Client) readPump(startedCh chan bool) {
 		reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(server.ID))
 
 		// Set message ID if there was one in the sent packet
-		reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("ID").Set(reflect.ValueOf(messageID))
+		reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
 
 		resData, err := res.(encoding.BinaryMarshaler).MarshalBinary()
 
@@ -234,7 +279,7 @@ func (c *Client) Send(msg interface{}) {
 func (c *Client) SendAndReceive(msg interface{}) interface{} {
 	// Set message ID
 	messageID := uuid.NewString()
-	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("ID").Set(reflect.ValueOf(messageID))
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
 
 	// Set up receive chan
 	recvCh := make(chan interface{}, 1)

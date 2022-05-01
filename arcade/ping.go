@@ -7,7 +7,7 @@ import (
 type PingMessage struct {
 	Message
 
-	ID string `json:"id"`
+	ID string
 }
 
 func NewPingMessage(id string) *PingMessage {

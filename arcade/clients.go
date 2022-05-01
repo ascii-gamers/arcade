@@ -6,10 +6,10 @@ import (
 
 type ClientsMessage struct {
 	Message
-	Clients map[string]float64 `json:"clients"`
+	Clients map[string]int
 }
 
-func NewClientsMessage(clients map[string]float64) *ClientsMessage {
+func NewClientsMessage(clients map[string]int) *ClientsMessage {
 	return &ClientsMessage{
 		Message: Message{Type: "clients"},
 		Clients: clients,
