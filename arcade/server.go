@@ -75,6 +75,10 @@ func (s *Server) startWithNextOpenPort() {
 	}
 }
 
+func (s *Server) AddClient(c *Client) {
+	s.clients[c.ID] = c
+}
+
 func (s *Server) GetClient(clientID string) (*Client, bool) {
 	s.RLock()
 	defer s.RUnlock()
