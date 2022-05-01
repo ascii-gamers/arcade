@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"sort"
 	"sync"
 	"unicode/utf8"
 
@@ -22,8 +23,12 @@ var header = []string{
 }
 
 var footer = []string{
-	"[C]reate new lobby      [J]oin lobby by IP address",
+	"[C]reate new lobby      [J]oin selected lobby by IP address",
 }
+
+var glv_join_box = ""
+var selectedLobbyKey = ""
+var err_msg = ""
 
 const (
 	nameColX    = 4
@@ -35,7 +40,16 @@ const (
 	tableY1 = 7
 	tableX2 = 76
 	tableY2 = 19
+
+	joinbox_X1 = 7
+	joinbox_Y1 = 9
+	joinbox_X2 = 72
+	joinbox_Y2 = 15
 )
+
+var glv_code_input_string = ""
+var glv_code = ""
+var glv_code_editing = false
 
 func NewGamesListView() *GamesListView {
 	return &GamesListView{
@@ -60,6 +74,11 @@ func (v *GamesListView) Init() {
 func (v *GamesListView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
 	case *tcell.EventKey:
+		if len(err_msg) > 0 {
+			err_msg = ""
+			glv_join_box = ""
+			return
+		}
 		switch evt.Key() {
 		case tcell.KeyDown:
 			v.selectedRow++
@@ -75,30 +94,75 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 			if v.selectedRow < 0 {
 				v.selectedRow = 0
 			}
+		case tcell.KeyBackspace, tcell.KeyBackspace2:
+			if glv_join_box != "" {
+				if len(glv_code_input_string) > 0 {
+					glv_code_input_string = glv_code_input_string[:len(glv_code_input_string)-1]
+				}
+			}
+		case tcell.KeyEnter:
+			if glv_join_box == "join_code" {
+				if len(glv_code_input_string) == 4 {
+					glv_code = glv_code_input_string
+					selectedLobby := v.lobbies[selectedLobbyKey]
+					self, _ := server.GetClient(selectedLobby.HostID)
+
+					joinPlayer := Player{
+						ClientID: server.ID,
+						Username: "joiningjoanna",
+						Host:     false,
+					}
+					go self.Send(NewJoinMessage(glv_code, joinPlayer))
+				} else {
+					glv_join_box = "join_code"
+					err_msg = "Code must be four characters long."
+				}
+
+			}
 		case tcell.KeyRune:
-			switch evt.Rune() {
-			case 'c':
-				mgr.SetView(NewLobbyCreateView())
-			case 't':
-				// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
-				// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
-				// mgr.SetView(tg)
-			case 'j':
-				joinPlayer := Player{
-					ClientID: server.ID,
-					Username: "joiningjoanna",
-					Host:     false,
+			if glv_join_box == "" {
+				switch evt.Rune() {
+				case 'c':
+					glv_join_box = ""
+					mgr.SetView(NewLobbyCreateView())
+				case 't':
+					// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
+					// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
+					// mgr.SetView(tg)
+				case 'j':
+					if len(v.lobbies) != 0 {
+						v.mu.RLock()
+
+						keys := make([]string, 0, len(v.lobbies))
+
+						for k := range v.lobbies {
+							keys = append(keys, k)
+						}
+						sort.Strings(keys)
+
+						selectedLobbyKey = keys[v.selectedRow]
+						selectedLobby := v.lobbies[keys[v.selectedRow]]
+						if selectedLobby.Private {
+							glv_join_box = "join_code"
+						} else {
+							self, _ := server.GetClient(selectedLobby.HostID)
+
+							joinPlayer := Player{
+								ClientID: server.ID,
+								Username: "joiningjoanna",
+								Host:     false,
+							}
+							go self.Send(NewJoinMessage("", joinPlayer))
+						}
+						v.mu.RUnlock()
+
+					}
+
 				}
-
-				v.mu.RLock()
-
-				for _, lobby := range v.lobbies {
-					self, _ := server.GetClient(lobby.HostID)
-					go self.Send(NewJoinMessage(lobby.Code, joinPlayer))
-					break
+			} else {
+				if len(glv_code_input_string) < 4 {
+					glv_code_input_string += string(evt.Rune())
 				}
-
-				v.mu.RUnlock()
 			}
 		}
 	}
@@ -110,13 +174,36 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 		v.mu.Lock()
 		v.lobbies[p.Lobby.ID] = p.Lobby
 		v.mu.Unlock()
+	case JoinReplyMessage:
+		if p.Error == OK {
+			lobby = p.Lobby
+			err_msg = ""
+			glv_join_box = ""
+			glv_code_input_string = ""
+			mgr.SetView(NewLobbyView())
+		} else if p.Error == ErrWrongCode {
+			err_msg = "Wrong join code."
+		} else if p.Error == ErrCapacity {
+			err_msg = "Game is now full."
+		}
 	}
 
 	return nil
 }
 
 func (v *GamesListView) Render(s *Screen) {
+	if glv_join_box == "" && len(glv_code_input_string) > 0 {
+		s.Clear()
+		glv_code_input_string = ""
+	}
+
 	width, height := s.displaySize()
+
+	// if glv_join_box == "" {
+	// 	sty_black := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorBlack)
+	// 	s.DrawBox(joinbox_X1, joinbox_Y1, joinbox_X2, joinbox_Y2, sty_black, true)
+
+	// }
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
@@ -145,11 +232,20 @@ func (v *GamesListView) Render(s *Screen) {
 
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
+	sty_bold := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorLightGreen)
 
 	i := 0
 	v.mu.RLock()
 
-	for _, lobby := range v.lobbies {
+	keys := make([]string, 0, len(v.lobbies))
+
+	for k := range v.lobbies {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, lobbyID := range keys {
+		lobby := v.lobbies[lobbyID]
 		y := tableY1 + i
 		rowSty := sty
 
@@ -175,6 +271,24 @@ func (v *GamesListView) Render(s *Screen) {
 		i++
 	}
 
+	if glv_join_box != "" {
+
+		selectedLobby := v.lobbies[selectedLobbyKey]
+		// Draw box surrounding games list
+		s.DrawBox(joinbox_X1, joinbox_Y1, joinbox_X2, joinbox_Y2, sty, true)
+
+		joinheader := "Joining private game " + selectedLobby.Name
+		s.DrawText((width-len(joinheader))/2, joinbox_Y1+1, sty, "Joining private game ")
+		s.DrawText((width-len(joinheader))/2+len(joinheader)-len(selectedLobby.Name), joinbox_Y1+1, sty_bold, selectedLobby.Name)
+		codeHeader := "Enter code: "
+		s.DrawText((width-len(codeHeader)-5)/2, joinbox_Y1+2, sty, codeHeader)
+		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader), joinbox_Y1+2, sty_bold, glv_code_input_string)
+		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader)+len(glv_code_input_string), joinbox_Y1+2, sty_bold, "    ")
+		if len(err_msg) > 0 {
+			shortString := err_msg + " Press any key to continue."
+			s.DrawText((width-len(shortString))/2, joinbox_Y1+4, sty_bold, shortString)
+		}
+	}
 	v.mu.RUnlock()
 }
 

@@ -14,12 +14,14 @@ type JoinErr string
 
 type JoinReplyMessage struct {
 	Message
+	Lobby *Lobby
 	Error JoinErr
 }
 
-func NewJoinReplyMessage(err JoinErr) *JoinReplyMessage {
+func NewJoinReplyMessage(lobby *Lobby, err JoinErr) *JoinReplyMessage {
 	return &JoinReplyMessage{
 		Message: Message{Type: "join_reply"},
+		Lobby:   lobby,
 		Error:   err,
 	}
 }

@@ -32,9 +32,9 @@ var lcv_inputString = ""
 
 const (
 	lcv_lobbyTableX1 = 16
-	lcv_lobbyTableY1 = 7
+	lcv_lobbyTableY1 = 4
 	lcv_lobbyTableX2 = 63
-	lcv_lobbyTableY2 = 18
+	lcv_lobbyTableY2 = 15
 )
 
 var create_game_header = []string{
@@ -71,9 +71,11 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 			}
 			lcv_editing = false
 		case tcell.KeyEnter:
-			lcv_game_name = lcv_inputString
-			lcv_editing = false
-			lcv_inputString = ""
+			if v.selectedRow == 0 {
+				lcv_game_name = lcv_inputString
+				lcv_editing = false
+				lcv_inputString = ""
+			}
 		case tcell.KeyLeft:
 			lcv_game_user_input_indices[v.selectedRow]--
 			if lcv_game_user_input_indices[v.selectedRow] < 0 {
@@ -141,22 +143,22 @@ func (v *LobbyCreateView) Render(s *Screen) {
 	}
 
 	// Green text on default background
-	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorLightSlateGray)
+	// sty := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorLightSlateGray)
 	// Dark blue text on light gray background
-	sty_game := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorMidnightBlue)
+	sty_game := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorLimeGreen)
 
-	// Draw ASCII ARCADE header
-	headerX := (width - utf8.RuneCountInString(header[0])) / 2
-	s.DrawText(headerX, 1, sty, header[0])
-	s.DrawText(headerX, 2, sty, header[1])
+	// // Draw ASCII ARCADE header
+	// headerX := (width - utf8.RuneCountInString(header[0])) / 2
+	// s.DrawText(headerX, 1, sty, header[0])
+	// s.DrawText(headerX, 2, sty, header[1])
 
 	// draw create game header
 	header2X := (width - utf8.RuneCountInString(create_game_header[0])) / 2
-	s.DrawText(header2X, 4, sty_game, create_game_header[0])
-	s.DrawText(header2X, 5, sty_game, create_game_header[1])
+	s.DrawText(header2X, 1, sty_game, create_game_header[0])
+	s.DrawText(header2X, 2, sty_game, create_game_header[1])
 
 	// Draw box surrounding games list
-	s.DrawBox(lcv_lobbyTableX1-1, 7, lcv_lobbyTableX2+1, lcv_lobbyTableY2+1, sty_game, true)
+	s.DrawBox(lcv_lobbyTableX1-1, 4, lcv_lobbyTableX2+1, lcv_lobbyTableY2+1, sty_game, true)
 
 	// Draw footer with navigation keystrokes
 	s.DrawText((width-len(lcv_game_footer[0]))/2, height-2, sty_game, lcv_game_footer[0])
@@ -168,9 +170,9 @@ func (v *LobbyCreateView) Render(s *Screen) {
 	// s.DrawText(pingColX, 5, sty, "PING")
 
 	// // Draw border below column headers
-	s.DrawLine(lcv_borderIndex, 7, lcv_borderIndex, tableY2, sty_game, true)
-	s.DrawText(lcv_borderIndex, 7, sty_game, "╦")
-	s.DrawText(lcv_borderIndex, tableY2, sty_game, "╩")
+	s.DrawLine(lcv_borderIndex, 4, lcv_borderIndex, lcv_lobbyTableY2, sty_game, true)
+	s.DrawText(lcv_borderIndex, 4, sty_game, "╦")
+	s.DrawText(lcv_borderIndex, lcv_lobbyTableY2+1, sty_game, "╩")
 
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)

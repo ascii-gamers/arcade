@@ -63,9 +63,18 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		return NewLobbyInfoMessage(lobby)
 	case JoinMessage:
 		lobby.Lock()
-		lobby.AddPlayer(p.Player.ClientID)
-		lobby.NumFull++
-		lobby.Unlock()
+		if lobby.NumFull == lobby.Capacity {
+			lobby.Unlock()
+			return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
+		} else if lobby.code != p.Code {
+			lobby.Unlock()
+			return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
+		} else {
+			lobby.NumFull++
+			lobby.AddPlayer(p.Player.ClientID)
+			lobby.Unlock()
+			return NewJoinReplyMessage(lobby, OK)
+		}
 		// deal with private games later
 		// if p.Code != pendingGame.Code {
 		// 	return NewJoinReplyMessage(ErrWrongCode)
@@ -107,7 +116,7 @@ func (v *LobbyView) Render(s *Screen) {
 	privateHeader := "Visibility: "
 	privateString := "public"
 	if lobby.Private {
-		privateString = "private, Join Code: " + lobby.Code
+		privateString = "private, Join Code: " + lobby.code
 	}
 	s.DrawText((width-len(privateHeader+privateString))/2, lv_TableY1+2, sty, privateHeader)
 	s.DrawText((width-len(privateHeader+privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)

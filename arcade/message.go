@@ -60,7 +60,7 @@ func parseMessage(data []byte) (interface{}, error) {
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "join_reply":
-		p := JoinMessage{}
+		p := JoinReplyMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "ping":

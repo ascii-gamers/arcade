@@ -3,6 +3,7 @@ package arcade
 import (
 	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -12,7 +13,7 @@ type Lobby struct {
 
 	ID        string
 	Name      string
-	Code      string
+	code      string
 	Private   bool
 	GameType  string
 	Capacity  int
@@ -34,7 +35,7 @@ func NewLobby(name string, private bool, gameType string, capacity int, hostID s
 	}
 
 	if private {
-		lobby.Code = generateCode()
+		lobby.code = generateCode()
 	}
 
 	return lobby
@@ -46,6 +47,7 @@ func (l *Lobby) AddPlayer(playerID string) {
 
 func generateCode() string {
 	var code string
+	rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < 4; i++ {
 		v := rand.Intn(25)
