@@ -3,6 +3,7 @@ package arcade
 import (
 	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -46,6 +47,7 @@ func (l *Lobby) AddPlayer(playerID string) {
 
 func generateCode() string {
 	var code string
+	rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < 4; i++ {
 		v := rand.Intn(25)

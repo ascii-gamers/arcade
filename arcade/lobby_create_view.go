@@ -145,7 +145,7 @@ func (v *LobbyCreateView) Render(s *Screen) {
 	// Green text on default background
 	// sty := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorLightSlateGray)
 	// Dark blue text on light gray background
-	sty_game := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorMidnightBlue)
+	sty_game := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorLimeGreen)
 
 	// // Draw ASCII ARCADE header
 	// headerX := (width - utf8.RuneCountInString(header[0])) / 2

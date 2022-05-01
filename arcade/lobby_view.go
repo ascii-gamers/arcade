@@ -63,9 +63,18 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		return NewLobbyInfoMessage(lobby)
 	case JoinMessage:
 		lobby.Lock()
-		lobby.AddPlayer(p.Player.ClientID)
-		lobby.NumFull++
-		lobby.Unlock()
+		if lobby.NumFull == lobby.Capacity {
+			lobby.Unlock()
+			return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
+		} else if lobby.code != p.Code {
+			lobby.Unlock()
+			return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
+		} else {
+			lobby.NumFull++
+			lobby.AddPlayer(p.Player.ClientID)
+			lobby.Unlock()
+			return NewJoinReplyMessage(lobby, OK)
+		}
 		// deal with private games later
 		// if p.Code != pendingGame.Code {
 		// 	return NewJoinReplyMessage(ErrWrongCode)
