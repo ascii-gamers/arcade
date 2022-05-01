@@ -36,6 +36,6 @@ func Start() {
 	time.Sleep(10 * time.Millisecond)
 
 	// Start view manager
-	gamesListView := NewGamesListView()
-	mgr.Start(gamesListView)
+	splashView := NewSplashView()
+	mgr.Start(splashView)
 }

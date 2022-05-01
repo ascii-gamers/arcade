@@ -76,11 +76,11 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 }
 
 func (v *LobbyView) Render(s *Screen) {
-	width, height := s.Size()
+	width, height := s.displaySize()
 
 	// Green text on default background
-	sty := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorGreen)
-	sty_bold := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorDarkGreen)
+	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
+	sty_bold := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorDarkGreen)
 
 	// Draw GAME header
 
@@ -124,4 +124,7 @@ func (v *LobbyView) Render(s *Screen) {
 	// Draw footer with navigation keystrokes
 	s.DrawText((width-len(lobby_footer[0]))/2, height-2, sty, lobby_footer[0])
 
+}
+
+func (v *LobbyView) Unload() {
 }

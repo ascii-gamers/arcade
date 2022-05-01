@@ -16,12 +16,13 @@ func NewViewManager() *ViewManager {
 }
 
 func (mgr *ViewManager) SetView(v View) {
-	// Set default text style
-	defStyle := tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
-	mgr.screen.SetStyle(defStyle)
+	// Unload existing view
+	if mgr.view != nil {
+		mgr.view.Unload()
+	}
 
-	// Clear screen
-	mgr.screen.Clear()
+	// Reset screen state
+	mgr.screen.Reset()
 
 	// Save view
 	mgr.view = v
@@ -30,11 +31,12 @@ func (mgr *ViewManager) SetView(v View) {
 
 func (mgr *ViewManager) Start(v View) {
 	s, err := tcell.NewScreen()
-	mgr.screen = &Screen{s}
 
 	if err != nil {
 		panic(err)
 	}
+
+	mgr.screen = &Screen{s}
 
 	if err := mgr.screen.Init(); err != nil {
 		panic(err)
@@ -50,8 +52,7 @@ func (mgr *ViewManager) Start(v View) {
 
 	for {
 		// Update screen
-		mgr.view.Render(mgr.screen)
-		mgr.screen.Show()
+		mgr.RequestRender()
 
 		// Poll event
 		ev := mgr.screen.PollEvent()
@@ -59,13 +60,29 @@ func (mgr *ViewManager) Start(v View) {
 		// Process event
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
-			mgr.screen.Sync()
+			mgr.screen.Reset()
+			mgr.RequestRender()
 		case *tcell.EventKey:
 			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
 				quit()
 			}
 		}
 
-		mgr.view.ProcessEvent(ev)		
+		// Send event to current view
+		mgr.view.ProcessEvent(ev)
 	}
+}
+
+func (mgr *ViewManager) RequestRender() {
+	displayWidth, displayHeight := mgr.screen.displaySize()
+	width, height := mgr.screen.Size()
+
+	if width < displayWidth || height < displayHeight {
+		warning := "Please make your terminal window larger!"
+		mgr.screen.DrawText((displayWidth-len(warning))/2, displayHeight/2-1, tcell.StyleDefault, warning)
+	} else {
+		mgr.view.Render(mgr.screen)
+	}
+
+	mgr.screen.Show()
 }
