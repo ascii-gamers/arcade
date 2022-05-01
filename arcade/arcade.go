@@ -13,6 +13,7 @@ var server *Server
 var hostPort int
 var lobby *Lobby
 var client *Client
+var router = NewDistanceVectorRouter()
 
 func Start() {
 	dist := flag.Bool("distributor", false, "Run as a distributor")

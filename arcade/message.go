@@ -43,6 +43,10 @@ func parseMessage(data []byte) (interface{}, error) {
 		p := DisconnectMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
+	case "distance_update":
+		p := DistanceUpdateMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
 	case "error":
 		p := ErrorMessage{}
 		json.Unmarshal(data, &p)
