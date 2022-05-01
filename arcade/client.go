@@ -126,14 +126,27 @@ func (c *Client) readPump(startedCh chan bool) {
 
 			server.Lock()
 			server.clients[c.ID] = c
-			server.Unlock()
 
-			server.AddClients(c, p.Clients)
+			for clientID := range p.Clients {
+				if clientID == server.ID {
+					continue
+				}
+
+				server.clients[clientID] = &Client{
+					Addr:            c.Addr,
+					ID:              clientID,
+					sendCh:          c.sendCh,
+					pendingMessages: make(map[string]chan interface{}),
+				}
+			}
+
+			server.Unlock()
 			c.connectedCh <- true
 		default:
 			if msg.RecipientID != server.ID {
 				if !distributor {
-					panic("Uh oh")
+					fmt.Println(p)
+					panic(fmt.Sprintf("Recipient ID is %s, but server ID is %s", msg.RecipientID, server.ID))
 				}
 
 				fmt.Println("Forwarding message to", msg.RecipientID[:4])

@@ -135,20 +135,6 @@ func (s *Server) getClients() map[string]float64 {
 	return clientPings
 }
 
-func (s *Server) AddClients(distributor *Client, clients map[string]float64) {
-	s.Lock()
-	defer s.Unlock()
-
-	for clientID := range clients {
-		s.clients[clientID] = &Client{
-			Addr:            distributor.Addr,
-			ID:              clientID,
-			sendCh:          distributor.sendCh,
-			pendingMessages: make(map[string]chan interface{}),
-		}
-	}
-}
-
 func (s *Server) SendToAllClients(msg interface{}) {
 	s.RLock()
 	defer s.RUnlock()
