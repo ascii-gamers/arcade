@@ -67,8 +67,6 @@ func (s *Server) connect(c *Client) error {
 }
 
 func (s *Server) startWithNextOpenPort() {
-	hostPort = 6824
-
 	for {
 		s.Addr = fmt.Sprintf("127.0.0.1:%d", hostPort)
 		s.start()
@@ -133,20 +131,6 @@ func (s *Server) getClients() map[string]float64 {
 	}
 
 	return clientPings
-}
-
-func (s *Server) AddClients(distributor *Client, clients map[string]float64) {
-	s.Lock()
-	defer s.Unlock()
-
-	for clientID := range clients {
-		s.clients[clientID] = &Client{
-			Addr:            distributor.Addr,
-			ID:              clientID,
-			sendCh:          distributor.sendCh,
-			pendingMessages: make(map[string]chan interface{}),
-		}
-	}
 }
 
 func (s *Server) SendToAllClients(msg interface{}) {
