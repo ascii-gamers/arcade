@@ -3,6 +3,7 @@ package arcade
 import (
 	"sort"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -60,6 +61,20 @@ func NewGamesListView() *GamesListView {
 func (v *GamesListView) Init() {
 	server.RLock()
 	clients := server.clients
+	server.RUnlock()
+
+	for _, client := range clients {
+		if !client.Distributor {
+			continue
+		}
+
+		client.Send(NewGetClientsMessage())
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	server.RLock()
+	clients = server.clients
 	server.RUnlock()
 
 	for _, client := range clients {

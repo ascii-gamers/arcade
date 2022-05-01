@@ -6,10 +6,10 @@ import (
 
 type LeaveMessage struct {
 	Message
-	Player Player
+	Player *Player
 }
 
-func NewLeaveMessage(player Player) *LeaveMessage {
+func NewLeaveMessage(player *Player) *LeaveMessage {
 	return &LeaveMessage{
 		Message: Message{Type: "leave"},
 		Player:  player,

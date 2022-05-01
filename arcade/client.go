@@ -19,6 +19,9 @@ type Client struct {
 	// address of the distributor.
 	Addr string
 
+	// True if we're connected to this client.
+	Connected bool
+
 	// Distance to this client. Right now, this is just the number of nodes
 	// packets need to travel through in order to reach this client. In the
 	// future, we can consider replacing this with ping times.
@@ -56,6 +59,10 @@ func NewClient(addr string) *Client {
 		sendCh:          make(chan []byte),
 		pendingMessages: make(map[string]chan interface{}),
 	}
+}
+
+func (c *Client) connect() {
+	c.Connected = true
 }
 
 // start begins reading and writing messages with this client.
@@ -119,45 +126,14 @@ func (c *Client) readPump(startedCh chan bool) {
 		var res interface{}
 
 		switch p := p.(type) {
-		case DisconnectMessage:
-			mgr.ProcessEvent(&ClientDisconnectEvent{
-				ClientID: c.ID,
-			})
-
-			server.Lock()
-			delete(server.clients, c.ID)
-			server.Unlock()
-		case GetClientsMessage:
-			res = NewClientsMessage(server.getClients())
-		case PingMessage:
-			c.ID = p.ID
-			c.Neighbor = true
-
-			server.Lock()
-			server.clients[c.ID] = c
-			server.Unlock()
-
-			res = NewPongMessage(server.ID, server.getClients(), distributor)
-		case PongMessage:
-			c.ID = p.ID
-			c.Distance = 1
-			c.Distributor = p.Distributor
-			c.Neighbor = true
-			c.ServicerID = p.ID
-
-			// Don't process client updates on the server immediately, as this
-			// may crash views. Instead, let views process client update events
-			// and then process these actions on the server afterward.
+		case ClientsMessage:
 			pendingServerActions := make([]func(), 0)
 
-			pendingServerActions = append(pendingServerActions, func() {
-				server.clients[c.ID] = c
-			})
-
+			// Find all clients we're connected to through this client
 			existingClients := make(map[string]bool)
 
 			for clientID, client := range server.clients {
-				if client.ServicerID == p.ID {
+				if client.Connected && client.ServicerID == c.ID {
 					existingClients[clientID] = true
 				}
 			}
@@ -170,14 +146,14 @@ func (c *Client) readPump(startedCh chan bool) {
 				}
 
 				pendingServerActions = append(pendingServerActions, func() {
-					server.clients[clientID] = &Client{
+					server.AddClient(&Client{
 						Addr:            c.Addr,
 						Distance:        distance + 1,
 						ID:              clientID,
 						ServicerID:      c.ID,
 						sendCh:          c.sendCh,
 						pendingMessages: make(map[string]chan interface{}),
-					}
+					})
 				})
 			}
 
@@ -195,6 +171,35 @@ func (c *Client) readPump(startedCh chan bool) {
 			for _, action := range pendingServerActions {
 				action()
 			}
+			server.Unlock()
+		case DisconnectMessage:
+			mgr.ProcessEvent(&ClientDisconnectEvent{
+				ClientID: c.ID,
+			})
+
+			server.Lock()
+			delete(server.clients, c.ID)
+			server.Unlock()
+		case GetClientsMessage:
+			res = NewClientsMessage(server.getClients())
+		case PingMessage:
+			c.ID = p.ID
+			c.Neighbor = true
+
+			server.Lock()
+			server.AddClient(c)
+			server.Unlock()
+
+			res = NewPongMessage(server.ID, distributor)
+		case PongMessage:
+			c.ID = p.ID
+			c.Distance = 1
+			c.Distributor = p.Distributor
+			c.Neighbor = true
+			c.ServicerID = p.ID
+
+			server.Lock()
+			server.AddClient(c)
 			server.Unlock()
 
 			c.connectedCh <- true

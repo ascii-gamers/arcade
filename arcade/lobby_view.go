@@ -52,7 +52,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 				if lobby.HostID != server.ID {
 					// not the host, just leave the game
 					host, _ := server.GetClient(lobby.HostID)
-					go host.Send(NewLeaveMessage(Player{}))
+					go host.Send(NewLeaveMessage(&Player{}))
 				}
 				mgr.SetView(NewGamesListView())
 				// delete game?
