@@ -7,7 +7,7 @@ import (
 type ErrorMessage struct {
 	Message
 
-	Text string `json:"text"`
+	Text string
 }
 
 func NewErrorMessage(msg string) *ErrorMessage {

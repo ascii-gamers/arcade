@@ -16,6 +16,10 @@ func NewViewManager() *ViewManager {
 }
 
 func (mgr *ViewManager) ProcessEvent(ev interface{}) {
+	if distributor {
+		return
+	}
+
 	mgr.view.ProcessEvent(ev)
 }
 
