@@ -42,11 +42,18 @@ func (v *LobbyView) Init() {
 
 func (v *LobbyView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
+	case *ClientDisconnectEvent:
+		lobby.RemovePlayer(evt.ClientID)
 	case *tcell.EventKey:
 		switch evt.Key() {
 		case tcell.KeyRune:
 			switch evt.Rune() {
 			case 'c':
+				if lobby.HostID != server.ID {
+					// not the host, just leave the game
+					host, _ := server.GetClient(lobby.HostID)
+					go host.Send(NewLeaveMessage(Player{}))
+				}
 				mgr.SetView(NewGamesListView())
 				// delete game?
 			case 's':
@@ -63,23 +70,19 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		return NewLobbyInfoMessage(lobby)
 	case JoinMessage:
 		lobby.Lock()
-		if lobby.NumFull == lobby.Capacity {
+		if len(lobby.PlayerIDs) == lobby.Capacity {
 			lobby.Unlock()
 			return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
 		} else if lobby.code != p.Code {
 			lobby.Unlock()
 			return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
 		} else {
-			lobby.NumFull++
-			lobby.AddPlayer(p.Player.ClientID)
 			lobby.Unlock()
+			lobby.AddPlayer(p.Player.ClientID)
 			return NewJoinReplyMessage(lobby, OK)
 		}
-		// deal with private games later
-		// if p.Code != pendingGame.Code {
-		// 	return NewJoinReplyMessage(ErrWrongCode)
-		// }
-		// add capacity branch
+	case LeaveMessage:
+		lobby.RemovePlayer(p.Player.ClientID)
 	}
 	return nil
 }
@@ -123,7 +126,7 @@ func (v *LobbyView) Render(s *Screen) {
 
 	// capacity
 	capacityHeader := "Game capacity: "
-	capacityString := fmt.Sprintf("(%v/%v)", lobby.NumFull, lobby.Capacity)
+	capacityString := fmt.Sprintf("(%v/%v)", len(lobby.PlayerIDs), lobby.Capacity)
 	s.DrawText((width-len(capacityHeader+capacityString))/2, lv_TableY1+3, sty, capacityHeader)
 	s.DrawText((width-len(capacityHeader+capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 

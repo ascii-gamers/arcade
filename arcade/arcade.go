@@ -12,6 +12,7 @@ var mgr = NewViewManager()
 var server *Server
 var hostPort int
 var lobby *Lobby
+var client *Client
 
 func Start() {
 	dist := flag.Bool("distributor", false, "Run as a distributor")
@@ -42,7 +43,8 @@ func Start() {
 	// TODO: Make better solution for this later -- wait for server to start
 	time.Sleep(10 * time.Millisecond)
 
-	go server.connect(NewClient(*distributorAddr))
+	client = NewClient(*distributorAddr)
+	go server.connect(client)
 
 	// TODO: Make better solution for this later -- wait to connect to distributor
 	time.Sleep(10 * time.Millisecond)

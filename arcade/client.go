@@ -28,6 +28,9 @@ type Client struct {
 	// another client or a distributor.
 	Neighbor bool
 
+	// should be set at the beginning and saved
+	Username string
+
 	conn net.Conn
 
 	sendCh chan []byte

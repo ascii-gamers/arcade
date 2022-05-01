@@ -17,7 +17,6 @@ type Lobby struct {
 	Private   bool
 	GameType  string
 	Capacity  int
-	NumFull   int
 	PlayerIDs []string
 	HostID    string
 }
@@ -29,7 +28,6 @@ func NewLobby(name string, private bool, gameType string, capacity int, hostID s
 		Private:   private,
 		GameType:  gameType,
 		Capacity:  capacity,
-		NumFull:   1,
 		PlayerIDs: []string{hostID},
 		HostID:    hostID,
 	}
@@ -42,7 +40,20 @@ func NewLobby(name string, private bool, gameType string, capacity int, hostID s
 }
 
 func (l *Lobby) AddPlayer(playerID string) {
+	l.Lock()
 	l.PlayerIDs = append(l.PlayerIDs, playerID)
+	l.Unlock()
+}
+
+func (l *Lobby) RemovePlayer(playerID string) {
+	l.Lock()
+	for i, v := range l.PlayerIDs {
+		if v == playerID {
+			l.PlayerIDs = append(l.PlayerIDs[:i], l.PlayerIDs[i+1:]...)
+			break
+		}
+	}
+	l.Unlock()
 }
 
 func generateCode() string {
