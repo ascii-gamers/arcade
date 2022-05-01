@@ -32,7 +32,7 @@ func Start() {
 	server = NewServer("")
 
 	if distributor {
-		server.Addr = fmt.Sprintf("127.0.0.1:%d", hostPort)
+		server.Addr = fmt.Sprintf("0.0.0.0:%d", hostPort)
 		server.start()
 		os.Exit(0)
 	}
