@@ -83,6 +83,18 @@ func parseMessage(data []byte) (interface{}, error) {
 		p := RoutingMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
+	case "game_update":
+		p := GameUpdateMessage[any, any]{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "client_update":
+		p := ClientUpdateMessage[any]{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "start_game":
+		p := StartGameMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
 	default:
 		return nil, fmt.Errorf("Unknown message type '%s'", res.Type)
 	}
