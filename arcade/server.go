@@ -67,8 +67,6 @@ func (s *Server) connect(c *Client) error {
 }
 
 func (s *Server) startWithNextOpenPort() {
-	hostPort = 6824
-
 	for {
 		s.Addr = fmt.Sprintf("127.0.0.1:%d", hostPort)
 		s.start()
