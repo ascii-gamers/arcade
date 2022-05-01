@@ -108,6 +108,14 @@ func (c *Client) readPump(startedCh chan bool) {
 		var res interface{}
 
 		switch p := p.(type) {
+		case DisconnectMessage:
+			mgr.ProcessEvent(&ClientDisconnectEvent{
+				ClientID: p.SenderID,
+			})
+
+			server.Lock()
+			delete(server.clients, c.ID)
+			server.Unlock()
 		case GetClientsMessage:
 			res = NewClientsMessage(server.getClients())
 		case PingMessage:

@@ -133,12 +133,12 @@ func (s *Server) getClients() map[string]float64 {
 	return clientPings
 }
 
-func (s *Server) SendToAllClients(msg interface{}) {
+func (s *Server) SendAll(msg interface{}, distributors bool) {
 	s.RLock()
 	defer s.RUnlock()
 
 	for _, client := range s.clients {
-		if client.Distributor {
+		if !distributors && client.Distributor {
 			continue
 		}
 

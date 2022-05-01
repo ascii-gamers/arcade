@@ -57,7 +57,7 @@ func (v *GamesListView) Init() {
 	}
 }
 
-func (v *GamesListView) ProcessEvent(evt tcell.Event) {
+func (v *GamesListView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
 	case *tcell.EventKey:
 		switch evt.Key() {

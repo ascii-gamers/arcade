@@ -91,11 +91,12 @@ func (tg *TronGameView) Init() {
 	}()
 }
 
-func (tg *TronGameView) ProcessEvent(ev tcell.Event) {
+func (tg *TronGameView) ProcessEvent(ev interface{}) {
 	switch ev := ev.(type) {
+	case *ClientDisconnectEvent:
+		// process disconnected client
 	case *tcell.EventKey:
 		tg.ProcessEventKey(ev)
-
 	}
 }
 

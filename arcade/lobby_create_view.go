@@ -53,7 +53,7 @@ func NewLobbyCreateView() *LobbyCreateView {
 func (v *LobbyCreateView) Init() {
 }
 
-func (v *LobbyCreateView) ProcessEvent(evt tcell.Event) {
+func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
 	case *tcell.EventKey:
 		switch evt.Key() {

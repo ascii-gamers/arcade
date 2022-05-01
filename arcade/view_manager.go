@@ -15,6 +15,10 @@ func NewViewManager() *ViewManager {
 	return &ViewManager{}
 }
 
+func (mgr *ViewManager) ProcessEvent(ev interface{}) {
+	mgr.view.ProcessEvent(ev)
+}
+
 func (mgr *ViewManager) SetView(v View) {
 	// Unload existing view
 	if mgr.view != nil {
@@ -64,12 +68,13 @@ func (mgr *ViewManager) Start(v View) {
 			mgr.RequestRender()
 		case *tcell.EventKey:
 			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
+				server.SendAll(NewDisconnectMessage(), true)
 				quit()
 			}
 		}
 
 		// Send event to current view
-		mgr.view.ProcessEvent(ev)
+		mgr.ProcessEvent(ev)
 	}
 }
 

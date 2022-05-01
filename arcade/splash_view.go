@@ -67,7 +67,7 @@ func (v *SplashView) Init() {
 
 }
 
-func (v *SplashView) ProcessEvent(evt tcell.Event) {
+func (v *SplashView) ProcessEvent(evt interface{}) {
 	switch evt.(type) {
 	case *tcell.EventKey:
 		mgr.SetView(NewGamesListView())
