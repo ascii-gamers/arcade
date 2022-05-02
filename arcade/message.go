@@ -16,7 +16,11 @@ type Message struct {
 func processMessage(from *Client, p interface{}) interface{} {
 	// Get sender ID
 	senderID := reflect.ValueOf(p).FieldByName("Message").FieldByName("SenderID").String()
-	sender := server.clients[senderID]
+	sender, ok := server.Network.GetClient(senderID)
+
+	if !ok {
+		panic("Unknown sender ID: " + senderID)
+	}
 
 	ret := mgr.view.ProcessMessage(sender, p)
 
@@ -81,6 +85,10 @@ func parseMessage(data []byte) (interface{}, error) {
 		return p, nil
 	case "pong":
 		p := PongMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "routing":
+		p := RoutingMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	default:

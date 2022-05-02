@@ -1,9 +1,11 @@
 package arcade
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"sync"
 
 	"github.com/google/uuid"
@@ -13,35 +15,20 @@ import (
 type Server struct {
 	sync.RWMutex
 
+	Network *Network
+
 	Addr string
 	ID   string
-
-	clients map[string]*Client
 }
 
 // NewServer creates the server with a given address.
 func NewServer(addr string) *Server {
+	serverID := uuid.NewString()
+
 	return &Server{
 		Addr:    addr,
-		ID:      uuid.NewString(),
-		clients: make(map[string]*Client, 0),
-	}
-}
-
-func (s *Server) connectToNextOpenPort() {
-	for port := 6824; port < 6824+10; port++ {
-		if port == hostPort {
-			port++
-			continue
-		}
-
-		client := NewClient(fmt.Sprintf("127.0.0.1:%d", port))
-
-		if err := server.connect(client); err != nil {
-			continue
-		}
-
-		client.Send(NewHelloMessage())
+		Network: NewNetwork(serverID),
+		ID:      serverID,
 	}
 }
 
@@ -56,14 +43,180 @@ func (s *Server) connect(c *Client) error {
 	c.start(sess)
 
 	c.connectedCh = make(chan bool)
-	c.Send(NewPingMessage(server.ID))
+	s.Network.Send(c, NewPingMessage(s.ID))
 
 	// TODO: timeout if no response
 	if !<-c.connectedCh {
 		return errors.New("client failed to connect")
 	}
 
+	go s.Network.PropagateRoutes()
+
 	return nil
+}
+
+func (s *Server) handleMessage(c *Client, data []byte) {
+	p, err := parseMessage(data)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
+
+	if distributor {
+		fmt.Println(msg)
+		fmt.Printf("Received '%s' from %s\n", msg.Type, msg.SenderID[:4])
+
+		if msg.Type == "error" {
+			fmt.Println(p)
+		}
+	}
+
+	// Get message ID and send signal if we're waiting on this one
+	messageID := reflect.ValueOf(p).FieldByName("Message").FieldByName("MessageID").String()
+
+	c.pendingMessagesMux.RLock()
+	recvCh, ok := c.pendingMessages[messageID]
+	c.pendingMessagesMux.RUnlock()
+
+	if ok {
+		recvCh <- p
+	}
+
+	// Process message and prepare response
+	var res interface{}
+
+	switch p := p.(type) {
+	// case ClientsMessage:
+	// 	pendingActions := make([]func(), 0)
+
+	// 	// Find all clients we're connected to through this client
+	// 	existingClients := make(map[string]bool)
+
+	// 	for clientID, client := range s.clients {
+	// 		if client.Connected && client.ServicerID == c.ID {
+	// 			existingClients[clientID] = true
+	// 		}
+	// 	}
+
+	// 	for clientID, distance := range p.Clients {
+	// 		delete(existingClients, clientID)
+
+	// 		if clientID == s.ID {
+	// 			continue
+	// 		}
+
+	// 		pendingActions = append(pendingActions, func() {
+	// 			s.AddClient(&Client{
+	// 				Addr:            c.Addr,
+	// 				Distance:        distance + 1,
+	// 				ID:              clientID,
+	// 				ServicerID:      c.ID,
+	// 				sendCh:          c.sendCh,
+	// 				pendingMessages: make(map[string]chan interface{}),
+	// 			})
+	// 		})
+	// 	}
+
+	// 	for clientID := range existingClients {
+	// 		mgr.ProcessEvent(&ClientDisconnectEvent{
+	// 			ClientID: clientID,
+	// 		})
+
+	// 		pendingActions = append(pendingActions, func() {
+	// 			delete(s.clients, clientID)
+	// 		})
+	// 	}
+
+	// 	s.Lock()
+	// 	for _, action := range pendingActions {
+	// 		action()
+	// 	}
+	// 	s.Unlock()
+	case DisconnectMessage:
+		mgr.ProcessEvent(&ClientDisconnectEvent{
+			ClientID: c.ID,
+		})
+
+		s.Network.DeleteClient(c.ID)
+	// case GetClientsMessage:
+	// 	res = NewClientsMessage(s.getClients())
+	case PingMessage:
+		c.ID = p.ID
+		c.ClientRoutingInfo = ClientRoutingInfo{
+			Distance: 1,
+		}
+		c.Neighbor = true
+
+		s.Network.AddClient(c)
+
+		res = NewPongMessage(s.ID, distributor)
+	case PongMessage:
+		c.ID = p.ID
+		c.ClientRoutingInfo = ClientRoutingInfo{
+			Distance:    1,
+			Distributor: p.Distributor,
+		}
+		c.Neighbor = true
+
+		s.Network.AddClient(c)
+
+		c.connectedCh <- true
+	case RoutingMessage:
+		fmt.Println("received new routes", p.Distances)
+		s.Network.UpdateRoutes(c, p.Distances)
+	default:
+		if msg.RecipientID != s.ID {
+			if !distributor {
+				fmt.Println(p)
+				panic(fmt.Sprintf("Recipient ID is %s, but server ID is %s", msg.RecipientID, s.ID))
+			}
+
+			fmt.Println("Forwarding message to", msg.RecipientID[:4])
+			fmt.Println(p)
+
+			s.RLock()
+			recipient, ok := s.Network.GetClient(msg.RecipientID)
+			s.RUnlock()
+
+			if ok {
+				recipient.sendCh <- data
+				return
+			} else {
+				res = NewErrorMessage("Invalid recipient")
+			}
+		} else {
+			if distributor {
+				fmt.Println(p)
+				panic("Recipient: " + msg.RecipientID + ", self: " + s.ID)
+			}
+
+			res = processMessage(c, p)
+		}
+	}
+
+	if res == nil {
+		return
+	} else if err, ok := res.(error); ok {
+		res = NewErrorMessage(err.Error())
+	}
+
+	// Set sender and recipient IDs
+	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(msg.SenderID))
+	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(s.ID))
+
+	// Set message ID if there was one in the sent packet
+	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
+
+	resData, err := res.(encoding.BinaryMarshaler).MarshalBinary()
+
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	c.sendCh <- resData
 }
 
 func (s *Server) startWithNextOpenPort() {
@@ -75,23 +228,6 @@ func (s *Server) startWithNextOpenPort() {
 	}
 }
 
-func (s *Server) AddClient(c *Client) {
-	s.clients[c.ID] = c
-}
-
-func (s *Server) GetClient(clientID string) (*Client, bool) {
-	s.RLock()
-	defer s.RUnlock()
-
-	client, ok := s.clients[clientID]
-
-	if !ok {
-		return nil, false
-	}
-
-	return client, true
-}
-
 // startServer starts listening for connections on a given address.
 func (s *Server) start() error {
 	listener, err := kcp.Listen(s.Addr)
@@ -101,6 +237,7 @@ func (s *Server) start() error {
 	}
 
 	fmt.Printf("Listening at %s...\n", s.Addr)
+	fmt.Printf("ID: %s\n", s.ID)
 
 	for {
 		// Wait for new client connections
@@ -119,33 +256,20 @@ func (s *Server) start() error {
 	}
 }
 
-func (s *Server) getClients() map[string]int {
-	s.RLock()
-	defer s.RUnlock()
+// func (s *Server) getClients() map[string]float64 {
+// 	s.RLock()
+// 	defer s.RUnlock()
 
-	clients := server.clients
-	clientDists := make(map[string]int, len(clients))
+// 	clients := s.clients
+// 	clientDists := make(map[string]float64, len(clients))
 
-	for i := range clients {
-		if clients[i].Distributor {
-			continue
-		}
+// 	for i := range clients {
+// 		if clients[i].Distributor {
+// 			continue
+// 		}
 
-		clientDists[clients[i].ID] = clients[i].Distance
-	}
+// 		clientDists[clients[i].ID] = clients[i].Distance
+// 	}
 
-	return clientDists
-}
-
-func (s *Server) SendAll(msg interface{}, distributors bool) {
-	s.RLock()
-	defer s.RUnlock()
-
-	for _, client := range s.clients {
-		if !distributors && client.Distributor {
-			continue
-		}
-
-		client.Send(msg)
-	}
-}
+// 	return clientDists
+// }

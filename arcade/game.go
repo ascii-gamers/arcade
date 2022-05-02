@@ -1,7 +1,6 @@
 package arcade
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -73,10 +72,6 @@ type Game[GS any, CS any] struct {
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func GameStart() {
-	fmt.Println("hello world")
-}
-
 func NewGame(lobby *Lobby) {
 	switch lobby.GameType {
 	case Tron:
@@ -113,8 +108,8 @@ func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 	clientUpdate := ClientUpdateData[CS]{g.Me, update}
 
 	for clientId := range g.ClientStates {
-		if client, ok := server.clients[clientId]; ok && clientId != g.Me {
-			client.Send(clientUpdate)
+		if client, ok := server.Network.GetClient(clientId); ok && clientId != g.Me {
+			server.Network.Send(client, clientUpdate)
 		}
 	}
 }
@@ -128,9 +123,9 @@ func (g *Game[GS, CS]) sendGameUpdate() {
 	defer server.RUnlock()
 
 	for clientID := range g.ClientStates {
-		if client, ok := server.GetClient(clientID); ok {
+		if client, ok := server.Network.GetClient(clientID); ok {
 			data := GameUpdateData[GS, CS]{g.GameState, g.ClientStates}
-			client.Send(data)
+			server.Network.Send(client, data)
 		}
 	}
 }

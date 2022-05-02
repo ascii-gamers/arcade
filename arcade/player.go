@@ -1,7 +1,5 @@
 package arcade
 
-import "fmt"
-
 const (
 	GameDone = "GameDone"
 	Waiting  = "Waiting"
@@ -14,8 +12,4 @@ type Player struct {
 	Username string
 	Status   string
 	Host     bool
-}
-
-func PlayerStart() {
-	fmt.Println("hello world")
 }

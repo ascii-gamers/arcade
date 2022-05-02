@@ -6,7 +6,6 @@ require (
 	github.com/gdamore/tcell/v2 v2.5.1
 	github.com/google/uuid v1.3.0
 	github.com/xtaci/kcp-go/v5 v5.6.1
-	golang.org/x/exp v0.0.0-20220428152302-39d4317da171
 )
 
 require (

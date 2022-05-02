@@ -1,7 +1,6 @@
 package arcade
 
 import (
-	"fmt"
 	"strconv"
 	"unicode/utf8"
 
@@ -115,7 +114,7 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 					}
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
 					lobby = NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, server.ID)
-					fmt.Println(server.clients)
+					// fmt.Println(server.clients)
 					mgr.SetView(NewLobbyView())
 				case 'i':
 					lcv_editing = true

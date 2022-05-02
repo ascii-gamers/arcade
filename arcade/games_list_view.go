@@ -3,7 +3,6 @@ package arcade
 import (
 	"sort"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -59,43 +58,19 @@ func NewGamesListView() *GamesListView {
 }
 
 func (v *GamesListView) Init() {
-	actions := make([]func(), 0)
+	actions := []func(){}
 
-	server.RLock()
-	clients := server.clients
-
-	for _, client := range clients {
-		if !client.Distributor {
-			continue
-		}
-
-		actions = append(actions, func() {
-			client.Send(NewGetClientsMessage())
-		})
-	}
-	server.RUnlock()
-
-	for _, action := range actions {
-		action()
-	}
-
-	actions = make([]func(), 0)
-
-	time.Sleep(100 * time.Millisecond)
-
-	server.RLock()
-	clients = server.clients
-
-	for _, client := range clients {
+	server.Network.ClientsRange(func(client *Client) bool {
 		if client.Distributor {
-			continue
+			return true
 		}
 
 		actions = append(actions, func() {
-			client.Send(NewHelloMessage())
+			server.Network.Send(client, NewHelloMessage())
 		})
-	}
-	server.RUnlock()
+
+		return true
+	})
 
 	for _, action := range actions {
 		action()
@@ -136,14 +111,15 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				if len(glv_code_input_string) == 4 {
 					glv_code = glv_code_input_string
 					selectedLobby := v.lobbies[selectedLobbyKey]
-					self, _ := server.GetClient(selectedLobby.HostID)
+					self, _ := server.Network.GetClient(selectedLobby.HostID)
 
 					joinPlayer := Player{
 						ClientID: server.ID,
 						Username: "joiningjoanna",
 						Host:     false,
 					}
-					go self.Send(NewJoinMessage(glv_code, joinPlayer))
+
+					go server.Network.Send(self, NewJoinMessage(glv_code, joinPlayer))
 				} else {
 					glv_join_box = "join_code"
 					err_msg = "Code must be four characters long."
@@ -176,14 +152,15 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 						if selectedLobby.Private {
 							glv_join_box = "join_code"
 						} else {
-							self, _ := server.GetClient(selectedLobby.HostID)
+							self, _ := server.Network.GetClient(selectedLobby.HostID)
 
 							joinPlayer := Player{
 								ClientID: server.ID,
 								Username: "joiningjoanna",
 								Host:     false,
 							}
-							go self.Send(NewJoinMessage("", joinPlayer))
+
+							go server.Network.Send(self, NewJoinMessage("", joinPlayer))
 						}
 						v.mu.RUnlock()
 
@@ -205,6 +182,8 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 		v.mu.Lock()
 		v.lobbies[p.Lobby.ID] = p.Lobby
 		v.mu.Unlock()
+
+		mgr.RequestRender()
 	case JoinReplyMessage:
 		if p.Error == OK {
 			lobby = p.Lobby

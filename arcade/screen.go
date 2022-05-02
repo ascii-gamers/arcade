@@ -1,11 +1,14 @@
 package arcade
 
 import (
+	"sync"
+
 	"github.com/gdamore/tcell/v2"
 )
 
 type Screen struct {
 	tcell.Screen
+	sync.RWMutex
 }
 
 type CursorStyle int
@@ -17,6 +20,20 @@ const (
 
 func (s *Screen) displaySize() (int, int) {
 	return displayWidth, displayHeight
+}
+
+func (s *Screen) Size() (int, int) {
+	s.RLock()
+	defer s.RUnlock()
+
+	return s.Screen.Size()
+}
+
+func (s *Screen) Clear() {
+	s.Lock()
+	defer s.Unlock()
+
+	s.Screen.Clear()
 }
 
 func (s *Screen) offset() (int, int) {

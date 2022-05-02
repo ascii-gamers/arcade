@@ -13,7 +13,6 @@ var server *Server
 var hostPort int
 var lobby *Lobby
 var client *Client
-var router = NewDistanceVectorRouter()
 
 func Start() {
 	dist := flag.Bool("distributor", false, "Run as a distributor")
@@ -45,6 +44,7 @@ func Start() {
 	time.Sleep(10 * time.Millisecond)
 
 	client = NewClient(*distributorAddr)
+	client.Distributor = true
 	go server.connect(client)
 
 	// TODO: Make better solution for this later -- wait to connect to distributor

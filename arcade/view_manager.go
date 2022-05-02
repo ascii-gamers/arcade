@@ -44,7 +44,7 @@ func (mgr *ViewManager) Start(v View) {
 		panic(err)
 	}
 
-	mgr.screen = &Screen{s}
+	mgr.screen = &Screen{Screen: s}
 
 	if err := mgr.screen.Init(); err != nil {
 		panic(err)
@@ -72,7 +72,7 @@ func (mgr *ViewManager) Start(v View) {
 			mgr.RequestRender()
 		case *tcell.EventKey:
 			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
-				server.SendAll(NewDisconnectMessage(), true)
+				server.Network.SendNeighbors(NewDisconnectMessage())
 				quit()
 			}
 		}
