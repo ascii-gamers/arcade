@@ -76,72 +76,16 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	// Get message ID and send signal if we're waiting on this one
 	messageID := reflect.ValueOf(p).FieldByName("Message").FieldByName("MessageID").String()
 
-	c.pendingMessagesMux.RLock()
-	recvCh, ok := c.pendingMessages[messageID]
-	c.pendingMessagesMux.RUnlock()
-
-	if ok {
-		recvCh <- p
-	}
-
 	// Process message and prepare response
 	var res interface{}
 
 	switch p := p.(type) {
-	// case ClientsMessage:
-	// 	pendingActions := make([]func(), 0)
-
-	// 	// Find all clients we're connected to through this client
-	// 	existingClients := make(map[string]bool)
-
-	// 	for clientID, client := range s.clients {
-	// 		if client.Connected && client.ServicerID == c.ID {
-	// 			existingClients[clientID] = true
-	// 		}
-	// 	}
-
-	// 	for clientID, distance := range p.Clients {
-	// 		delete(existingClients, clientID)
-
-	// 		if clientID == s.ID {
-	// 			continue
-	// 		}
-
-	// 		pendingActions = append(pendingActions, func() {
-	// 			s.AddClient(&Client{
-	// 				Addr:            c.Addr,
-	// 				Distance:        distance + 1,
-	// 				ID:              clientID,
-	// 				ServicerID:      c.ID,
-	// 				sendCh:          c.sendCh,
-	// 				pendingMessages: make(map[string]chan interface{}),
-	// 			})
-	// 		})
-	// 	}
-
-	// 	for clientID := range existingClients {
-	// 		mgr.ProcessEvent(&ClientDisconnectEvent{
-	// 			ClientID: clientID,
-	// 		})
-
-	// 		pendingActions = append(pendingActions, func() {
-	// 			delete(s.clients, clientID)
-	// 		})
-	// 	}
-
-	// 	s.Lock()
-	// 	for _, action := range pendingActions {
-	// 		action()
-	// 	}
-	// 	s.Unlock()
 	case DisconnectMessage:
 		arcade.ViewManager.ProcessEvent(&ClientDisconnectEvent{
 			ClientID: c.ID,
 		})
 
 		s.Network.DeleteClient(c.ID)
-	// case GetClientsMessage:
-	// 	res = NewClientsMessage(s.getClients())
 	case PingMessage:
 		c.ID = p.ID
 		c.ClientRoutingInfo = ClientRoutingInfo{
@@ -246,29 +190,7 @@ func (s *Server) start() error {
 			log.Fatal(err)
 		}
 
-		client := &Client{
-			Addr:   s.RemoteAddr().String(),
-			sendCh: make(chan []byte),
-		}
-
+		client := NewNeighboringClient(s.RemoteAddr().String())
 		client.start(s)
 	}
 }
-
-// func (s *Server) getClients() map[string]float64 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	clients := s.clients
-// 	clientDists := make(map[string]float64, len(clients))
-
-// 	for i := range clients {
-// 		if clients[i].Distributor {
-// 			continue
-// 		}
-
-// 		clientDists[clients[i].ID] = clients[i].Distance
-// 	}
-
-// 	return clientDists
-// }

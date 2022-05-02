@@ -59,7 +59,7 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
-	if client.ServicerID == "" {
+	if client.NextHop == "" {
 		client.send(msg)
 		return true
 	}
@@ -67,7 +67,7 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 	n.RLock()
 	defer n.RUnlock()
 
-	servicer, ok := n.clients[client.ServicerID]
+	servicer, ok := n.clients[client.NextHop]
 
 	if !ok {
 		return false
@@ -139,7 +139,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 			client.Distance = c.Distance
 
 			from.RLock()
-			client.ServicerID = from.ID
+			client.NextHop = from.ID
 			client.conn = from.conn
 			from.RUnlock()
 
@@ -153,15 +153,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 			continue
 		}
 
-		n.clients[clientID] = &Client{
-			ID: clientID,
-			ClientRoutingInfo: ClientRoutingInfo{
-				Distance:    c.Distance + 1,
-				Distributor: c.Distributor,
-			},
-			ServicerID: from.ID,
-		}
-
+		n.clients[clientID] = NewDistantClient(clientID, from.ID, c.Distance+1, c.Distributor)
 		changes++
 	}
 

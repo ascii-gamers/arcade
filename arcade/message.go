@@ -39,10 +39,6 @@ func parseMessage(data []byte) (interface{}, error) {
 	}
 
 	switch res.Type {
-	case "clients":
-		p := ClientsMessage{}
-		json.Unmarshal(data, &p)
-		return p, nil
 	case "disconnect":
 		p := DisconnectMessage{}
 		json.Unmarshal(data, &p)
@@ -53,10 +49,6 @@ func parseMessage(data []byte) (interface{}, error) {
 		return p, nil
 	case "error":
 		p := ErrorMessage{}
-		json.Unmarshal(data, &p)
-		return p, nil
-	case "get_clients":
-		p := GetClientsMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "hello":
