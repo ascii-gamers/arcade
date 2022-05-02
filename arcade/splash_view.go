@@ -53,9 +53,10 @@ func NewSplashView() *SplashView {
 				view.displayFooter = !view.displayFooter
 				view.mu.Unlock()
 
-				mgr.RequestRender()
+				arcade.ViewManager.RequestRender()
 			case <-view.stopTickerCh:
 				ticker.Stop()
+				return
 			}
 		}
 	}()
@@ -70,7 +71,7 @@ func (v *SplashView) Init() {
 func (v *SplashView) ProcessEvent(evt interface{}) {
 	switch evt.(type) {
 	case *tcell.EventKey:
-		mgr.SetView(NewGamesListView())
+		arcade.ViewManager.SetView(NewGamesListView())
 	}
 }
 

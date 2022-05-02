@@ -103,7 +103,7 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 			if !lcv_editing {
 				switch evt.Rune() {
 				case 'c':
-					mgr.SetView(NewGamesListView())
+					arcade.ViewManager.SetView(NewGamesListView())
 				case 'p':
 					// save things
 					if lcv_game_name == "" {
@@ -113,9 +113,13 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 						}
 					}
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
-					lobby = NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, server.ID)
+
+					arcade.lobbyMux.Lock()
+					arcade.Lobby = NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, arcade.Server.ID)
+					arcade.lobbyMux.Unlock()
+
 					// fmt.Println(server.clients)
-					mgr.SetView(NewLobbyView())
+					arcade.ViewManager.SetView(NewLobbyView())
 				case 'i':
 					lcv_editing = true
 					lcv_inputString = ""

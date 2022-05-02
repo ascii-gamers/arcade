@@ -75,7 +75,7 @@ var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func NewGame(lobby *Lobby) {
 	switch lobby.GameType {
 	case Tron:
-		mgr.SetView(NewTronGameView(lobby))
+		arcade.ViewManager.SetView(NewTronGameView(lobby))
 	}
 }
 
@@ -108,8 +108,8 @@ func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 	clientUpdate := ClientUpdateData[CS]{g.Me, update}
 
 	for clientId := range g.ClientStates {
-		if client, ok := server.Network.GetClient(clientId); ok && clientId != g.Me {
-			server.Network.Send(client, clientUpdate)
+		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
+			arcade.Server.Network.Send(client, clientUpdate)
 		}
 	}
 }
@@ -119,13 +119,13 @@ func (g *Game[GS, CS]) sendGameUpdate() {
 		return
 	}
 
-	server.RLock()
-	defer server.RUnlock()
+	arcade.Server.RLock()
+	defer arcade.Server.RUnlock()
 
 	for clientID := range g.ClientStates {
-		if client, ok := server.Network.GetClient(clientID); ok {
+		if client, ok := arcade.Server.Network.GetClient(clientID); ok {
 			data := GameUpdateData[GS, CS]{g.GameState, g.ClientStates}
-			server.Network.Send(client, data)
+			arcade.Server.Network.Send(client, data)
 		}
 	}
 }

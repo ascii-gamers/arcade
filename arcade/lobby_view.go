@@ -41,53 +41,63 @@ func (v *LobbyView) Init() {
 }
 
 func (v *LobbyView) ProcessEvent(evt interface{}) {
+	arcade.lobbyMux.RLock()
+	defer arcade.lobbyMux.RUnlock()
+
 	switch evt := evt.(type) {
 	case *ClientDisconnectEvent:
-		lobby.RemovePlayer(evt.ClientID)
+		arcade.Lobby.RemovePlayer(evt.ClientID)
 	case *tcell.EventKey:
 		switch evt.Key() {
 		case tcell.KeyRune:
 			switch evt.Rune() {
 			case 'c':
-				if lobby.HostID != server.ID {
+				if arcade.Lobby.HostID != arcade.Server.ID {
 					// not the host, just leave the game
-					host, _ := server.Network.GetClient(lobby.HostID)
-					go server.Network.Send(host, NewLeaveMessage(&Player{}))
+					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
+					go arcade.Server.Network.Send(host, NewLeaveMessage(&Player{}))
 				}
-				mgr.SetView(NewGamesListView())
+				arcade.ViewManager.SetView(NewGamesListView())
 				// delete game?
 			case 's':
 				//start game
-				NewGame(lobby)
+				NewGame(arcade.Lobby)
 			}
 		}
 	}
 }
 
 func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
+	arcade.lobbyMux.RLock()
+	defer arcade.lobbyMux.RUnlock()
+
 	switch p := p.(type) {
 	case HelloMessage:
-		return NewLobbyInfoMessage(lobby)
+		return NewLobbyInfoMessage(arcade.Lobby)
 	case JoinMessage:
-		lobby.Lock()
-		if len(lobby.PlayerIDs) == lobby.Capacity {
-			lobby.Unlock()
+		arcade.Lobby.RLock()
+		defer arcade.Lobby.RUnlock()
+
+		if len(arcade.Lobby.PlayerIDs) == arcade.Lobby.Capacity {
 			return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
-		} else if lobby.code != p.Code {
-			lobby.Unlock()
+		} else if arcade.Lobby.code != p.Code {
 			return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
 		} else {
-			lobby.Unlock()
-			lobby.AddPlayer(p.Player.ClientID)
-			return NewJoinReplyMessage(lobby, OK)
+			arcade.Lobby.RUnlock()
+			arcade.Lobby.AddPlayer(p.Player.ClientID)
+			arcade.Lobby.RLock()
+			return NewJoinReplyMessage(arcade.Lobby, OK)
 		}
 	case LeaveMessage:
-		lobby.RemovePlayer(p.Player.ClientID)
+		arcade.Lobby.RemovePlayer(p.Player.ClientID)
 	}
 	return nil
 }
 
 func (v *LobbyView) Render(s *Screen) {
+	arcade.lobbyMux.RLock()
+	defer arcade.lobbyMux.RUnlock()
+
 	width, height := s.displaySize()
 
 	// Green text on default background
@@ -97,7 +107,7 @@ func (v *LobbyView) Render(s *Screen) {
 	// Draw GAME header
 
 	game_header := pong_header
-	if lobby.GameType == Tron {
+	if arcade.Lobby.GameType == Tron {
 		game_header = tron_header
 	}
 	headerX := (width - utf8.RuneCountInString(game_header[0])) / 2
@@ -111,22 +121,22 @@ func (v *LobbyView) Render(s *Screen) {
 
 	// name
 	nameHeader := "Name: "
-	nameString := lobby.Name
+	nameString := arcade.Lobby.Name
 	s.DrawText((width-len(nameHeader+nameString))/2, lv_TableY1+1, sty, nameHeader)
 	s.DrawText((width-len(nameHeader+nameString))/2+utf8.RuneCountInString(nameHeader), lv_TableY1+1, sty_bold, nameString)
 
 	// private
 	privateHeader := "Visibility: "
 	privateString := "public"
-	if lobby.Private {
-		privateString = "private, Join Code: " + lobby.code
+	if arcade.Lobby.Private {
+		privateString = "private, Join Code: " + arcade.Lobby.code
 	}
 	s.DrawText((width-len(privateHeader+privateString))/2, lv_TableY1+2, sty, privateHeader)
 	s.DrawText((width-len(privateHeader+privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)
 
 	// capacity
 	capacityHeader := "Game capacity: "
-	capacityString := fmt.Sprintf("(%v/%v)", len(lobby.PlayerIDs), lobby.Capacity)
+	capacityString := fmt.Sprintf("(%v/%v)", len(arcade.Lobby.PlayerIDs), arcade.Lobby.Capacity)
 	s.DrawText((width-len(capacityHeader+capacityString))/2, lv_TableY1+3, sty, capacityHeader)
 	s.DrawText((width-len(capacityHeader+capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 

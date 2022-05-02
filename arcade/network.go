@@ -32,7 +32,6 @@ func (n *Network) AddClient(c *Client) {
 	n.Lock()
 	defer n.Unlock()
 
-	fmt.Println("adding2", c.ID, "distributor=", c.Distributor)
 	n.clients[c.ID] = c
 	go n.PropagateRoutes()
 }
@@ -123,9 +122,6 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 	n.Lock()
 	defer n.Unlock()
 
-	fmt.Println("received new routes", routingTable)
-	fmt.Println(n.clients)
-
 	changes := 0
 
 	for clientID, client := range n.clients {
@@ -137,7 +133,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 
 		// Bellman-Ford equation: Update least-cost paths to all other clients
 		if c, ok := routingTable[clientID]; ok && c.Distance < client.Distance {
-			// TODO: Test this
+			// TODO: Fix this
 			fmt.Println("new path to", clientID, "cost=", c.Distance)
 			client.Lock()
 			client.Distance = c.Distance
@@ -157,7 +153,6 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 			continue
 		}
 
-		fmt.Println("adding", clientID, "distributor=", c.Distributor)
 		n.clients[clientID] = &Client{
 			ID: clientID,
 			ClientRoutingInfo: ClientRoutingInfo{

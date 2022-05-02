@@ -8,15 +8,20 @@ import (
 
 type ViewManager struct {
 	screen *Screen
-	view   View
+
+	view View
 }
 
 func NewViewManager() *ViewManager {
 	return &ViewManager{}
 }
 
+func (mgr *ViewManager) ProcessMessage(from *Client, p interface{}) interface{} {
+	return mgr.view.ProcessMessage(from, p)
+}
+
 func (mgr *ViewManager) ProcessEvent(ev interface{}) {
-	if distributor {
+	if arcade.Distributor {
 		return
 	}
 
@@ -72,7 +77,7 @@ func (mgr *ViewManager) Start(v View) {
 			mgr.RequestRender()
 		case *tcell.EventKey:
 			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
-				server.Network.SendNeighbors(NewDisconnectMessage())
+				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 				quit()
 			}
 		}

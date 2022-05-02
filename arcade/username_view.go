@@ -32,8 +32,8 @@ func (v *UsernameView) ProcessEvent(evt interface{}) {
 			}
 		case tcell.KeyEnter:
 			if uv_input != "" {
-				client.Username = uv_input
-				mgr.SetView(NewGamesListView())
+				// client.Username = uv_input
+				arcade.ViewManager.SetView(NewGamesListView())
 			}
 		}
 	}

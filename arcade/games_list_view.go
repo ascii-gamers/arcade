@@ -60,13 +60,13 @@ func NewGamesListView() *GamesListView {
 func (v *GamesListView) Init() {
 	actions := []func(){}
 
-	server.Network.ClientsRange(func(client *Client) bool {
+	arcade.Server.Network.ClientsRange(func(client *Client) bool {
 		if client.Distributor {
 			return true
 		}
 
 		actions = append(actions, func() {
-			server.Network.Send(client, NewHelloMessage())
+			arcade.Server.Network.Send(client, NewHelloMessage())
 		})
 
 		return true
@@ -111,15 +111,15 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				if len(glv_code_input_string) == 4 {
 					glv_code = glv_code_input_string
 					selectedLobby := v.lobbies[selectedLobbyKey]
-					self, _ := server.Network.GetClient(selectedLobby.HostID)
+					self, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
 					joinPlayer := Player{
-						ClientID: server.ID,
+						ClientID: arcade.Server.ID,
 						Username: "joiningjoanna",
 						Host:     false,
 					}
 
-					go server.Network.Send(self, NewJoinMessage(glv_code, joinPlayer))
+					go arcade.Server.Network.Send(self, NewJoinMessage(glv_code, joinPlayer))
 				} else {
 					glv_join_box = "join_code"
 					err_msg = "Code must be four characters long."
@@ -131,7 +131,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				switch evt.Rune() {
 				case 'c':
 					glv_join_box = ""
-					mgr.SetView(NewLobbyCreateView())
+					arcade.ViewManager.SetView(NewLobbyCreateView())
 				case 't':
 					// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
 					// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
@@ -152,15 +152,15 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 						if selectedLobby.Private {
 							glv_join_box = "join_code"
 						} else {
-							self, _ := server.Network.GetClient(selectedLobby.HostID)
+							self, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
 							joinPlayer := Player{
-								ClientID: server.ID,
+								ClientID: arcade.Server.ID,
 								Username: "joiningjoanna",
 								Host:     false,
 							}
 
-							go server.Network.Send(self, NewJoinMessage("", joinPlayer))
+							go arcade.Server.Network.Send(self, NewJoinMessage("", joinPlayer))
 						}
 						v.mu.RUnlock()
 
@@ -183,14 +183,17 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 		v.lobbies[p.Lobby.ID] = p.Lobby
 		v.mu.Unlock()
 
-		mgr.RequestRender()
+		arcade.ViewManager.RequestRender()
 	case JoinReplyMessage:
 		if p.Error == OK {
-			lobby = p.Lobby
+			arcade.lobbyMux.Lock()
+			arcade.Lobby = p.Lobby
+			arcade.lobbyMux.Unlock()
+
 			err_msg = ""
 			glv_join_box = ""
 			glv_code_input_string = ""
-			mgr.SetView(NewLobbyView())
+			arcade.ViewManager.SetView(NewLobbyView())
 		} else if p.Error == ErrWrongCode {
 			err_msg = "Wrong join code."
 		} else if p.Error == ErrCapacity {

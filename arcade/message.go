@@ -16,15 +16,15 @@ type Message struct {
 func processMessage(from *Client, p interface{}) interface{} {
 	// Get sender ID
 	senderID := reflect.ValueOf(p).FieldByName("Message").FieldByName("SenderID").String()
-	sender, ok := server.Network.GetClient(senderID)
+	sender, ok := arcade.Server.Network.GetClient(senderID)
 
 	if !ok {
 		panic("Unknown sender ID: " + senderID)
 	}
 
-	ret := mgr.view.ProcessMessage(sender, p)
+	ret := arcade.ViewManager.ProcessMessage(sender, p)
 
-	mgr.RequestRender()
+	arcade.ViewManager.RequestRender()
 
 	return ret
 }

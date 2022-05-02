@@ -49,7 +49,7 @@ func NewTronGameView(lobby *Lobby) *TronGameView {
 		Game: Game[TronGameState, TronClientState]{
 			PlayerIDs:      lobby.PlayerIDs,
 			Name:           lobby.Name,
-			Me:             server.ID,
+			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 1000,
 			TimestepPeriod: 100,
@@ -86,7 +86,7 @@ func (tg *TronGameView) Init() {
 			time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
 			tg.updateOthers()
 
-			mgr.RequestRender()
+			arcade.ViewManager.RequestRender()
 		}
 	}()
 }

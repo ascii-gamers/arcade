@@ -4,15 +4,32 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
-var distributor = false
-var mgr = NewViewManager()
-var server *Server
-var hostPort int
-var lobby *Lobby
-var client *Client
+type Arcade struct {
+	Distributor bool
+	Port        int
+
+	ViewManager *ViewManager
+
+	Server *Server
+
+	lobbyMux sync.RWMutex
+	Lobby    *Lobby
+}
+
+var arcade = NewArcade()
+
+func NewArcade() *Arcade {
+	return &Arcade{
+		Distributor: false,
+		ViewManager: NewViewManager(),
+
+		Port: 6824,
+	}
+}
 
 func Start() {
 	dist := flag.Bool("distributor", false, "Run as a distributor")
@@ -26,31 +43,31 @@ func Start() {
 
 	flag.Parse()
 
-	distributor = *dist
-	hostPort = *port
+	arcade.Distributor = *dist
+	arcade.Port = *port
 
 	// Start host server
-	server = NewServer("")
+	arcade.Server = NewServer("")
 
-	if distributor {
-		server.Addr = fmt.Sprintf("0.0.0.0:%d", hostPort)
-		server.start()
+	if arcade.Distributor {
+		arcade.Server.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
+		arcade.Server.start()
 		os.Exit(0)
 	}
 
-	go server.startWithNextOpenPort()
+	go arcade.Server.startWithNextOpenPort()
 
 	// TODO: Make better solution for this later -- wait for server to start
 	time.Sleep(10 * time.Millisecond)
 
-	client = NewClient(*distributorAddr)
+	client := NewClient(*distributorAddr)
 	client.Distributor = true
-	go server.connect(client)
+	go arcade.Server.connect(client)
 
 	// TODO: Make better solution for this later -- wait to connect to distributor
 	time.Sleep(10 * time.Millisecond)
 
 	// Start view manager
 	splashView := NewSplashView()
-	mgr.Start(splashView)
+	arcade.ViewManager.Start(splashView)
 }

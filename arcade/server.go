@@ -64,7 +64,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
 
-	if distributor {
+	if arcade.Distributor {
 		fmt.Println(msg)
 		fmt.Printf("Received '%s' from %s\n", msg.Type, msg.SenderID[:4])
 
@@ -135,7 +135,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	// 	}
 	// 	s.Unlock()
 	case DisconnectMessage:
-		mgr.ProcessEvent(&ClientDisconnectEvent{
+		arcade.ViewManager.ProcessEvent(&ClientDisconnectEvent{
 			ClientID: c.ID,
 		})
 
@@ -151,7 +151,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 		s.Network.AddClient(c)
 
-		res = NewPongMessage(s.ID, distributor)
+		res = NewPongMessage(s.ID, arcade.Distributor)
 	case PongMessage:
 		c.ID = p.ID
 		c.ClientRoutingInfo = ClientRoutingInfo{
@@ -164,11 +164,10 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 		c.connectedCh <- true
 	case RoutingMessage:
-		fmt.Println("received new routes", p.Distances)
 		s.Network.UpdateRoutes(c, p.Distances)
 	default:
 		if msg.RecipientID != s.ID {
-			if !distributor {
+			if !arcade.Distributor {
 				fmt.Println(p)
 				panic(fmt.Sprintf("Recipient ID is %s, but server ID is %s", msg.RecipientID, s.ID))
 			}
@@ -187,7 +186,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 				res = NewErrorMessage("Invalid recipient")
 			}
 		} else {
-			if distributor {
+			if arcade.Distributor {
 				fmt.Println(p)
 				panic("Recipient: " + msg.RecipientID + ", self: " + s.ID)
 			}
@@ -221,10 +220,10 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 func (s *Server) startWithNextOpenPort() {
 	for {
-		s.Addr = fmt.Sprintf("127.0.0.1:%d", hostPort)
+		s.Addr = fmt.Sprintf("127.0.0.1:%d", arcade.Port)
 		s.start()
 
-		hostPort++
+		arcade.Port++
 	}
 }
 

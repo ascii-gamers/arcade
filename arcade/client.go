@@ -99,7 +99,7 @@ func (c *Client) readPump() {
 		data := make([]byte, n)
 		copy(data, buf[:n])
 
-		server.handleMessage(c, data)
+		arcade.Server.handleMessage(c, data)
 	}
 }
 
