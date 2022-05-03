@@ -6,13 +6,13 @@ import (
 
 type LeaveMessage struct {
 	Message
-	Player *Player
+	PlayerID string
 }
 
-func NewLeaveMessage(player *Player) *LeaveMessage {
+func NewLeaveMessage(playerId string) *LeaveMessage {
 	return &LeaveMessage{
 		Message: Message{Type: "leave"},
-		Player:  player,
+		PlayerID:  playerId,
 	}
 }
 

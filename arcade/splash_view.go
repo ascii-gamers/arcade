@@ -72,6 +72,7 @@ func (v *SplashView) ProcessEvent(evt interface{}) {
 	switch evt.(type) {
 	case *tcell.EventKey:
 		arcade.ViewManager.SetView(NewGamesListView())
+		// arcade.ViewManager.SetView(NewUsernameView())
 	}
 }
 

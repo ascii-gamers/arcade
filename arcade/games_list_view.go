@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"unicode/utf8"
@@ -111,15 +112,10 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				if len(glv_code_input_string) == 4 {
 					glv_code = glv_code_input_string
 					selectedLobby := v.lobbies[selectedLobbyKey]
-					self, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
+					host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-					joinPlayer := Player{
-						ClientID: arcade.Server.ID,
-						Username: "joiningjoanna",
-						Host:     false,
-					}
-
-					go arcade.Server.Network.Send(self, NewJoinMessage(glv_code, joinPlayer))
+					
+					go arcade.Server.Network.Send(host, NewJoinMessage(glv_code, arcade.Server.ID))
 				} else {
 					glv_join_box = "join_code"
 					err_msg = "Code must be four characters long."
@@ -152,15 +148,9 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 						if selectedLobby.Private {
 							glv_join_box = "join_code"
 						} else {
-							self, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
+							host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-							joinPlayer := Player{
-								ClientID: arcade.Server.ID,
-								Username: "joiningjoanna",
-								Host:     false,
-							}
-
-							go arcade.Server.Network.Send(self, NewJoinMessage("", joinPlayer))
+							go arcade.Server.Network.Send(host, NewJoinMessage("", arcade.Server.ID))
 						}
 						v.mu.RUnlock()
 
@@ -259,6 +249,7 @@ func (v *GamesListView) Render(s *Screen) {
 
 	for _, lobbyID := range keys {
 		lobby := v.lobbies[lobbyID]
+		lobby.mu.RLock()
 		y := tableY1 + i
 		rowSty := sty
 
@@ -267,9 +258,10 @@ func (v *GamesListView) Render(s *Screen) {
 		}
 
 		name := lobby.Name
-		game := "Pong"
-		players := "1/2"
+		game := lobby.GameType
+		players := fmt.Sprintf("%d/%d", len(lobby.PlayerIDs), lobby.Capacity)
 		ping := "25ms"
+		lobby.mu.RUnlock()
 
 		s.DrawEmpty(tableX1, y, nameColX-1, y, rowSty)
 		s.DrawText(nameColX, y, rowSty, name)
@@ -280,7 +272,6 @@ func (v *GamesListView) Render(s *Screen) {
 		s.DrawEmpty(playersColX+len(players), y, pingColX-1, y, rowSty)
 		s.DrawText(pingColX, y, rowSty, ping)
 		s.DrawEmpty(pingColX+len(ping), y, tableX2, y, rowSty)
-
 		i++
 	}
 

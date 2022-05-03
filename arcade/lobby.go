@@ -9,7 +9,7 @@ import (
 )
 
 type Lobby struct {
-	sync.RWMutex
+	mu sync.RWMutex
 
 	ID        string
 	Name      string
@@ -40,20 +40,20 @@ func NewLobby(name string, private bool, gameType string, capacity int, hostID s
 }
 
 func (l *Lobby) AddPlayer(playerID string) {
-	l.Lock()
+	l.mu.Lock()
 	l.PlayerIDs = append(l.PlayerIDs, playerID)
-	l.Unlock()
+	l.mu.Unlock()
 }
 
 func (l *Lobby) RemovePlayer(playerID string) {
-	l.Lock()
+	l.mu.Lock()
 	for i, v := range l.PlayerIDs {
 		if v == playerID {
 			l.PlayerIDs = append(l.PlayerIDs[:i], l.PlayerIDs[i+1:]...)
 			break
 		}
 	}
-	l.Unlock()
+	l.mu.Unlock()
 }
 
 func generateCode() string {

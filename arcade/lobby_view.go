@@ -55,7 +55,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 				if arcade.Lobby.HostID != arcade.Server.ID {
 					// not the host, just leave the game
 					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
-					go arcade.Server.Network.Send(host, NewLeaveMessage(&Player{}))
+					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID))
 				}
 				arcade.ViewManager.SetView(NewGamesListView())
 				// delete game?
@@ -75,21 +75,21 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	case HelloMessage:
 		return NewLobbyInfoMessage(arcade.Lobby)
 	case JoinMessage:
-		arcade.Lobby.RLock()
-		defer arcade.Lobby.RUnlock()
+		arcade.Lobby.mu.RLock()
+		defer arcade.Lobby.mu.RUnlock()
 
 		if len(arcade.Lobby.PlayerIDs) == arcade.Lobby.Capacity {
 			return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
 		} else if arcade.Lobby.code != p.Code {
 			return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
 		} else {
-			arcade.Lobby.RUnlock()
-			arcade.Lobby.AddPlayer(p.Player.ClientID)
-			arcade.Lobby.RLock()
+			arcade.Lobby.mu.RUnlock()
+			arcade.Lobby.AddPlayer(p.PlayerID)
+			arcade.Lobby.mu.RLock()
 			return NewJoinReplyMessage(arcade.Lobby, OK)
 		}
 	case LeaveMessage:
-		arcade.Lobby.RemovePlayer(p.Player.ClientID)
+		arcade.Lobby.RemovePlayer(p.PlayerID)
 	}
 	return nil
 }
