@@ -1,6 +1,6 @@
 package main
 
-import "github.com/ascii-arcade/asciiarcade/arcade"
+import "github.com/ascii-arcade/arcade/arcade"
 
 func main() {
 	arcade.Start()
