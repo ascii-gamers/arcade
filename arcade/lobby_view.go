@@ -65,8 +65,18 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 				// delete game?
 			case 's':
-				//start game
-				NewGame(arcade.Lobby)
+				//start gamex
+				arcade.Lobby.mu.RLock()
+				if arcade.Lobby.HostID == arcade.Server.ID {
+					for _, playerId := range arcade.Lobby.PlayerIDs {
+						client, ok := arcade.Server.Network.GetClient(playerId)
+						if ok {
+							arcade.Server.Network.Send(client, NewStartGameMessage(arcade.Lobby.ID))
+						}
+					}
+					NewGame(arcade.Lobby)
+				}
+				arcade.Lobby.mu.RUnlock()
 			}
 		}
 	}
@@ -115,6 +125,19 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		}
 	case LeaveMessage:
 		arcade.Lobby.RemovePlayer(p.PlayerID)
+	// deal with private games later
+	// if p.Code != pendingGame.Code {
+	// 	return NewJoinReplyMessage(ErrWrongCode)
+	// }
+	// add capacity branch
+	case StartGameMessage:
+		arcade.Lobby.mu.RLock()
+		fmt.Println(p.GameID, arcade.Lobby.ID)
+		if p.GameID == arcade.Lobby.ID {
+			NewGame(arcade.Lobby)
+		}
+		arcade.Lobby.mu.RUnlock()
+		return nil
 	}
 	return nil
 }
