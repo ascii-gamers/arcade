@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"encoding"
+	"math/rand"
 	"net"
 	"sync"
 )
@@ -92,6 +93,14 @@ func (c *Client) readPump() {
 		data := make([]byte, n)
 		copy(data, buf[:n])
 
+		// Randomly drop packets if debugging
+		dropRate := arcade.Server.Network.GetDropRate()
+
+		if dropRate > 0 && rand.Float64() < dropRate {
+			continue
+		}
+
+		// Handle the message
 		arcade.Server.handleMessage(c, data)
 	}
 }
@@ -109,6 +118,13 @@ func (c *Client) writePump() {
 
 // send sends a message to the client.
 func (c *Client) send(msg interface{}) {
+	// Randomly drop packets if debugging
+	dropRate := arcade.Server.Network.GetDropRate()
+
+	if dropRate > 0 && rand.Float64() < dropRate {
+		return
+	}
+
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data
 }

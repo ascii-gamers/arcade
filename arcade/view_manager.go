@@ -2,14 +2,19 @@ package arcade
 
 import (
 	"os"
+	"sync"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 type ViewManager struct {
+	sync.RWMutex
+
 	screen *Screen
 
 	view View
+
+	showDebug bool
 }
 
 func NewViewManager() *ViewManager {
@@ -40,6 +45,13 @@ func (mgr *ViewManager) SetView(v View) {
 	// Save view
 	mgr.view = v
 	mgr.view.Init()
+}
+
+func (mgr *ViewManager) ToggleDebugPanel() {
+	mgr.Lock()
+	defer mgr.Unlock()
+
+	mgr.showDebug = !mgr.showDebug
 }
 
 func (mgr *ViewManager) Start(v View) {
@@ -76,9 +88,21 @@ func (mgr *ViewManager) Start(v View) {
 			mgr.screen.Reset()
 			mgr.RequestRender()
 		case *tcell.EventKey:
-			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
+			switch ev.Key() {
+			case tcell.KeyEscape, tcell.KeyCtrlC:
 				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 				quit()
+			case tcell.KeyCtrlD:
+				mgr.ToggleDebugPanel()
+
+				mgr.screen.Reset()
+				mgr.RequestRender()
+			case tcell.KeyCtrlQ:
+				arcade.Server.Network.SetDropRate(1)
+			case tcell.KeyCtrlW:
+				arcade.Server.Network.SetDropRate(0.5)
+			case tcell.KeyCtrlE:
+				arcade.Server.Network.SetDropRate(0.1)
 			}
 		}
 
@@ -96,6 +120,20 @@ func (mgr *ViewManager) RequestRender() {
 		mgr.screen.DrawText((displayWidth-len(warning))/2, displayHeight/2-1, tcell.StyleDefault, warning)
 	} else {
 		mgr.view.Render(mgr.screen)
+	}
+
+	mgr.RLock()
+	showDebug := mgr.showDebug
+	mgr.RUnlock()
+
+	if showDebug {
+		x, y := mgr.screen.offset()
+		debugSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorRed)
+
+		mgr.screen.DrawText(-x, -y, debugSty, "Ctrl-D to hide")
+		mgr.screen.DrawText(-x, -y+1, debugSty, "Ctrl-Q to drop 100%")
+		mgr.screen.DrawText(-x, -y+2, debugSty, "Ctrl-W to drop 50%")
+		mgr.screen.DrawText(-x, -y+3, debugSty, "Ctrl-E to drop 10%")
 	}
 
 	mgr.screen.Show()
