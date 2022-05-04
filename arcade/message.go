@@ -88,7 +88,7 @@ func parseMessage(data []byte) (interface{}, error) {
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "client_update":
-		p := ClientUpdateMessage{}
+		p := ClientUpdateMessage[TronClientState]{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "start_game":

@@ -50,7 +50,7 @@ func NewTronGameView(lobby *Lobby) *TronGameView {
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 1000,
-			TimestepPeriod: 300,
+			TimestepPeriod: 200,
 			Timestep:       0,
 		},
 	}
@@ -118,7 +118,7 @@ func (tg *TronGameView) ProcessMessage(from *Client, p interface{}) interface{} 
 	switch p := p.(type) {
 	case GameUpdateMessage[TronGameState, TronClientState]:
 		// tg.handleGameUpdate(p)
-	case ClientUpdateMessage:
+	case ClientUpdateMessage[TronClientState]:
 		tg.handleClientUpdate(p)
 	}
 	return nil
@@ -237,10 +237,10 @@ func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, T
 
 }
 
-func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage) {
-	state := data.TronClientState
-	tg.setCollision(state.X, state.Y)
-	tg.ClientStates[data.Id] = state
+func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientState]) {
+	update := data.Update
+	tg.setCollision(update.X, update.Y)
+	tg.ClientStates[data.Id] = update
 	arcade.ViewManager.RequestRender()
 }
 
