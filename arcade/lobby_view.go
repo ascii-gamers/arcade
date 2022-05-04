@@ -56,14 +56,39 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					// not the host, just leave the game
 					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
 					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID))
+					arcade.ViewManager.SetView(NewGamesListView())
+				} else {
+					// host, notify everyone game is done
+					v.SendUpdates()
+
 				}
-				arcade.ViewManager.SetView(NewGamesListView())
+
 				// delete game?
 			case 's':
 				//start game
 				NewGame(arcade.Lobby)
 			}
 		}
+	}
+}
+
+func (v *LobbyView) SendUpdates() {
+	actions := []func(){}
+
+	arcade.Server.Network.ClientsRange(func(client *Client) bool {
+		if client.Distributor {
+			return true
+		}
+
+		actions = append(actions, func() {
+			arcade.Server.Network.Send(client, NewLobbyInfoMessage(arcade.Lobby))
+		})
+
+		return true
+	})
+
+	for _, action := range actions {
+		action()
 	}
 }
 
