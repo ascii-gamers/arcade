@@ -63,15 +63,13 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 				//start gamex
 				arcade.Lobby.mu.RLock()
 				if arcade.Lobby.HostID == arcade.Server.ID {
-					// fmt.Println(arcade.Server.Network.getClients())
 					for _, playerId := range arcade.Lobby.PlayerIDs {
 						client, ok := arcade.Server.Network.GetClient(playerId)
-						fmt.Println(playerId, ok)
 						if ok {
 							arcade.Server.Network.Send(client, NewStartGameMessage(arcade.Lobby.ID))
 						}
 					}
-					// NewGame(arcade.Lobby)
+					NewGame(arcade.Lobby)
 				}
 				arcade.Lobby.mu.RUnlock()
 			}

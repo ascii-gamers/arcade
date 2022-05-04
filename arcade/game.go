@@ -81,10 +81,10 @@ func NewGame(lobby *Lobby) {
 	}
 }
 
-type ClientUpdateMessage[CS any] struct {
+type ClientUpdateMessage struct {
 	Message
-	Id     string
-	Update CS
+	Id string
+	TronClientState
 }
 
 type GameUpdateMessage[GS any, CS any] struct {
@@ -102,7 +102,7 @@ func NewStartGameMessage(GameID string) *StartGameMessage {
 	return &StartGameMessage{Message{Type: "start_game"}, GameID}
 }
 
-func (m ClientUpdateMessage[CS]) MarshalBinary() ([]byte, error) {
+func (m ClientUpdateMessage) MarshalBinary() ([]byte, error) {
 	return json.Marshal(m)
 }
 
@@ -124,16 +124,17 @@ func (g *Game[GS, CS]) start() {
 func (g *Game[GS, CS]) startHostSync() {
 	for g.Started {
 		time.Sleep(time.Duration(g.HostSyncPeriod * int(time.Millisecond)))
-		g.sendGameUpdate()
+		// g.sendGameUpdate()
 	}
 }
 
-func (g *Game[GS, CS]) sendClientUpdate(update CS) {
-	g.ClientStates[g.Me] = update
-	clientUpdate := &ClientUpdateMessage[CS]{Message{Type: "client_update"}, g.Me, update}
+func (g *Game[GS, CS]) sendClientUpdate(update TronClientState) {
+	// g.ClientStates[g.Me] = update
+	clientUpdate := &ClientUpdateMessage{Message: Message{Type: "client_update"}, Id: g.Me, TronClientState: update}
 
 	for clientId := range g.ClientStates {
 		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
+			// fmt.Println("BRUH: ", clientUpdate.Id)
 			arcade.Server.Network.Send(client, clientUpdate)
 		}
 	}

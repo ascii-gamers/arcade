@@ -36,6 +36,12 @@ func (s *Screen) Clear() {
 	s.Screen.Clear()
 }
 
+func (s *Screen) ClearContent() {
+	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
+	displayWidth, displayHeight := s.displaySize()
+	s.DrawEmpty(0, 0, displayWidth-1, displayHeight-1, sty)
+}
+
 func (s *Screen) offset() (int, int) {
 	currentWidth, currentHeight := s.Size()
 	displayWidth, displayHeight := s.displaySize()
