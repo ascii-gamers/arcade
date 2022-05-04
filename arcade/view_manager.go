@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"fmt"
 	"os"
 	"sync"
 
@@ -97,12 +98,16 @@ func (mgr *ViewManager) Start(v View) {
 
 				mgr.screen.Reset()
 				mgr.RequestRender()
+				continue
 			case tcell.KeyCtrlQ:
 				arcade.Server.Network.SetDropRate(1)
+				continue
 			case tcell.KeyCtrlW:
 				arcade.Server.Network.SetDropRate(0.5)
+				continue
 			case tcell.KeyCtrlE:
 				arcade.Server.Network.SetDropRate(0.1)
+				continue
 			}
 		}
 
@@ -128,13 +133,35 @@ func (mgr *ViewManager) RequestRender() {
 
 	if showDebug {
 		x, y := mgr.screen.offset()
+		w, _ := mgr.screen.displaySize()
+
 		debugSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorRed)
 
 		mgr.screen.DrawText(-x, -y, debugSty, "Ctrl-D to hide")
 		mgr.screen.DrawText(-x, -y+1, debugSty, "Ctrl-Q to drop 100%")
 		mgr.screen.DrawText(-x, -y+2, debugSty, "Ctrl-W to drop 50%")
 		mgr.screen.DrawText(-x, -y+3, debugSty, "Ctrl-E to drop 10%")
+
+		connectedClients := arcade.Server.GetConnectedClients()
+
+		i := 0
+		for clientID, info := range connectedClients {
+			s := fmt.Sprintf("%s: %dms", clientID[:4], info.GetMeanRTT().Milliseconds())
+			mgr.screen.DrawText(w+x-len(s), -y+i, debugSty, s)
+			i++
+		}
 	}
 
 	mgr.screen.Show()
+}
+
+func (mgr *ViewManager) RequestDebugRender() {
+	mgr.RLock()
+	defer mgr.RUnlock()
+
+	if !mgr.showDebug {
+		return
+	}
+
+	mgr.RequestRender()
 }

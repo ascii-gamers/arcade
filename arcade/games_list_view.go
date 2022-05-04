@@ -114,7 +114,6 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 					selectedLobby := v.lobbies[selectedLobbyKey]
 					host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-					
 					go arcade.Server.Network.Send(host, NewJoinMessage(glv_code, arcade.Server.ID))
 				} else {
 					glv_join_box = "join_code"
@@ -184,6 +183,8 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 			glv_join_box = ""
 			glv_code_input_string = ""
 			arcade.ViewManager.SetView(NewLobbyView())
+
+			arcade.Server.MonitorConnection(p.Lobby.HostID)
 		} else if p.Error == ErrWrongCode {
 			err_msg = "Wrong join code."
 		} else if p.Error == ErrCapacity {
