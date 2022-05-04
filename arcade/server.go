@@ -4,7 +4,6 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 
@@ -59,7 +58,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	p, err := parseMessage(data)
 
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
@@ -155,8 +154,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	resData, err := res.(encoding.BinaryMarshaler).MarshalBinary()
 
 	if err != nil {
-		log.Fatal(err)
-		return
+		panic(err)
 	}
 
 	c.sendCh <- resData
@@ -187,7 +185,7 @@ func (s *Server) start() error {
 		s, err := listener.Accept()
 
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 		client := NewNeighboringClient(s.RemoteAddr().String())

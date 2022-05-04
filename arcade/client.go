@@ -2,12 +2,13 @@ package arcade
 
 import (
 	"encoding"
-	"log"
 	"net"
 	"sync"
 )
 
-const maxBufferSize = 1024
+// Actually can't be increased past this number -- kcp-go enforces a packet
+// size limit of 1500 bytes, and 128 bytes are reserved for the header.
+const maxBufferSize = 1372
 
 type ClientRoutingInfo struct {
 	// Distance to this client. Right now, this is just the number of nodes
@@ -54,7 +55,7 @@ func NewNeighboringClient(addr string) *Client {
 	return &Client{
 		Addr:     addr,
 		Neighbor: true,
-		sendCh:   make(chan []byte),
+		sendCh:   make(chan []byte, maxBufferSize),
 	}
 }
 
@@ -85,7 +86,7 @@ func (c *Client) readPump() {
 		n, err := c.conn.Read(buf)
 
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 		data := make([]byte, n)
@@ -101,7 +102,7 @@ func (c *Client) writePump() {
 		_, err := c.conn.Write(<-c.sendCh)
 
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 }
