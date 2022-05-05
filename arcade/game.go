@@ -134,7 +134,6 @@ func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 
 	for clientId := range g.ClientStates {
 		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
-			// fmt.Println("BRUH: ", clientUpdate.Id)
 			arcade.Server.Network.Send(client, clientUpdate)
 		}
 	}

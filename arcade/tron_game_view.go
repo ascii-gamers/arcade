@@ -25,11 +25,13 @@ type Position struct {
 }
 
 type TronGameState struct {
-	Width      int
-	Height     int
-	Ended      bool
-	Collisions [][]bool
+	Width  int
+	Height int
+	Ended  bool
+	// Collisions [][]bool
 }
+
+var Collisions [][]bool
 
 type TronClientState struct {
 	Timestep  int
@@ -58,7 +60,7 @@ func NewTronGameView(lobby *Lobby) *TronGameView {
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 1000,
-			TimestepPeriod: 500,
+			TimestepPeriod: 200,
 			Timestep:       0,
 		},
 	}
@@ -72,7 +74,8 @@ func (tg *TronGameView) Init() {
 	for i := range collisions {
 		collisions[i] = make([]bool, height)
 	}
-	tg.GameState = TronGameState{width, height, false, collisions}
+	Collisions = collisions
+	tg.GameState = TronGameState{width, height, false} //, collisions}
 
 	clientState := make(map[string]TronClientState)
 	startingPos, startingDir := getStartingPosAndDir()
@@ -134,7 +137,7 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 func (tg *TronGameView) ProcessMessage(from *Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case GameUpdateMessage[TronGameState, TronClientState]:
-		tg.handleGameUpdate(p)
+		// tg.handleGameUpdate(p)
 	case ClientUpdateMessage[TronClientState]:
 		tg.handleClientUpdate(p)
 	}
@@ -314,7 +317,7 @@ func (tg *TronGameView) recalculateCollisions() {
 	for i := range collisions {
 		collisions[i] = make([]bool, tg.GameState.Height)
 	}
-	tg.GameState.Collisions = collisions
+	Collisions = collisions
 	for _, player := range tg.ClientStates {
 		for i := 0; i < len(player.PathX); i++ {
 			tg.setCollision(player.PathX[i], player.PathY[i])
@@ -331,7 +334,7 @@ func getStartingPosAndDir() ([][2]int, []TronDirection) {
 }
 
 func (tg *TronGameView) shouldDie(player TronClientState) bool {
-	return tg.isOutOfBounds(player.X, player.Y) || tg.GameState.Collisions[player.X][player.Y]
+	return tg.isOutOfBounds(player.X, player.Y) || Collisions[player.X][player.Y]
 }
 
 func (tg *TronGameView) die(player TronClientState) TronClientState {
@@ -345,7 +348,7 @@ func (tg *TronGameView) isOutOfBounds(x int, y int) bool {
 
 func (tg *TronGameView) setCollision(x int, y int) {
 	if !tg.isOutOfBounds(x, y) {
-		tg.GameState.Collisions[x][y] = true
+		Collisions[x][y] = true
 	}
 }
 
