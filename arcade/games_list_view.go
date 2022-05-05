@@ -63,7 +63,7 @@ func NewGamesListView() *GamesListView {
 			select {
 			case <-ticker.C:
 				// Scan on LAN
-				// arcade.Server.ScanLAN()
+				arcade.Server.ScanLAN()
 
 				// send out lobbyinfo
 				lastTimeRefreshed = (lastTimeRefreshed + 1) % 4
