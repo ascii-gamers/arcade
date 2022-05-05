@@ -216,6 +216,10 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 				}
 				s.Unlock()
 
+				// Send heartbeat metadata to view
+				arcade.ViewManager.ProcessEvent(NewHeartbeatEvent(p.Metadata))
+
+				// Reply to heartbeat
 				res = NewHeartbeatReplyMessage(p.Seq)
 			case HeartbeatReplyMessage:
 				if msg.RecipientID == s.ID {

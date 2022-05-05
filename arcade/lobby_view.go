@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"encoding"
+	"encoding/json"
 	"fmt"
 	"unicode/utf8"
 
@@ -48,6 +49,11 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
 	case *ClientDisconnectEvent:
 		arcade.Lobby.RemovePlayer(evt.ClientID)
+	case *HeartbeatEvent:
+		lobby := new(Lobby)
+		json.Unmarshal(evt.Metadata, lobby)
+
+		// do something with lobby
 	case *tcell.EventKey:
 		switch evt.Key() {
 		case tcell.KeyRune:
@@ -177,5 +183,5 @@ func (v *LobbyView) Unload() {
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
-	return nil
+	return arcade.Lobby
 }
