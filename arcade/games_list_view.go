@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -15,8 +16,9 @@ type GamesListView struct {
 
 	mu sync.RWMutex
 
-	lobbies     map[string]*Lobby
-	selectedRow int
+	lobbies      map[string]*Lobby
+	selectedRow  int
+	stopTickerCh chan bool
 }
 
 var header = []string{
@@ -41,7 +43,7 @@ const (
 	tableX1 = 3
 	tableY1 = 7
 	tableX2 = 76
-	tableY2 = 19
+	tableY2 = 18
 
 	joinbox_X1 = 7
 	joinbox_Y1 = 9
@@ -51,12 +53,37 @@ const (
 
 var glv_code_input_string = ""
 var glv_code = ""
-var glv_code_editing = false
+var lastTimeRefreshed = 0
 
 func NewGamesListView() *GamesListView {
-	return &GamesListView{
-		lobbies: make(map[string]*Lobby),
-	}
+	view := &GamesListView{stopTickerCh: make(chan bool), lobbies: make(map[string]*Lobby)}
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				// send out lobbyinfo
+				lastTimeRefreshed = (lastTimeRefreshed + 1) % 4
+				if lastTimeRefreshed == 0 {
+					arcade.Server.Network.ClientsRange(func(client *Client) bool {
+						if client.Distributor {
+							return true
+						}
+
+						arcade.Server.Network.Send(client, NewHelloMessage())
+
+						return true
+					})
+				}
+				arcade.ViewManager.RequestRender()
+
+			case <-view.stopTickerCh:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	return view
 }
 
 func (v *GamesListView) Init() {
@@ -225,6 +252,14 @@ func (v *GamesListView) Render(s *Screen) {
 	// Draw footer with navigation keystrokes
 	s.DrawText((width-len(footer[0]))/2, height-2, sty, footer[0])
 
+	countdownMsg := fmt.Sprintf("Refreshing in %d", 4-lastTimeRefreshed)
+	// Draw countdown
+	if lastTimeRefreshed == 0 {
+		countdownMsg = "     Refreshing...     "
+	}
+
+	s.DrawText((width-len(countdownMsg))/2, height-3, sty, countdownMsg)
+
 	// Draw column headers
 	s.DrawText(nameColX, 5, sty, "NAME")
 	s.DrawText(gameColX, 5, sty, "GAME")
@@ -300,6 +335,7 @@ func (v *GamesListView) Render(s *Screen) {
 }
 
 func (v *GamesListView) Unload() {
+	v.stopTickerCh <- true
 }
 
 func (v *GamesListView) GetHeartbeatMetadata() encoding.BinaryMarshaler {

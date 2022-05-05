@@ -4,7 +4,6 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
-	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -12,7 +11,6 @@ import (
 
 type LobbyView struct {
 	View
-	stopTickerCh chan bool
 }
 
 // const stickmen = []string{
@@ -41,23 +39,7 @@ var lobby_footer_nonhost = []string{
 }
 
 func NewLobbyView() *LobbyView {
-	view := &LobbyView{stopTickerCh: make(chan bool)}
-	ticker := time.NewTicker(750 * time.Millisecond)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				// send out lobbyinfo
-
-				arcade.ViewManager.RequestRender()
-			case <-view.stopTickerCh:
-				ticker.Stop()
-				return
-			}
-		}
-	}()
-	return view
-
+	return &LobbyView{}
 }
 
 func (v *LobbyView) Init() {
@@ -68,14 +50,16 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 	defer arcade.lobbyMux.RUnlock()
 
 	switch evt := evt.(type) {
-	case *HeartbeatMessage:
-		evt.Metadata
 	case *ClientDisconnectEvent:
 		arcade.Lobby.RemovePlayer(evt.ClientID)
 	case *HeartbeatEvent:
 		lobby := new(Lobby)
 		json.Unmarshal(evt.Metadata, lobby)
-
+		arcade.lobbyMux.RUnlock()
+		arcade.lobbyMux.Lock()
+		arcade.Lobby = lobby
+		arcade.lobbyMux.Unlock()
+		arcade.lobbyMux.RLock()
 		// do something with lobby
 	case *tcell.EventKey:
 		switch evt.Key() {
@@ -233,7 +217,6 @@ func (v *LobbyView) Render(s *Screen) {
 }
 
 func (v *LobbyView) Unload() {
-	v.stopTickerCh <- true
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {

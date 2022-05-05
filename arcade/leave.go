@@ -11,8 +11,8 @@ type LeaveMessage struct {
 
 func NewLeaveMessage(playerId string) *LeaveMessage {
 	return &LeaveMessage{
-		Message: Message{Type: "leave"},
-		PlayerID:  playerId,
+		Message:  Message{Type: "leave"},
+		PlayerID: playerId,
 	}
 }
 
