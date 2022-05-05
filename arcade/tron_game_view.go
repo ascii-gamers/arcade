@@ -2,7 +2,7 @@ package arcade
 
 import (
 	"encoding"
-	"math/rand"
+	"math"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -19,11 +19,16 @@ const (
 	TronLeft
 )
 
+type Position struct {
+	X int
+	Y int
+}
+
 type TronGameState struct {
-	width      int
-	height     int
-	ended      bool
-	collisions [][]bool
+	Width      int
+	Height     int
+	Ended      bool
+	Collisions [][]bool
 }
 
 type TronClientState struct {
@@ -42,6 +47,8 @@ type TronGameView struct {
 	Game[TronGameState, TronClientState]
 }
 
+const CLIENT_LAG_TIMESTEP = 2
+
 func NewTronGameView(lobby *Lobby) *TronGameView {
 	return &TronGameView{
 		Game: Game[TronGameState, TronClientState]{
@@ -51,11 +58,13 @@ func NewTronGameView(lobby *Lobby) *TronGameView {
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 1000,
-			TimestepPeriod: 200,
+			TimestepPeriod: 500,
 			Timestep:       0,
 		},
 	}
 }
+
+var lastReceivedInp = make(map[string]int)
 
 func (tg *TronGameView) Init() {
 	width, height := arcade.ViewManager.screen.displaySize()
@@ -66,26 +75,25 @@ func (tg *TronGameView) Init() {
 	tg.GameState = TronGameState{width, height, false, collisions}
 
 	clientState := make(map[string]TronClientState)
+	startingPos, startingDir := getStartingPosAndDir()
 	for i, playerID := range tg.PlayerIDs {
-		x := width/2 + rand.Intn(10) - 5
-		y := height/2 + rand.Intn(10) - 5
-		clientState[playerID] = TronClientState{tg.Timestep, true, TRON_COLORS[i], []int{x}, []int{y}, x, y, TronDown}
+		x := startingPos[i][0]
+		y := startingPos[i][1]
+		clientState[playerID] = TronClientState{tg.Timestep, true, TRON_COLORS[i], []int{x}, []int{y}, x, y, startingDir[i]}
+		lastReceivedInp[playerID] = 0
 	}
 
 	tg.ClientStates = clientState
-	// tg.state = clientState[tg.Me]
 
 	tg.start()
 
 	go func() {
-		for !tg.GameState.ended {
+		for !tg.GameState.Ended {
 			tg.Timestep += 1
 			tg.updateSelf()
 			arcade.ViewManager.RequestRender()
 			time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
 			tg.updateOthers()
-
-			// arcade.ViewManager.RequestRender()
 		}
 	}()
 }
@@ -104,13 +112,21 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 	state := tg.getMyState()
 	switch key {
 	case tcell.KeyUp:
-		state.Direction = TronUp
+		if state.Direction != TronDown {
+			state.Direction = TronUp
+		}
 	case tcell.KeyRight:
-		state.Direction = TronRight
+		if state.Direction != TronLeft {
+			state.Direction = TronRight
+		}
 	case tcell.KeyDown:
-		state.Direction = TronDown
+		if state.Direction != TronUp {
+			state.Direction = TronDown
+		}
 	case tcell.KeyLeft:
-		state.Direction = TronLeft
+		if state.Direction != TronRight {
+			state.Direction = TronLeft
+		}
 	}
 	tg.setMyState(state)
 }
@@ -118,7 +134,7 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 func (tg *TronGameView) ProcessMessage(from *Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case GameUpdateMessage[TronGameState, TronClientState]:
-		// tg.handleGameUpdate(p)
+		tg.handleGameUpdate(p)
 	case ClientUpdateMessage[TronClientState]:
 		tg.handleClientUpdate(p)
 	}
@@ -126,21 +142,43 @@ func (tg *TronGameView) ProcessMessage(from *Client, p interface{}) interface{} 
 }
 
 func (tg *TronGameView) Render(s *Screen) {
-	style := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
 
+	// defaultStyle := tcell.StyleDefault.Background(tcell.ColorTeal).Foreground(tcell.ColorTeal)
 	// s.DrawLine(0, 0, tg.GameState.width, 0, style, true)
 	// s.DrawLine(tg.GameState.width, 0, tg.GameState.width, tg.GameState.height, style, true)
 	// s.DrawLine(0, tg.GameState.height, tg.GameState.width, tg.GameState.height, style, true)
 	// s.DrawLine(0, 0, 0, tg.GameState.height, style, true)
 	s.ClearContent()
+
+	// displayWidth, displayHeight := s.displaySize()
+	// s.DrawBox(0, 0, displayWidth-1, displayHeight-1, defaultStyle, true)
+
 	for _, client := range tg.ClientStates {
+		style := tcell.StyleDefault.Background(tcell.ColorNames[client.Color])
+		hStyle := tcell.StyleDefault.Foreground(tcell.ColorNames[client.Color]) //.Foreground(tcell.ColorWhite)
+		// vStyle := tcell.StyleDefault.Background(tcell.ColorNames[client.Color])
 		for i := 0; i < len(client.PathX)-1; i++ {
-			s.DrawText(client.PathX[i], client.PathY[i], style, "*")
+			// s.DrawText(client.PathX[i], client.PathY[i], style, " ")
+			// if math.Abs(float64(client.PathX[i+1]-client.PathX[i])) > 0 {
+			// 	s.DrawText(client.PathX[i], client.PathY[i], hStyle, "■")
+			// } else if math.Abs(float64(client.PathY[i+1]-client.PathY[i])) > 0 {
+			// 	s.DrawText(client.PathX[i], client.PathY[i], vStyle, " ")
+			// }
+
+			if math.Abs(float64(client.PathX[i+1]-client.PathX[i])) > 0 && i < len(client.PathX)-2 {
+				s.DrawText(client.PathX[i], client.PathY[i], style, " ")
+			} else if math.Abs(float64(client.PathY[i+1]-client.PathY[i])) > 0 {
+				s.DrawText(client.PathX[i], client.PathY[i], style, " ")
+			}
+
 		}
+
 		if client.Alive {
-			s.DrawText(client.X, client.Y, style, "😎")
+			style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorNames[client.Color])
+			chr := getDirChr(client.Direction)
+			s.DrawText(client.X, client.Y, style, chr)
 		} else {
-			s.DrawText(client.X, client.Y, style, "😵")
+			s.DrawText(client.X, client.Y, hStyle, "😵")
 		}
 
 	}
@@ -151,7 +189,6 @@ func (tg *TronGameView) updateState() {
 }
 
 func (tg *TronGameView) updateSelf() {
-	// tg.state.direction = (tg.ClientStates[tg.Me].direction + 1 % 4)
 
 	state := tg.getMyState()
 	if !state.Alive {
@@ -167,7 +204,7 @@ func (tg *TronGameView) updateSelf() {
 	case TronLeft:
 		state.X -= 1
 	}
-	// fmt.Println(tg.state, tg.GameState.collisions[36])
+
 	if tg.shouldDie(state) {
 		state = tg.die(state)
 	}
@@ -183,14 +220,13 @@ func (tg *TronGameView) updateSelf() {
 
 func (tg *TronGameView) updateOthers() {
 	for id, state := range tg.ClientStates {
-		if id != tg.Me && state.Timestep < tg.Timestep {
+		if id != tg.Me && lastReceivedInp[id]+CLIENT_LAG_TIMESTEP < tg.Timestep {
 			tg.ClientStates[id] = tg.clientPredict(state, tg.Timestep)
 		}
 	}
 }
 
 func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int) TronClientState {
-
 	if !state.Alive || targetTimestep <= state.Timestep {
 		return state
 	}
@@ -201,22 +237,43 @@ func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int)
 
 	lastX := state.PathX[len(state.PathX)-1]
 	lastY := state.PathY[len(state.PathY)-1]
-	for i := 1; i <= delta; i++ {
-		switch state.Direction {
-		case TronUp:
-			newPathX = append(newPathX, lastX)
-			newPathY = append(newPathY, lastY-i)
-		case TronRight:
-			newPathX = append(newPathX, lastX+i)
-			newPathY = append(newPathY, lastY)
-		case TronDown:
-			newPathX = append(newPathX, lastX)
-			newPathY = append(newPathY, lastY+i)
-		case TronLeft:
-			newPathX = append(newPathX, lastX-i)
-			newPathY = append(newPathY, lastY)
-		}
+	// for i := 1; i <= delta; i++ {
+	// 	switch state.Direction {
+	// 	case TronUp:
+	// 		newPathX = append(newPathX, lastX)
+	// 		newPathY = append(newPathY, lastY-i)
+	// 	case TronRight:
+	// 		newPathX = append(newPathX, lastX+i)
+	// 		newPathY = append(newPathY, lastY)
+	// 	case TronDown:
+	// 		newPathX = append(newPathX, lastX)
+	// 		newPathY = append(newPathY, lastY+i)
+	// 	case TronLeft:
+	// 		newPathX = append(newPathX, lastX-i)
+	// 		newPathY = append(newPathY, lastY)
+	// 	}
+	// }
+
+	for i := 0; i < delta-1; i++ {
+		newPathX = append(newPathX, lastX)
+		newPathY = append(newPathY, lastY)
 	}
+
+	switch state.Direction {
+	case TronUp:
+		newPathX = append(newPathX, lastX)
+		newPathY = append(newPathY, lastY-1)
+	case TronRight:
+		newPathX = append(newPathX, lastX+1)
+		newPathY = append(newPathY, lastY)
+	case TronDown:
+		newPathX = append(newPathX, lastX)
+		newPathY = append(newPathY, lastY+1)
+	case TronLeft:
+		newPathX = append(newPathX, lastX-1)
+		newPathY = append(newPathY, lastY)
+	}
+
 	state.Timestep = targetTimestep
 	state.PathX = append(state.PathX, newPathX...)
 	state.PathY = append(state.PathY, newPathY...)
@@ -234,23 +291,47 @@ func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int)
 
 func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, TronClientState]) {
 	tg.GameState = data.GameUpdate
-	tg.ClientStates = data.ClientStates
-
+	for id, clientState := range data.ClientStates {
+		if id != tg.Me {
+			tg.ClientStates[id] = clientState
+		}
+	}
+	tg.recalculateCollisions()
 }
 
 func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientState]) {
+
 	update := data.Update
-	tg.setCollision(update.X, update.Y)
 	tg.ClientStates[data.Id] = update
 	arcade.ViewManager.RequestRender()
+	tg.recalculateCollisions()
+
+	lastReceivedInp[data.Id] = update.Timestep
+}
+
+func (tg *TronGameView) recalculateCollisions() {
+	collisions := make([][]bool, tg.GameState.Width)
+	for i := range collisions {
+		collisions[i] = make([]bool, tg.GameState.Height)
+	}
+	tg.GameState.Collisions = collisions
+	for _, player := range tg.ClientStates {
+		for i := 0; i < len(player.PathX); i++ {
+			tg.setCollision(player.PathX[i], player.PathY[i])
+		}
+	}
 }
 
 // GAME FUNCTIONS
 
-func (tg *TronGameView) shouldDie(player TronClientState) bool {
+func getStartingPosAndDir() ([][2]int, []TronDirection) {
+	width, height := arcade.ViewManager.screen.displaySize()
+	margin := int(math.Round(math.Min(float64(width)/10, float64(height)/10)))
+	return [][2]int{{margin, margin}, {width - margin, height - margin}, {width - margin, margin}, {margin, height - margin}, {width / 2, margin}, {width - margin, height / 2}, {width / 2, height - margin}, {margin, height / 2}}, []TronDirection{TronRight, TronLeft, TronDown, TronUp, TronDown, TronLeft, TronUp, TronRight}
+}
 
-	// fmt.Println(tg.isOutOfBounds(player.x, player.y), player.x, player.y, tg.GameState.collisions[player.x][player.y])
-	return tg.isOutOfBounds(player.X, player.Y) || tg.GameState.collisions[player.X][player.Y]
+func (tg *TronGameView) shouldDie(player TronClientState) bool {
+	return tg.isOutOfBounds(player.X, player.Y) || tg.GameState.Collisions[player.X][player.Y]
 }
 
 func (tg *TronGameView) die(player TronClientState) TronClientState {
@@ -259,12 +340,12 @@ func (tg *TronGameView) die(player TronClientState) TronClientState {
 }
 
 func (tg *TronGameView) isOutOfBounds(x int, y int) bool {
-	return x <= 0 || x >= tg.GameState.width || y <= 0 || y >= tg.GameState.height
+	return x <= 0 || x >= tg.GameState.Width-1 || y <= 0 || y >= tg.GameState.Height-1
 }
 
 func (tg *TronGameView) setCollision(x int, y int) {
 	if !tg.isOutOfBounds(x, y) {
-		tg.GameState.collisions[x][y] = true
+		tg.GameState.Collisions[x][y] = true
 	}
 }
 
@@ -274,6 +355,20 @@ func (tg *TronGameView) getMyState() TronClientState {
 
 func (tg *TronGameView) setMyState(state TronClientState) {
 	tg.ClientStates[tg.Me] = state
+}
+
+func getDirChr(dir TronDirection) string {
+	switch dir {
+	case TronUp:
+		return "▲"
+	case TronRight:
+		return "▶"
+	case TronDown:
+		return "▼"
+	case TronLeft:
+		return "◀"
+	}
+	return "?"
 }
 
 func (v *TronGameView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
