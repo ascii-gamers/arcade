@@ -135,7 +135,10 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	p, err := parseMessage(data)
 
 	if err != nil {
-		panic(err)
+		p = NewMalformedMessage(err.Error())
+		err = nil
+
+		reflect.ValueOf(p).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(c.ID))
 	}
 
 	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
@@ -159,6 +162,8 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 		})
 
 		s.Network.DeleteClient(c.ID)
+	case MalformedMessage:
+		res = NewErrorMessage(p.Text)
 	case PingMessage:
 		c.ID = msg.SenderID
 		c.ClientRoutingInfo = ClientRoutingInfo{
