@@ -1,6 +1,8 @@
 package arcade
 
 import (
+	"encoding"
+
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -61,4 +63,8 @@ func (v *UsernameView) Render(s *Screen) {
 }
 
 func (v *UsernameView) Unload() {
+}
+
+func (v *UsernameView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	return nil
 }

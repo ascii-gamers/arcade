@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"encoding"
 	"fmt"
 	"unicode/utf8"
 
@@ -173,4 +174,8 @@ func (v *LobbyView) Render(s *Screen) {
 }
 
 func (v *LobbyView) Unload() {
+}
+
+func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	return nil
 }

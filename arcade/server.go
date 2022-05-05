@@ -75,8 +75,10 @@ func (s *Server) startHeartbeats() {
 				continue
 			}
 
+			metadata := arcade.ViewManager.GetHeartbeatMetadata()
+
 			client.Lock()
-			s.Network.Send(client, NewHeartbeatMessage(client.Seq))
+			s.Network.Send(client, NewHeartbeatMessage(client.Seq, metadata))
 			s.connectedClients[clientID].HeartbeatSendTimes[client.Seq] = time.Now()
 			client.Seq++
 			client.Unlock()

@@ -165,3 +165,19 @@ func (mgr *ViewManager) RequestDebugRender() {
 
 	mgr.RequestRender()
 }
+
+func (mgr *ViewManager) GetHeartbeatMetadata() []byte {
+	metadata := mgr.view.GetHeartbeatMetadata()
+
+	if metadata == nil {
+		return nil
+	}
+
+	data, err := metadata.MarshalBinary()
+
+	if err != nil {
+		panic(err)
+	}
+
+	return data
+}

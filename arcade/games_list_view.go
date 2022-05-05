@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"encoding"
 	"fmt"
 	"sort"
 	"sync"
@@ -298,4 +299,8 @@ func (v *GamesListView) Render(s *Screen) {
 }
 
 func (v *GamesListView) Unload() {
+}
+
+func (v *GamesListView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	return nil
 }

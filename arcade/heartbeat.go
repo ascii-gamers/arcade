@@ -7,13 +7,15 @@ import (
 type HeartbeatMessage struct {
 	Message
 
-	Seq int
+	Seq      int
+	Metadata []byte
 }
 
-func NewHeartbeatMessage(seq int) *HeartbeatMessage {
+func NewHeartbeatMessage(seq int, metadata []byte) *HeartbeatMessage {
 	return &HeartbeatMessage{
-		Message: Message{Type: "heartbeat"},
-		Seq:     seq,
+		Message:  Message{Type: "heartbeat"},
+		Seq:      seq,
+		Metadata: metadata,
 	}
 }
 
