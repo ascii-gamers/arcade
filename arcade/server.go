@@ -135,7 +135,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	p, err := parseMessage(data)
 
 	if err != nil {
-		p = NewMalformedMessage(err.Error())
+		p = *NewMalformedMessage(err.Error())
 		err = nil
 
 		reflect.ValueOf(p).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(c.ID))
