@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"encoding/json"
 	"math/rand"
 	"sync"
 	"time"
@@ -66,4 +67,8 @@ func generateCode() string {
 	}
 
 	return code
+}
+
+func (l *Lobby) MarshalBinary() ([]byte, error) {
+	return json.Marshal(l)
 }
