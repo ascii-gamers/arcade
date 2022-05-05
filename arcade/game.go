@@ -124,7 +124,7 @@ func (g *Game[GS, CS]) start() {
 func (g *Game[GS, CS]) startHostSync() {
 	for g.Started {
 		time.Sleep(time.Duration(g.HostSyncPeriod * int(time.Millisecond)))
-		// g.sendGameUpdate()
+		g.sendGameUpdate()
 	}
 }
 
@@ -134,7 +134,6 @@ func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 
 	for clientId := range g.ClientStates {
 		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
-			// fmt.Println("BRUH: ", clientUpdate.Id)
 			arcade.Server.Network.Send(client, clientUpdate)
 		}
 	}
@@ -148,8 +147,8 @@ func (g *Game[GS, CS]) sendGameUpdate() {
 	arcade.Server.RLock()
 	defer arcade.Server.RUnlock()
 
-	for clientID := range g.ClientStates {
-		if client, ok := arcade.Server.Network.GetClient(clientID); ok {
+	for clientId := range g.ClientStates {
+		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
 			data := &GameUpdateMessage[GS, CS]{Message{Type: "game_update"}, g.GameState, g.ClientStates}
 			arcade.Server.Network.Send(client, data)
 		}

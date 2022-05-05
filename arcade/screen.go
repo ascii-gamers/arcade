@@ -39,7 +39,7 @@ func (s *Screen) Clear() {
 func (s *Screen) ClearContent() {
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 	displayWidth, displayHeight := s.displaySize()
-	s.DrawEmpty(0, 0, displayWidth-1, displayHeight-1, sty)
+	s.DrawEmpty(1, 1, displayWidth-2, displayHeight-2, sty)
 }
 
 func (s *Screen) offset() (int, int) {
@@ -145,10 +145,10 @@ func (s *Screen) Reset() {
 	s.Fill(' ', sty)
 
 	// Draw border around screen
-	width, height := s.Size()
+	// width, height := s.Size()
 	displayWidth, displayHeight := s.displaySize()
 
-	if width >= displayWidth+2 && height >= displayHeight+2 {
-		s.DrawBox(-1, -1, displayWidth, displayHeight, sty, true)
-	}
+	// if width >= displayWidth+2 && height >= displayHeight+2 {
+	s.DrawBox(0, 0, displayWidth-1, displayHeight-1, sty, true)
+	// }
 }
