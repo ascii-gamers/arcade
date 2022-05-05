@@ -316,13 +316,9 @@ func (s *Server) ScanLAN() {
 		panic(err)
 	}
 
-	for i, ip := range ips {
+	for _, ip := range ips {
 		client := NewNeighboringClient(fmt.Sprintf("%s:6824", ip))
 		go arcade.Server.connect(client)
-
-		if i%1000 == 0 {
-			fmt.Println(i)
-		}
 	}
 
 	time.Sleep(10 * time.Second)
