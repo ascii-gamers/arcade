@@ -108,6 +108,9 @@ func (mgr *ViewManager) Start(v View) {
 			case tcell.KeyCtrlE:
 				arcade.Server.Network.SetDropRate(0.1)
 				continue
+			case tcell.KeyCtrlR:
+				arcade.Server.Network.SetDropRate(0)
+				continue
 			}
 		}
 
@@ -120,16 +123,20 @@ func (mgr *ViewManager) RequestRender() {
 	displayWidth, displayHeight := mgr.screen.displaySize()
 	width, height := mgr.screen.Size()
 
+	mgr.RLock()
+	showDebug := mgr.showDebug
+	mgr.RUnlock()
+
+	if showDebug {
+		mgr.screen.Reset()
+	}
+
 	if width < displayWidth || height < displayHeight {
 		warning := "Please make your terminal window larger!"
 		mgr.screen.DrawText((displayWidth-len(warning))/2, displayHeight/2-1, tcell.StyleDefault, warning)
 	} else {
 		mgr.view.Render(mgr.screen)
 	}
-
-	mgr.RLock()
-	showDebug := mgr.showDebug
-	mgr.RUnlock()
 
 	if showDebug {
 		x, y := mgr.screen.offset()
@@ -138,9 +145,29 @@ func (mgr *ViewManager) RequestRender() {
 		debugSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorRed)
 
 		mgr.screen.DrawText(-x, -y, debugSty, "Ctrl-D to hide")
-		mgr.screen.DrawText(-x, -y+1, debugSty, "Ctrl-Q to drop 100%")
-		mgr.screen.DrawText(-x, -y+2, debugSty, "Ctrl-W to drop 50%")
-		mgr.screen.DrawText(-x, -y+3, debugSty, "Ctrl-E to drop 10%")
+
+		text100 := "Ctrl-Q to drop 100%"
+		mgr.screen.DrawText(-x, -y+1, debugSty, text100)
+
+		text50 := "Ctrl-W to drop 50%"
+		mgr.screen.DrawText(-x, -y+2, debugSty, text50)
+
+		text10 := "Ctrl-E to drop 10%"
+		mgr.screen.DrawText(-x, -y+3, debugSty, text10)
+
+		text0 := "Ctrl-R to drop 0%"
+		mgr.screen.DrawText(-x, -y+4, debugSty, text0)
+
+		switch arcade.Server.Network.GetDropRate() {
+		case 0:
+			mgr.screen.DrawText(-x+len(text0)+1, -y+4, debugSty, "<--")
+		case 0.1:
+			mgr.screen.DrawText(-x+len(text10)+1, -y+3, debugSty, "<--")
+		case 0.5:
+			mgr.screen.DrawText(-x+len(text50)+1, -y+2, debugSty, "<--")
+		case 1:
+			mgr.screen.DrawText(-x+len(text100)+1, -y+1, debugSty, "<--")
+		}
 
 		connectedClients := arcade.Server.GetHeartbeatClients()
 
