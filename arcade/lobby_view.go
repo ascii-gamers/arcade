@@ -3,6 +3,7 @@ package arcade
 import (
 	"encoding"
 	"fmt"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,7 +11,7 @@ import (
 
 type LobbyView struct {
 	View
-	selectedRow int
+	stopTickerCh chan bool
 }
 
 // const stickmen = []string{
@@ -39,7 +40,23 @@ var lobby_footer_nonhost = []string{
 }
 
 func NewLobbyView() *LobbyView {
-	return &LobbyView{}
+	view := &LobbyView{stopTickerCh: make(chan bool)}
+	ticker := time.NewTicker(750 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				// send out lobbyinfo
+
+				arcade.ViewManager.RequestRender()
+			case <-view.stopTickerCh:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	return view
+
 }
 
 func (v *LobbyView) Init() {
@@ -208,6 +225,7 @@ func (v *LobbyView) Render(s *Screen) {
 }
 
 func (v *LobbyView) Unload() {
+	v.stopTickerCh <- true
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
