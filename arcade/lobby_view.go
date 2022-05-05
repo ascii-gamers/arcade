@@ -30,8 +30,12 @@ const (
 	lv_TableY2 = 12
 )
 
-var lobby_footer = []string{
+var lobby_footer_host = []string{
 	"[S]tart game       [C]ancel",
+}
+
+var lobby_footer_nonhost = []string{
+	"[C]ancel",
 }
 
 func NewLobbyView() *LobbyView {
@@ -194,7 +198,12 @@ func (v *LobbyView) Render(s *Screen) {
 	s.DrawText((width-len(capacityHeader+capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 
 	// Draw footer with navigation keystrokes
-	s.DrawText((width-len(lobby_footer[0]))/2, height-2, sty, lobby_footer[0])
+	if arcade.Server.ID == arcade.Lobby.HostID {
+		// I am host so I should see start game controls
+		s.DrawText((width-len(lobby_footer_host[0]))/2, height-2, sty, lobby_footer_host[0])
+	} else {
+		s.DrawText((width-len(lobby_footer_nonhost[0]))/2, height-2, sty, lobby_footer_nonhost[0])
+	}
 
 }
 
