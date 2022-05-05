@@ -50,7 +50,10 @@ type Client struct {
 
 	sendCh chan []byte
 
-	connectedCh chan bool
+	connected    bool
+	timedOut     bool
+	connectedCh  chan bool
+	connectedMux sync.Mutex
 }
 
 // NewClient creates a client with the given address.

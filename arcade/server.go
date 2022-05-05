@@ -12,7 +12,7 @@ import (
 	"github.com/xtaci/kcp-go/v5"
 )
 
-const disconnectInterval = 2500 * time.Millisecond
+const timeoutInterval = 2500 * time.Millisecond
 const heartbeatInterval = time.Second
 
 type ConnectedClientInfo struct {
@@ -69,7 +69,7 @@ func (s *Server) startHeartbeats() {
 		for clientID, info := range s.connectedClients {
 			client, ok := s.Network.GetClient(clientID)
 
-			if !ok || time.Since(info.LastHeartbeat) >= disconnectInterval {
+			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
 				arcade.ViewManager.ProcessEvent(NewClientDisconnectEvent(clientID))
 				delete(s.connectedClients, clientID)
 				continue
@@ -121,9 +121,19 @@ func (s *Server) connect(c *Client) error {
 	c.connectedCh = make(chan bool)
 	s.Network.Send(c, NewPingMessage())
 
-	// TODO: timeout if no response
+	// Timeout if we don't receive a response
+	time.AfterFunc(timeoutInterval, func() {
+		c.connectedMux.Lock()
+		defer c.connectedMux.Unlock()
+
+		if !c.connected {
+			c.timedOut = true
+			c.connectedCh <- false
+		}
+	})
+
 	if !<-c.connectedCh {
-		return errors.New("client failed to connect")
+		return errors.New("client timed out")
 	}
 
 	go s.Network.PropagateRoutes()
@@ -180,7 +190,12 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 		s.Network.AddClient(c)
 
-		c.connectedCh <- true
+		c.connectedMux.Lock()
+		if !c.timedOut {
+			c.connected = true
+			c.connectedCh <- true
+		}
+		c.connectedMux.Unlock()
 	case RoutingMessage:
 		s.Network.UpdateRoutes(c, p.Distances)
 	default:
@@ -292,4 +307,23 @@ func (s *Server) start() error {
 		client := NewNeighboringClient(s.RemoteAddr().String())
 		client.start(s)
 	}
+}
+
+func (s *Server) ScanLAN() {
+	ips, err := GetLANIPs()
+
+	if err != nil {
+		panic(err)
+	}
+
+	for i, ip := range ips {
+		client := NewNeighboringClient(fmt.Sprintf("%s:6824", ip))
+		go arcade.Server.connect(client)
+
+		if i%1000 == 0 {
+			fmt.Println(i)
+		}
+	}
+
+	time.Sleep(10 * time.Second)
 }
