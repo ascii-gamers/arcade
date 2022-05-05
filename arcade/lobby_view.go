@@ -68,6 +68,8 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 	defer arcade.lobbyMux.RUnlock()
 
 	switch evt := evt.(type) {
+	case *HeartbeatMessage:
+		evt.Metadata
 	case *ClientDisconnectEvent:
 		arcade.Lobby.RemovePlayer(evt.ClientID)
 	case *HeartbeatEvent:
