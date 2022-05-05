@@ -2,7 +2,6 @@ package arcade
 
 import (
 	"encoding"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -56,6 +55,7 @@ type TronGameView struct {
 }
 
 const CLIENT_LAG_TIMESTEP = 0
+const COLL_PER_BYTE = 2
 
 func NewTronGameView(lobby *Lobby) *TronGameView {
 	return &TronGameView{
@@ -81,11 +81,12 @@ func (tg *TronGameView) Init() {
 	// for i := range collisions {
 	// 	collisions[i] = make([]bool, height)
 	// }
-	collisions := make([]byte, int(math.Ceil(float64(width*height)/2)))
+	collisions := make([]byte, int(math.Ceil(float64(width*height)/4)))
+
 	// tg.GameState.Collisions = collisions
 	tg.GameState = TronGameState{width, height, false, collisions}
 
-	localCollisions = make([]byte, int(math.Ceil(float64(width*height)/2)))
+	localCollisions = make([]byte, int(math.Ceil(float64(width*height)/4)))
 
 	clientState := make(map[string]TronClientState)
 	startingPos, startingDir := getStartingPosAndDir()
@@ -266,6 +267,7 @@ func (tg *TronGameView) updateSelf() {
 	mu.Unlock()
 }
 
+// lock this shit
 func (tg *TronGameView) updateOthers() {
 	for id, state := range tg.ClientStates {
 		if id != tg.Me && lastReceivedInp[id]+CLIENT_LAG_TIMESTEP < tg.Timestep {
@@ -343,21 +345,40 @@ func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int)
 func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, TronClientState]) {
 	mu.Lock()
 	defer mu.Unlock()
-	fmt.Println("IN GAME UPDATE")
+	// fmt.Println("IN GAME UPDATE")
 	tg.GameState = data.GameUpdate
 	// lastInps := data.LastInps
-	for id, incomingClient := range data.ClientStates {
+	// for id, incomingClient := range data.ClientStates {
+	// 	// if id != tg.Me {
+	// 	currClient := tg.ClientStates[id]
+	// 	fmt.Println(incomingClient.CommitTimestep, currClient.CommitTimestep)
+	// 	if incomingClient.CommitTimestep > currClient.CommitTimestep {
+	// 		diff := incomingClient.CommitTimestep - currClient.CommitTimestep
+
+	// 		currClient.CommitTimestep = incomingClient.CommitTimestep
+	// 		currClient.PathX = currClient.PathX[int(math.Min(float64(diff), float64(len(currClient.PathX)))):]
+	// 		currClient.PathY = currClient.PathY[int(math.Min(float64(diff), float64(len(currClient.PathY)))):]
+	// 		if lastReceivedInp[id] < incomingClient.CommitTimestep {
+	// 			lastReceivedInp[id] = incomingClient.CommitTimestep
+	// 		}
+	// 		tg.ClientStates[id] = currClient
+	// 	} else {
+	// 		panic("incoming client < currclient commitTimestep")
+	// 	}
+	// 	// }
+	// }
+	for id, lastInp := range data.LastInps {
 		// if id != tg.Me {
 		currClient := tg.ClientStates[id]
-		fmt.Println(incomingClient.CommitTimestep, currClient.CommitTimestep)
-		if incomingClient.CommitTimestep > currClient.CommitTimestep {
-			diff := incomingClient.CommitTimestep - currClient.CommitTimestep
+		// fmt.Println(lastInp, currClient.CommitTimestep)
+		if lastInp > currClient.CommitTimestep {
+			diff := lastInp - currClient.CommitTimestep
 
-			currClient.CommitTimestep = incomingClient.CommitTimestep
+			currClient.CommitTimestep = lastInp
 			currClient.PathX = currClient.PathX[int(math.Min(float64(diff), float64(len(currClient.PathX)))):]
 			currClient.PathY = currClient.PathY[int(math.Min(float64(diff), float64(len(currClient.PathY)))):]
-			if lastReceivedInp[id] < incomingClient.CommitTimestep {
-				lastReceivedInp[id] = incomingClient.CommitTimestep
+			if lastReceivedInp[id] < lastInp {
+				lastReceivedInp[id] = lastInp
 			}
 			tg.ClientStates[id] = currClient
 		} else {
@@ -412,7 +433,6 @@ func (g *Game[GS, CS]) sendClientUpdate(update CS) {
 
 func (tg *TronGameView) sendGameUpdate() {
 	if tg.Me != tg.HostID {
-		fmt.Println(tg.Me, tg.HostID)
 		return
 	}
 
@@ -421,7 +441,7 @@ func (tg *TronGameView) sendGameUpdate() {
 
 	for clientId := range tg.ClientStates {
 		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != tg.Me {
-			data := &GameUpdateMessage[TronGameState, TronClientState]{Message{Type: "game_update"}, tg.GameState, tg.ClientStates, lastReceivedInp}
+			data := &GameUpdateMessage[TronGameState, TronClientState]{Message{Type: "game_update"}, tg.GameState, lastReceivedInp}
 			arcade.Server.Network.Send(client, data)
 		}
 	}
@@ -484,9 +504,9 @@ func (tg *TronGameView) isOutOfBounds(x int, y int) bool {
 
 func (tg *TronGameView) setCollision(collisions []byte, x int, y int, playerNum int) []byte {
 	width, _ := arcade.ViewManager.screen.displaySize()
-	if !tg.isOutOfBounds(x, y) && playerNum < 8 {
+	if !tg.isOutOfBounds(x, y) && playerNum < 2 {
 		ind := y*width + x
-		collisions[ind/2] |= byte(playerNum<<1+1) << ((ind % 2) * 4)
+		collisions[ind/4] |= byte(playerNum<<1+1) << ((ind % 4) * 2)
 	}
 	return collisions
 }
@@ -495,12 +515,12 @@ func (tg *TronGameView) getCollision(collisions []byte, x int, y int) (bool, int
 	width, _ := arcade.ViewManager.screen.displaySize()
 	if !tg.isOutOfBounds(x, y) {
 		ind := y*width + x
-		offset := ((ind % 2) * 4)
-		coll := collisions[ind/2] >> offset
+		offset := ((ind % 4) * 2)
+		coll := collisions[ind/4] >> offset
 
 		if coll&1 == 1 {
 			// fmt.Println("B: ", coll, coll>>1, int((coll>>1)&7))
-			return true, int((coll >> 1) & 7)
+			return true, int((coll >> 1) & 1)
 		} else {
 			return false, -1
 		}

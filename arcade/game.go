@@ -88,9 +88,9 @@ type ClientUpdateMessage[CS any] struct {
 
 type GameUpdateMessage[GS any, CS any] struct {
 	Message
-	GameUpdate   GS
-	ClientStates map[string]CS
-	LastInps     map[string]int
+	GameUpdate GS
+	// ClientStates map[string]CS
+	LastInps map[string]int
 }
 
 type StartGameMessage struct {
