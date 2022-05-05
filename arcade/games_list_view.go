@@ -184,7 +184,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 			glv_code_input_string = ""
 			arcade.ViewManager.SetView(NewLobbyView())
 
-			arcade.Server.MonitorConnection(p.Lobby.HostID)
+			arcade.Server.BeginHeartbeats(p.Lobby.HostID)
 		} else if p.Error == ErrWrongCode {
 			err_msg = "Wrong join code."
 		} else if p.Error == ErrCapacity {

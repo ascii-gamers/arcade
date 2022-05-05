@@ -142,7 +142,7 @@ func (mgr *ViewManager) RequestRender() {
 		mgr.screen.DrawText(-x, -y+2, debugSty, "Ctrl-W to drop 50%")
 		mgr.screen.DrawText(-x, -y+3, debugSty, "Ctrl-E to drop 10%")
 
-		connectedClients := arcade.Server.GetConnectedClients()
+		connectedClients := arcade.Server.GetHeartbeatClients()
 
 		i := 0
 		for clientID, info := range connectedClients {

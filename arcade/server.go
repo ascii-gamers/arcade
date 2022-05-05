@@ -70,8 +70,9 @@ func (s *Server) startHeartbeats() {
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= disconnectInterval {
+				arcade.ViewManager.ProcessEvent(NewClientDisconnectEvent(clientID))
 				delete(s.connectedClients, clientID)
-				panic("unknown disconnect: " + clientID)
+				continue
 			}
 
 			client.Lock()
@@ -87,7 +88,7 @@ func (s *Server) startHeartbeats() {
 	}
 }
 
-func (s *Server) MonitorConnection(clientID string) {
+func (s *Server) BeginHeartbeats(clientID string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -98,7 +99,7 @@ func (s *Server) MonitorConnection(clientID string) {
 	}
 }
 
-func (s *Server) GetConnectedClients() map[string]*ConnectedClientInfo {
+func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 	s.RLock()
 	defer s.RUnlock()
 
