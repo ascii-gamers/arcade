@@ -61,7 +61,6 @@ func Start() {
 	time.Sleep(10 * time.Millisecond)
 
 	client := NewNeighboringClient(*distributorAddr)
-	client.Distributor = true
 	go arcade.Server.connect(client)
 
 	// TODO: Make better solution for this later -- wait to connect to distributor

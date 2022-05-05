@@ -263,7 +263,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 func (s *Server) startWithNextOpenPort() {
 	for {
-		s.Addr = fmt.Sprintf("127.0.0.1:%d", arcade.Port)
+		s.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
 		s.start()
 
 		arcade.Port++
