@@ -3,7 +3,6 @@ package arcade
 import (
 	"encoding/json"
 	"sync"
-	"time"
 )
 
 const (
@@ -117,17 +116,17 @@ func (m StartGameMessage) MarshalBinary() ([]byte, error) {
 
 func (g *Game[GS, CS]) start() {
 	g.Started = true
-	if g.Me == g.HostID && g.HostSyncPeriod > 0 {
-		go g.startHostSync()
-	}
+	// if g.Me == g.HostID && g.HostSyncPeriod > 0 {
+	// 	go g.startHostSync()
+	// }
 }
 
-func (g *Game[GS, CS]) startHostSync() {
-	for g.Started {
-		time.Sleep(time.Duration(g.HostSyncPeriod * int(time.Millisecond)))
-		g.sendGameUpdate()
-	}
-}
+// func (g *Game[GS, CS]) startHostSync() {
+// 	for g.Started {
+// 		time.Sleep(time.Duration(g.HostSyncPeriod * int(time.Millisecond)))
+// 		g.sendGameUpdate()
+// 	}
+// }
 
 // use these to generalize funcs in tron game
 
