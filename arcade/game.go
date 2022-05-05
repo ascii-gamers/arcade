@@ -90,7 +90,9 @@ type GameUpdateMessage[GS any, CS any] struct {
 	Message
 	GameUpdate GS
 	// ClientStates map[string]CS
-	LastInps map[string]int
+	LastInps    map[string]int
+	ID          string
+	FragmentNum int
 }
 
 type StartGameMessage struct {
