@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"encoding"
 	"fmt"
 	"unicode/utf8"
 
@@ -120,6 +121,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		} else {
 			arcade.Lobby.mu.RUnlock()
 			arcade.Lobby.AddPlayer(p.PlayerID)
+			arcade.Server.BeginHeartbeats(p.PlayerID)
 			arcade.Lobby.mu.RLock()
 			return NewJoinReplyMessage(arcade.Lobby, OK)
 		}
@@ -197,4 +199,8 @@ func (v *LobbyView) Render(s *Screen) {
 }
 
 func (v *LobbyView) Unload() {
+}
+
+func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	return nil
 }

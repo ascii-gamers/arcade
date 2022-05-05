@@ -1,4 +1,4 @@
-module github.com/ascii-arcade/asciiarcade
+module github.com/ascii-arcade/arcade
 
 go 1.18
 

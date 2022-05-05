@@ -6,14 +6,11 @@ import (
 
 type PingMessage struct {
 	Message
-
-	ID string
 }
 
-func NewPingMessage(id string) *PingMessage {
+func NewPingMessage() *PingMessage {
 	return &PingMessage{
 		Message: Message{Type: "ping"},
-		ID:      id,
 	}
 }
 

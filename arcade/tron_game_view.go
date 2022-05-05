@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"encoding"
 	"math/rand"
 	"time"
 
@@ -273,4 +274,8 @@ func (tg *TronGameView) getMyState() TronClientState {
 
 func (tg *TronGameView) setMyState(state TronClientState) {
 	tg.ClientStates[tg.Me] = state
+}
+
+func (v *TronGameView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	return nil
 }

@@ -9,8 +9,9 @@ import (
 type Network struct {
 	sync.RWMutex
 
-	clients map[string]*Client
-	me      string
+	clients  map[string]*Client
+	dropRate float64
+	me       string
 }
 
 func NewNetwork(me string) *Network {
@@ -162,4 +163,18 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 	}
 
 	go n.PropagateRoutes()
+}
+
+func (n *Network) GetDropRate() float64 {
+	n.RLock()
+	defer n.RUnlock()
+
+	return n.dropRate
+}
+
+func (n *Network) SetDropRate(rate float64) {
+	n.Lock()
+	defer n.Unlock()
+
+	n.dropRate = rate
 }

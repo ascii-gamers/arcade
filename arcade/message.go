@@ -51,6 +51,14 @@ func parseMessage(data []byte) (interface{}, error) {
 		p := ErrorMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
+	case "heartbeat":
+		p := HeartbeatMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "heartbeat_reply":
+		p := HeartbeatReplyMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
 	case "hello":
 		p := HelloMessage{}
 		json.Unmarshal(data, &p)

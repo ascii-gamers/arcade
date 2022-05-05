@@ -2,12 +2,14 @@ package arcade
 
 import (
 	"encoding"
-	"log"
+	"math/rand"
 	"net"
 	"sync"
 )
 
-const maxBufferSize = 1024
+// Actually can't be increased past this number -- kcp-go enforces a packet
+// size limit of 1500 bytes, and 128 bytes are reserved for the header.
+const maxBufferSize = 1372
 
 type ClientRoutingInfo struct {
 	// Distance to this client. Right now, this is just the number of nodes
@@ -42,6 +44,8 @@ type Client struct {
 	// ID of the client through which this client is reached.
 	NextHop string
 
+	Seq int
+
 	conn net.Conn
 
 	sendCh chan []byte
@@ -54,7 +58,7 @@ func NewNeighboringClient(addr string) *Client {
 	return &Client{
 		Addr:     addr,
 		Neighbor: true,
-		sendCh:   make(chan []byte),
+		sendCh:   make(chan []byte, maxBufferSize),
 	}
 }
 
@@ -85,12 +89,20 @@ func (c *Client) readPump() {
 		n, err := c.conn.Read(buf)
 
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 		data := make([]byte, n)
 		copy(data, buf[:n])
 
+		// Randomly drop packets if debugging
+		dropRate := arcade.Server.Network.GetDropRate()
+
+		if dropRate > 0 && rand.Float64() < dropRate {
+			continue
+		}
+
+		// Handle the message
 		arcade.Server.handleMessage(c, data)
 	}
 }
@@ -101,13 +113,20 @@ func (c *Client) writePump() {
 		_, err := c.conn.Write(<-c.sendCh)
 
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 }
 
 // send sends a message to the client.
 func (c *Client) send(msg interface{}) {
+	// Randomly drop packets if debugging
+	dropRate := arcade.Server.Network.GetDropRate()
+
+	if dropRate > 0 && rand.Float64() < dropRate {
+		return
+	}
+
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data
 }

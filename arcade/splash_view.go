@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"encoding"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -117,4 +118,8 @@ func (v *SplashView) Render(s *Screen) {
 
 func (v *SplashView) Unload() {
 	v.stopTickerCh <- true
+}
+
+func (v *SplashView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	return nil
 }

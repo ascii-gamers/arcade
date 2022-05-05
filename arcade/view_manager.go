@@ -1,15 +1,21 @@
 package arcade
 
 import (
+	"fmt"
 	"os"
+	"sync"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 type ViewManager struct {
+	sync.RWMutex
+
 	screen *Screen
 
 	view View
+
+	showDebug bool
 }
 
 func NewViewManager() *ViewManager {
@@ -40,6 +46,13 @@ func (mgr *ViewManager) SetView(v View) {
 	// Save view
 	mgr.view = v
 	mgr.view.Init()
+}
+
+func (mgr *ViewManager) ToggleDebugPanel() {
+	mgr.Lock()
+	defer mgr.Unlock()
+
+	mgr.showDebug = !mgr.showDebug
 }
 
 func (mgr *ViewManager) Start(v View) {
@@ -76,9 +89,25 @@ func (mgr *ViewManager) Start(v View) {
 			mgr.screen.Reset()
 			mgr.RequestRender()
 		case *tcell.EventKey:
-			if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
+			switch ev.Key() {
+			case tcell.KeyEscape, tcell.KeyCtrlC:
 				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 				quit()
+			case tcell.KeyCtrlD:
+				mgr.ToggleDebugPanel()
+
+				mgr.screen.Reset()
+				mgr.RequestRender()
+				continue
+			case tcell.KeyCtrlQ:
+				arcade.Server.Network.SetDropRate(1)
+				continue
+			case tcell.KeyCtrlW:
+				arcade.Server.Network.SetDropRate(0.5)
+				continue
+			case tcell.KeyCtrlE:
+				arcade.Server.Network.SetDropRate(0.1)
+				continue
 			}
 		}
 
@@ -98,5 +127,57 @@ func (mgr *ViewManager) RequestRender() {
 		mgr.view.Render(mgr.screen)
 	}
 
+	mgr.RLock()
+	showDebug := mgr.showDebug
+	mgr.RUnlock()
+
+	if showDebug {
+		x, y := mgr.screen.offset()
+		w, _ := mgr.screen.displaySize()
+
+		debugSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorRed)
+
+		mgr.screen.DrawText(-x, -y, debugSty, "Ctrl-D to hide")
+		mgr.screen.DrawText(-x, -y+1, debugSty, "Ctrl-Q to drop 100%")
+		mgr.screen.DrawText(-x, -y+2, debugSty, "Ctrl-W to drop 50%")
+		mgr.screen.DrawText(-x, -y+3, debugSty, "Ctrl-E to drop 10%")
+
+		connectedClients := arcade.Server.GetHeartbeatClients()
+
+		i := 0
+		for clientID, info := range connectedClients {
+			s := fmt.Sprintf("%s: %dms", clientID[:4], info.GetMeanRTT().Milliseconds())
+			mgr.screen.DrawText(w+x-len(s), -y+i, debugSty, s)
+			i++
+		}
+	}
+
 	mgr.screen.Show()
+}
+
+func (mgr *ViewManager) RequestDebugRender() {
+	mgr.RLock()
+	defer mgr.RUnlock()
+
+	if !mgr.showDebug {
+		return
+	}
+
+	mgr.RequestRender()
+}
+
+func (mgr *ViewManager) GetHeartbeatMetadata() []byte {
+	metadata := mgr.view.GetHeartbeatMetadata()
+
+	if metadata == nil {
+		return nil
+	}
+
+	data, err := metadata.MarshalBinary()
+
+	if err != nil {
+		panic(err)
+	}
+
+	return data
 }

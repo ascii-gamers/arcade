@@ -7,14 +7,12 @@ import (
 type PongMessage struct {
 	Message
 
-	ID          string
 	Distributor bool
 }
 
-func NewPongMessage(id string, distributor bool) *PongMessage {
+func NewPongMessage(distributor bool) *PongMessage {
 	return &PongMessage{
 		Message:     Message{Type: "pong"},
-		ID:          id,
 		Distributor: distributor,
 	}
 }
