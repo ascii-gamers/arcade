@@ -139,7 +139,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 				arcade.Lobby.mu.RLock()
 				playerIDlength := len(arcade.Lobby.PlayerIDs)
 				cap := arcade.Lobby.Capacity
-				lobby_code := arcade.Lobby.code
+				lobby_code := arcade.Lobby.Code
 				arcade.Lobby.mu.RUnlock()
 
 				if playerIDlength == cap {
@@ -221,7 +221,7 @@ func (v *LobbyView) Render(s *Screen) {
 	privateHeader := "Visibility: "
 	privateString := "public"
 	if arcade.Lobby.Private {
-		privateString = "private, Join Code: " + arcade.Lobby.code
+		privateString = "private, Join Code: " + arcade.Lobby.Code
 	}
 	s.DrawText((width-len(privateHeader+privateString))/2, lv_TableY1+2, sty, privateHeader)
 	s.DrawText((width-len(privateHeader+privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)

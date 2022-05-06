@@ -224,7 +224,6 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 		if p.Error == OK {
 			arcade.lobbyMux.Lock()
 			arcade.Lobby = p.Lobby
-			arcade.Lobby.code = glv_code
 			arcade.lobbyMux.Unlock()
 
 			err_msg = ""
