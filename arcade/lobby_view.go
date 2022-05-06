@@ -68,12 +68,34 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 			case 'c':
 				if arcade.Lobby.HostID != arcade.Server.ID {
 					// not the host, just leave the game
+
 					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
-					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID))
+					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
+					arcade.lobbyMux.Lock()
+					arcade.Lobby = &Lobby{}
+					arcade.lobbyMux.Unlock()
 					arcade.ViewManager.SetView(NewGamesListView())
 				} else {
-					// host, notify everyone game is done
-					v.SendUpdates()
+					// first extract lobbyID for messages
+					arcade.Lobby.mu.RLock()
+					lobbyID := arcade.Lobby.ID
+					arcade.Lobby.mu.Unlock()
+
+					// get rid of lobby
+					arcade.lobbyMux.Lock()
+					arcade.Lobby = &Lobby{}
+					arcade.lobbyMux.Unlock()
+
+					// send updates to everyone
+					arcade.Server.Network.ClientsRange(func(client *Client) bool {
+						if client.Distributor {
+							return true
+						}
+
+						arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
+
+						return true
+					})
 
 				}
 
@@ -96,55 +118,47 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 	}
 }
 
-func (v *LobbyView) SendUpdates() {
-	actions := []func(){}
-
-	arcade.Server.Network.ClientsRange(func(client *Client) bool {
-		if client.Distributor {
-			return true
-		}
-
-		actions = append(actions, func() {
-			arcade.Server.Network.Send(client, NewLobbyInfoMessage(arcade.Lobby))
-		})
-
-		return true
-	})
-
-	for _, action := range actions {
-		action()
-	}
-}
-
 func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	arcade.lobbyMux.RLock()
 	defer arcade.lobbyMux.RUnlock()
+
+	arcade.Lobby.mu.RLock()
+	lobbyID := arcade.Lobby.ID
+	arcade.Lobby.mu.Unlock()
 
 	switch p := p.(type) {
 	case HelloMessage:
 		return NewLobbyInfoMessage(arcade.Lobby)
 	case JoinMessage:
-		arcade.Lobby.mu.RLock()
-		defer arcade.Lobby.mu.RUnlock()
-
-		if len(arcade.Lobby.PlayerIDs) == arcade.Lobby.Capacity {
-			return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
-		} else if arcade.Lobby.code != p.Code {
-			return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
-		} else {
-			arcade.Lobby.mu.RUnlock()
-			arcade.Lobby.AddPlayer(p.PlayerID)
-			arcade.Server.BeginHeartbeats(p.PlayerID)
+		if lobbyID == p.LobbyID {
 			arcade.Lobby.mu.RLock()
-			return NewJoinReplyMessage(arcade.Lobby, OK)
+			defer arcade.Lobby.mu.RUnlock()
+
+			if len(arcade.Lobby.PlayerIDs) == arcade.Lobby.Capacity {
+				return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
+			} else if arcade.Lobby.code != p.Code {
+				return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
+			} else {
+				arcade.Lobby.mu.RUnlock()
+				arcade.Lobby.AddPlayer(p.PlayerID)
+				arcade.Server.BeginHeartbeats(p.PlayerID)
+				arcade.Lobby.mu.RLock()
+				return NewJoinReplyMessage(arcade.Lobby, OK)
+			}
 		}
+
 	case LeaveMessage:
-		arcade.Lobby.RemovePlayer(p.PlayerID)
-	// deal with private games later
-	// if p.Code != pendingGame.Code {
-	// 	return NewJoinReplyMessage(ErrWrongCode)
-	// }
-	// add capacity branch
+		if lobbyID == p.LobbyID {
+			arcade.Lobby.RemovePlayer(p.PlayerID)
+		}
+	case LobbyEndMessage:
+		// get rid of lobby
+		if lobbyID == p.LobbyID {
+			arcade.lobbyMux.Lock()
+			arcade.Lobby = &Lobby{}
+			arcade.lobbyMux.Unlock()
+			arcade.ViewManager.SetView(NewGamesListView())
+		}
 	case StartGameMessage:
 		arcade.Lobby.mu.RLock()
 		fmt.Println(p.GameID, arcade.Lobby.ID)

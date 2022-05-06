@@ -145,7 +145,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 					selectedLobby := v.lobbies[selectedLobbyKey]
 					host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-					go arcade.Server.Network.Send(host, NewJoinMessage(glv_code, arcade.Server.ID))
+					go arcade.Server.Network.Send(host, NewJoinMessage(glv_code, arcade.Server.ID, selectedLobby.ID))
 				} else {
 					glv_join_box = "join_code"
 					err_msg = "Code must be four characters long."
@@ -180,7 +180,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 						} else {
 							host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-							go arcade.Server.Network.Send(host, NewJoinMessage("", arcade.Server.ID))
+							go arcade.Server.Network.Send(host, NewJoinMessage("", arcade.Server.ID, selectedLobby.ID))
 						}
 						v.mu.RUnlock()
 
@@ -222,6 +222,14 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 		} else if p.Error == ErrCapacity {
 			err_msg = "Game is now full."
 		}
+	case LobbyEndMessage:
+		v.mu.Lock()
+		_, ok := v.lobbies[p.LobbyID]
+		if ok {
+			delete(v.lobbies, p.LobbyID)
+		}
+		v.mu.Unlock()
+
 	}
 
 	return nil
