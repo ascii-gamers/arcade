@@ -157,7 +157,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 	if err != nil {
 		// Most likely malformed message/packet is too large, ignore
-		return
+		panic("BRUH")
 	}
 
 	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)

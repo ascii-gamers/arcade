@@ -138,6 +138,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 			fmt.Println("new path to", clientID, "cost=", c.Distance)
 			client.Lock()
 			client.Distance = c.Distance
+			panic("")
 
 			from.RLock()
 			client.NextHop = from.ID
