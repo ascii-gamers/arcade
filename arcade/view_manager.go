@@ -90,7 +90,6 @@ func (mgr *ViewManager) Start(v View) {
 		case *tcell.EventKey:
 			switch ev.Key() {
 			case tcell.KeyEscape, tcell.KeyCtrlC:
-				arcade.Lobby.mu.Lock()
 				if arcade.Lobby.Name != "" {
 					if arcade.Lobby.HostID == arcade.Server.ID {
 						// send to all the players, similar to 'c'
@@ -119,7 +118,7 @@ func (mgr *ViewManager) Start(v View) {
 						arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
 					}
 				}
-				arcade.Lobby.mu.Unlock()
+
 				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 				quit()
 			case tcell.KeyCtrlD:

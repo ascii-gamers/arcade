@@ -46,8 +46,8 @@ func (v *LobbyView) Init() {
 }
 
 func (v *LobbyView) ProcessEvent(evt interface{}) {
-	arcade.lobbyMux.RLock()
-	defer arcade.lobbyMux.RUnlock()
+	arcade.lobbyMux.Lock()
+	defer arcade.lobbyMux.Unlock()
 
 	switch evt := evt.(type) {
 	case *ClientDisconnectEvent:
@@ -58,12 +58,8 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 		if arcade.Lobby.HostID == arcade.Server.ID {
 			lobby := new(Lobby)
 			json.Unmarshal(evt.Metadata, lobby)
-			arcade.lobbyMux.RUnlock()
-			arcade.lobbyMux.Lock()
 			// fmt.Println("lobby updated w heartbeat")
 			arcade.Lobby = lobby
-			arcade.lobbyMux.Unlock()
-			arcade.lobbyMux.RLock()
 		}
 		// do something with lobby
 	case *tcell.EventKey:
@@ -78,11 +74,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
 					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
 
-					arcade.lobbyMux.RUnlock()
-					arcade.lobbyMux.Lock()
 					arcade.Lobby = &Lobby{}
-					arcade.lobbyMux.Unlock()
-					arcade.lobbyMux.RLock()
 
 					arcade.Server.EndAllHeartbeats()
 					arcade.ViewManager.SetView(NewGamesListView())
@@ -92,11 +84,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.Lobby.mu.RUnlock()
 
 					// get rid of lobby
-					arcade.lobbyMux.RUnlock()
-					arcade.lobbyMux.Lock()
 					arcade.Lobby = &Lobby{}
-					arcade.lobbyMux.Unlock()
-					arcade.lobbyMux.RLock()
 
 					arcade.Server.EndAllHeartbeats()
 					// send updates to everyone
@@ -133,8 +121,8 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 }
 
 func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
-	arcade.lobbyMux.RLock()
-	defer arcade.lobbyMux.RUnlock()
+	arcade.lobbyMux.Lock()
+	defer arcade.lobbyMux.Unlock()
 
 	arcade.Lobby.mu.RLock()
 	lobbyID := arcade.Lobby.ID
@@ -176,15 +164,9 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	case LobbyEndMessage:
 		// get rid of lobby
 		if lobbyID == p.LobbyID {
-
-			arcade.lobbyMux.RUnlock()
-			arcade.lobbyMux.Lock()
-			fmt.Println("lobby deleted from host")
 			arcade.Lobby = &Lobby{}
-			arcade.lobbyMux.Unlock()
 
 			arcade.Server.EndAllHeartbeats()
-			arcade.lobbyMux.RLock()
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
 	case StartGameMessage:

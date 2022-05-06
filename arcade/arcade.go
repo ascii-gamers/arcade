@@ -48,6 +48,7 @@ func Start() {
 
 	// Start host server
 	arcade.Server = NewServer("")
+	arcade.Lobby = &Lobby{}
 
 	// go arcade.Server.ScanLAN()
 	// time.Sleep(10 * time.Second)
