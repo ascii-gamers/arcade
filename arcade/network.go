@@ -134,11 +134,10 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 
 		// Bellman-Ford equation: Update least-cost paths to all other clients
 		if c, ok := routingTable[clientID]; ok && c.Distance < client.Distance {
-			// TODO: Fix this
 			fmt.Println("new path to", clientID, "cost=", c.Distance)
+
 			client.Lock()
 			client.Distance = c.Distance
-			panic("")
 
 			from.RLock()
 			client.NextHop = from.ID
