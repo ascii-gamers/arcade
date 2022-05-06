@@ -62,12 +62,12 @@ func NewGamesListView() *GamesListView {
 		for {
 			select {
 			case <-ticker.C:
-				// Scan on LAN
-				go arcade.Server.ScanLAN()
-
 				// send out lobbyinfo
 				lastTimeRefreshed = (lastTimeRefreshed + 1) % 4
 				if lastTimeRefreshed == 0 {
+					// Scan on LAN
+					go arcade.Server.ScanLAN()
+
 					arcade.Server.Network.ClientsRange(func(client *Client) bool {
 						if client.Distributor {
 							return true
