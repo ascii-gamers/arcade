@@ -66,7 +66,7 @@ func NewTronGameView(lobby *Lobby) *TronGameView {
 			Name:           lobby.Name,
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
-			HostSyncPeriod: 1000,
+			HostSyncPeriod: 2000,
 			TimestepPeriod: 200,
 			Timestep:       0,
 		},
@@ -82,16 +82,9 @@ var currFragments = 0
 
 func (tg *TronGameView) Init() {
 	width, height := arcade.ViewManager.screen.displaySize()
-	// collisions := make([][]bool, width)
-	// for i := range collisions {
-	// 	collisions[i] = make([]bool, height)
-	// }
-	collisions := make([]byte, int(math.Ceil(float64(width*height)/2)))
+	tg.GameState = TronGameState{width, height, false, initCollisions()}
 
-	// tg.GameState.Collisions = collisions
-	tg.GameState = TronGameState{width, height, false, collisions}
-
-	localCollisions = make([]byte, int(math.Ceil(float64(width*height)/2)))
+	localCollisions = initCollisions()
 
 	clientState := make(map[string]TronClientState)
 	startingPos, startingDir := getStartingPosAndDir()
@@ -187,44 +180,29 @@ func (tg *TronGameView) Render(s *Screen) {
 	// displayWidth, displayHeight := s.displaySize()
 	// s.DrawBox(0, 0, displayWidth-1, displayHeight-1, defaultStyle, true)
 
-	// for row := 0; row < tg.GameState.Width; row++ {
-	// 	for col := 0; col < tg.GameState.Height; col++ {
-	// 		if ok, playerNum := tg.getCollision(tg.GameState.Collisions, row, col); ok && playerNum >= 0 {
-	// 			style := tcell.StyleDefault.Foreground(tcell.ColorNames[TRON_COLORS[playerNum+1]])
-	// 			s.DrawText(row, col, style, "-")
-	// 		}
-	// 	}
-	// }
-
 	for row := 0; row < tg.GameState.Width; row++ {
 		for col := 0; col < tg.GameState.Height; col++ {
-			if ok, playerNum := tg.getCollision(localCollisions, row, col); ok && playerNum >= 0 {
-				style := tcell.StyleDefault.Background(tcell.ColorNames[TRON_COLORS[playerNum+2]])
+			if ok, playerNum := tg.getCollision(tg.GameState.Collisions, row, col); ok && playerNum >= 0 {
+				style := tcell.StyleDefault.Background(tcell.ColorNames[TRON_COLORS[playerNum+1]])
 				s.DrawText(row, col, style, " ")
 			}
 		}
 	}
 
+	// for row := 0; row < tg.GameState.Width; row++ {
+	// 	for col := 0; col < tg.GameState.Height; col++ {
+	// 		if ok, playerNum := tg.getCollision(localCollisions, row, col); ok && playerNum >= 0 {
+	// 			style := tcell.StyleDefault.Background(tcell.ColorNames[TRON_COLORS[playerNum+2]])
+	// 			s.DrawText(row, col, style, " ")
+	// 		}
+	// 	}
+	// }
+
 	for _, client := range tg.ClientStates {
 		style := tcell.StyleDefault.Background(tcell.ColorNames[client.Color])
-		hStyle := tcell.StyleDefault.Foreground(tcell.ColorNames[client.Color]) //.Foreground(tcell.ColorWhite)
-		// vStyle := tcell.StyleDefault.Background(tcell.ColorNames[client.Color])
+
 		for i := 0; i < len(client.PathX)-1; i++ {
-			// s.DrawText(client.PathX[i], client.PathY[i], style, " ")
-			// if math.Abs(float64(client.PathX[i+1]-client.PathX[i])) > 0 {
-			// 	s.DrawText(client.PathX[i], client.PathY[i], hStyle, "■")
-			// } else if math.Abs(float64(client.PathY[i+1]-client.PathY[i])) > 0 {
-			// 	s.DrawText(client.PathX[i], client.PathY[i], vStyle, " ")
-			// }
-
-			// if math.Abs(float64(client.PathX[i+1]-client.PathX[i])) > 0 && i < len(client.PathX)-2 {
-			// 	s.DrawText(client.PathX[i], client.PathY[i], style, " ")
-			// } else if math.Abs(float64(client.PathY[i+1]-client.PathY[i])) > 0 {
-			// 	s.DrawText(client.PathX[i], client.PathY[i], style, " ")
-			// }
-
 			s.DrawText(client.PathX[i], client.PathY[i], style, " ")
-
 		}
 
 		if client.Alive {
@@ -237,7 +215,8 @@ func (tg *TronGameView) Render(s *Screen) {
 				s.DrawText(client.X-1, client.Y, style, " ")
 			}
 		} else {
-			s.DrawText(client.X, client.Y, hStyle, "😵")
+			style := tcell.StyleDefault.Foreground(tcell.ColorNames[client.Color])
+			s.DrawText(client.X, client.Y, style, "😵")
 		}
 
 	}
@@ -340,11 +319,10 @@ func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int)
 func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, TronClientState]) {
 	mu.Lock()
 	defer mu.Unlock()
-	width, height := arcade.ViewManager.screen.displaySize()
 	if data.ID != currGameUpdateId {
 		currGameUpdateId = data.ID
 		currFragments = 0
-		currCollisions = make([]byte, int(math.Ceil(float64(width*height)/2)))
+		currCollisions = initCollisions()
 	}
 
 	gameState := data.GameUpdate
@@ -405,6 +383,25 @@ func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientSt
 	mu.Lock()
 	defer mu.Unlock()
 	update := data.Update
+	state := tg.ClientStates[data.Id]
+
+	if state.CommitTimestep <= update.CommitTimestep {
+		if update.CommitTimestep <= state.Timestep+1 {
+			diff := update.CommitTimestep - state.CommitTimestep
+			update.PathX = append(state.PathX[:diff], update.PathX...)
+			update.PathY = append(state.PathY[:diff], update.PathY...)
+		} else {
+			update = tg.clientPredict(state, update.CommitTimestep-1) // client predict to fill gap
+			update.PathX = append(state.PathX, update.PathX...)
+			update.PathY = append(state.PathY, update.PathY...)
+		}
+	} else {
+		// panic("committimestep: " + fmt.Sprintf("%d > %d", state.CommitTimestep, update.CommitTimestep))
+		return
+	}
+
+	update.CommitTimestep = state.CommitTimestep
+
 	tg.ClientStates[data.Id] = update
 	arcade.ViewManager.RequestRender()
 	tg.recalculateCollisions()
@@ -589,6 +586,11 @@ func fromBytestr(byteStr string) [][]bool {
 		}
 	}
 	return collisions
+}
+
+func initCollisions() []byte {
+	width, height := arcade.ViewManager.screen.displaySize()
+	return make([]byte, int(math.Ceil(float64(width*height)/2)))
 }
 
 func (v *TronGameView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
