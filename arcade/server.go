@@ -59,6 +59,7 @@ func NewServer(addr string) *Server {
 		Network:          NewNetwork(serverID),
 		ID:               serverID,
 		connectedClients: make(map[string]*ConnectedClientInfo),
+		pingMessageTimes: make(map[string]time.Time),
 	}
 
 	go s.startHeartbeats()
