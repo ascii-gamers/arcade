@@ -55,7 +55,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 			arcade.Lobby.RemovePlayer(evt.ClientID)
 		}
 	case *HeartbeatEvent:
-		if arcade.Lobby.HostID == arcade.Server.ID {
+		if arcade.Lobby.HostID != arcade.Server.ID {
 			lobby := new(Lobby)
 			json.Unmarshal(evt.Metadata, lobby)
 			// fmt.Println("lobby updated w heartbeat")
