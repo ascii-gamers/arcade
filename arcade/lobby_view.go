@@ -71,20 +71,24 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
 					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
+					arcade.lobbyMux.RUnlock()
 					arcade.lobbyMux.Lock()
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
+					arcade.lobbyMux.RLock()
 					arcade.ViewManager.SetView(NewGamesListView())
 				} else {
 					// first extract lobbyID for messages
 					arcade.Lobby.mu.RLock()
 					lobbyID := arcade.Lobby.ID
-					arcade.Lobby.mu.Unlock()
+					arcade.Lobby.mu.RUnlock()
 
 					// get rid of lobby
+					arcade.lobbyMux.RUnlock()
 					arcade.lobbyMux.Lock()
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
+					arcade.lobbyMux.RLock()
 
 					// send updates to everyone
 					arcade.Server.Network.ClientsRange(func(client *Client) bool {
@@ -154,9 +158,13 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	case LobbyEndMessage:
 		// get rid of lobby
 		if lobbyID == p.LobbyID {
+
+			arcade.lobbyMux.RUnlock()
 			arcade.lobbyMux.Lock()
 			arcade.Lobby = &Lobby{}
 			arcade.lobbyMux.Unlock()
+			arcade.lobbyMux.RLock()
+
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
 	case StartGameMessage:
