@@ -67,22 +67,22 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 			switch evt.Rune() {
 			case 'c':
 				arcade.Lobby.mu.RLock()
-				defer arcade.Lobby.mu.RUnlock()
 				if arcade.Lobby.HostID != arcade.Server.ID {
 					// not the host, just leave the game
-
+					arcade.Lobby.mu.RUnlock()
 					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
 					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
+
 					arcade.lobbyMux.RUnlock()
 					arcade.lobbyMux.Lock()
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
-					arcade.Server.EndHeartbeats()
+
+					go arcade.Server.EndHeartbeats()
 					arcade.ViewManager.SetView(NewGamesListView())
 				} else {
 					// first extract lobbyID for messages
-					arcade.Lobby.mu.RLock()
 					lobbyID := arcade.Lobby.ID
 					arcade.Lobby.mu.RUnlock()
 
@@ -174,16 +174,15 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 			arcade.lobbyMux.Lock()
 			arcade.Lobby = &Lobby{}
 			arcade.lobbyMux.Unlock()
-			arcade.lobbyMux.RLock()
+
 			arcade.Server.EndHeartbeats()
+			arcade.lobbyMux.RLock()
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
 	case StartGameMessage:
-		arcade.Lobby.mu.RLock()
-		if p.GameID == arcade.Lobby.ID {
+		if p.GameID == lobbyID {
 			NewGame(arcade.Lobby)
 		}
-		arcade.Lobby.mu.RUnlock()
 		return nil
 	}
 	return nil
