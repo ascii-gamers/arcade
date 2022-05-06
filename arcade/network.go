@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +19,8 @@ type Network struct {
 	pendingMessagesMux sync.RWMutex
 	pendingMessages    map[string]chan interface{}
 }
+
+const sendAndReceiveTimeout = time.Second
 
 func NewNetwork(me string) *Network {
 	return &Network{
@@ -84,7 +87,7 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 	return true
 }
 
-func (n *Network) SendAndReceive(client *Client, msg interface{}) interface{} {
+func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, error) {
 	// Set message ID
 	messageID := uuid.NewString()
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
@@ -99,14 +102,27 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) interface{} {
 	// Send message
 	n.Send(client, msg)
 
+	time.AfterFunc(sendAndReceiveTimeout, func() {
+		n.pendingMessagesMux.Lock()
+		if _, ok := n.pendingMessages[messageID]; ok {
+			delete(n.pendingMessages, messageID)
+			close(recvCh)
+		}
+		n.pendingMessagesMux.Unlock()
+	})
+
 	// Wait for response
-	recvMsg := <-recvCh
+	recvMsg, ok := <-recvCh
+
+	if !ok {
+		return nil, fmt.Errorf("Timed out")
+	}
 
 	n.pendingMessagesMux.Lock()
 	delete(n.pendingMessages, messageID)
 	n.pendingMessagesMux.Unlock()
 
-	return recvMsg
+	return recvMsg, nil
 }
 
 func (n *Network) SignalReceived(messageID string, resp interface{}) {
