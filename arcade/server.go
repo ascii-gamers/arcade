@@ -46,6 +46,9 @@ type Server struct {
 	ID   string
 
 	connectedClients map[string]*ConnectedClientInfo
+
+	// Message IDs to ping times
+	pingMessageTimes map[string]time.Time
 }
 
 // NewServer creates the server with a given address.
@@ -119,12 +122,19 @@ func (s *Server) Connect(c *Client) error {
 	c.start(sess)
 
 	c.connectedCh = make(chan bool)
-	s.Network.Send(c, NewPingMessage())
+
+	msg := NewPingMessage()
+	s.Network.Send(c, msg)
+	msg.MessageID = uuid.NewString()
+
+	s.Lock()
+	s.pingMessageTimes[msg.MessageID] = time.Now()
+	s.Unlock()
 
 	// Timeout if we don't receive a response
 	time.AfterFunc(timeoutInterval, func() {
-		c.connectedMux.Lock()
-		defer c.connectedMux.Unlock()
+		c.Lock()
+		defer c.Unlock()
 
 		if !c.connected {
 			c.timedOut = true
@@ -181,21 +191,28 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 		res = NewPongMessage(arcade.Distributor)
 	case PongMessage:
+		s.Lock()
+		pingTime := time.Since(s.pingMessageTimes[msg.MessageID])
+		delete(s.pingMessageTimes, msg.MessageID)
+		s.Unlock()
+
+		c.Lock()
 		c.ID = msg.SenderID
 		c.ClientRoutingInfo = ClientRoutingInfo{
-			Distance:    1,
+			Distance:    float64(pingTime.Milliseconds()),
 			Distributor: p.Distributor,
 		}
 		c.Neighbor = true
 
-		c.connectedMux.Lock()
 		if !c.timedOut {
 			s.Network.AddClient(c)
 
 			c.connected = true
 			c.connectedCh <- true
 
-			arcade.ViewManager.ProcessEvent(NewClientConnectEvent(c.ID))
+			if !c.Distributor {
+				arcade.ViewManager.ProcessEvent(NewClientConnectEvent(c.ID))
+			}
 		}
 		c.connectedMux.Unlock()
 	case RoutingMessage:
@@ -228,6 +245,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 				s.Lock()
 				if _, ok := s.connectedClients[msg.SenderID]; ok {
 					s.connectedClients[msg.SenderID].LastHeartbeat = time.Now()
+					c.Distance = float64(s.connectedClients[msg.SenderID].GetMeanRTT().Milliseconds())
 				}
 				s.Unlock()
 
