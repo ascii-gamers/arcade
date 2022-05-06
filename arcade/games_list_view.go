@@ -291,7 +291,10 @@ func (v *GamesListView) Render(s *Screen) {
 	s.DrawText(2, 6, sty, "╠")
 	s.DrawText(width-3, 6, sty, "╣")
 
-	//
+	// Clear screen of potentially old games
+	for m := tableY1; m <= tableY2; m++ {
+		s.DrawEmpty(tableX1, m, tableX2, m, sty)
+	}
 
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
@@ -306,12 +309,14 @@ func (v *GamesListView) Render(s *Screen) {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	s.DrawEmpty(tableX1, tableY1, tableX2, tableY1, sty)
 
 	for _, lobbyID := range keys {
 		lobby := v.lobbies[lobbyID]
 		lobby.mu.RLock()
 		y := tableY1 + i
+		if y == tableY2+1 {
+			break
+		}
 		rowSty := sty
 
 		if i == v.selectedRow {
