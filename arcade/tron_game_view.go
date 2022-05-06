@@ -2,13 +2,62 @@ package arcade
 
 import (
 	"encoding"
+	"fmt"
 	"math"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/google/uuid"
 )
+
+var COUNTDOWN_1 = []string{
+	"░░███╗░░",
+	"░████║░░",
+	"██╔██║░░",
+	"╚═╝██║░░",
+	"███████╗",
+	"╚══════╝",
+}
+
+var COUNTDOWN_2 = []string{
+	"██████╗░",
+	"╚════██╗",
+	"░░███╔═╝",
+	"██╔══╝░░",
+	"███████╗",
+	"╚══════╝",
+}
+
+var COUNTDOWN_3 = []string{
+	"██████╗░",
+	"╚════██╗",
+	"░█████╔╝",
+	"░╚═══██╗",
+	"██████╔╝",
+	"╚═════╝░",
+}
+
+var ASCII_GAME_OVER = []string{
+	"░██████╗░░█████╗░███╗░░░███╗███████╗  ░█████╗░██╗░░░██╗███████╗██████╗░",
+	"██╔════╝░██╔══██╗████╗░████║██╔════╝  ██╔══██╗██║░░░██║██╔════╝██╔══██╗",
+	"██║░░██╗░███████║██╔████╔██║█████╗░░  ██║░░██║╚██╗░██╔╝█████╗░░██████╔╝",
+	"██║░░╚██╗██╔══██║██║╚██╔╝██║██╔══╝░░  ██║░░██║░╚████╔╝░██╔══╝░░██╔══██╗",
+	"╚██████╔╝██║░░██║██║░╚═╝░██║███████╗  ╚█████╔╝░░╚██╔╝░░███████╗██║░░██║",
+	"░╚═════╝░╚═╝░░╚═╝╚═╝░░░░░╚═╝╚══════╝  ░╚════╝░░░░╚═╝░░░╚══════╝╚═╝░░╚═╝",
+}
+
+var ASCII_YOU_WON = []string{
+	"██╗░░░██╗░█████╗░██╗░░░██╗  ░██╗░░░░░░░██╗░█████╗░███╗░░██╗",
+	"╚██╗░██╔╝██╔══██╗██║░░░██║  ░██║░░██╗░░██║██╔══██╗████╗░██║",
+	"░╚████╔╝░██║░░██║██║░░░██║  ░╚██╗████╗██╔╝██║░░██║██╔██╗██║",
+	"░░╚██╔╝░░██║░░██║██║░░░██║  ░░████╔═████║░██║░░██║██║╚████║",
+	"░░░██║░░░╚█████╔╝╚██████╔╝  ░░╚██╔╝░╚██╔╝░╚█████╔╝██║░╚███║",
+	"░░░╚═╝░░░░╚════╝░░╚═════╝░  ░░░╚═╝░░░╚═╝░░░╚════╝░╚═╝░░╚══╝",
+}
+
+var returnToLobbyText = "Press [C] to return to lobby"
 
 var TRON_COLORS = [8]string{"blue", "red", "green", "purple", "yellow", "orange", "white", "teal"}
 
@@ -32,6 +81,7 @@ type TronGameState struct {
 	Width      int
 	Height     int
 	Ended      bool
+	Winner     string
 	Collisions []byte
 }
 
@@ -80,9 +130,18 @@ var currGameUpdateId = ""
 var currCollisions []byte
 var currFragments = 0
 
+const (
+	TronInitScreen = iota
+	TronGameScreen
+	TronWinScreen
+)
+
+var gameRenderState = TronInitScreen
+var countdownNum = 3
+
 func (tg *TronGameView) Init() {
 	width, height := arcade.ViewManager.screen.displaySize()
-	tg.GameState = TronGameState{width, height, false, initCollisions()}
+	tg.GameState = TronGameState{width, height, false, "", initCollisions()}
 
 	localCollisions = initCollisions()
 
@@ -100,6 +159,13 @@ func (tg *TronGameView) Init() {
 	tg.start()
 
 	go func() {
+		for i := 3; i > 0; i-- {
+			countdownNum = i
+			arcade.ViewManager.RequestRender()
+			time.Sleep(time.Duration(int(time.Second)))
+		}
+
+		gameRenderState = TronGameScreen
 		for !tg.GameState.Ended {
 			tg.Timestep += 1
 			processedInp = false
@@ -107,7 +173,20 @@ func (tg *TronGameView) Init() {
 			arcade.ViewManager.RequestRender()
 			time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
 			tg.updateOthers()
+
+			mu.Lock()
+			if tg.Me == tg.HostID {
+				if ended, winner := tg.shouldWin(); ended {
+					tg.GameState.Ended = ended
+					tg.GameState.Winner = winner
+					tg.sendGameUpdate()
+				}
+			}
+			mu.Unlock()
 		}
+
+		gameRenderState = TronWinScreen
+		arcade.ViewManager.RequestRender()
 	}()
 
 	if tg.Me == tg.HostID && tg.HostSyncPeriod > 0 {
@@ -172,14 +251,60 @@ func (tg *TronGameView) ProcessMessage(from *Client, p interface{}) interface{} 
 }
 
 func (tg *TronGameView) Render(s *Screen) {
-
-	// defaultStyle := tcell.StyleDefault.Background(tcell.ColorTeal).Foreground(tcell.ColorTeal)
-
 	s.ClearContent()
 
-	// displayWidth, displayHeight := s.displaySize()
-	// s.DrawBox(0, 0, displayWidth-1, displayHeight-1, defaultStyle, true)
+	displayWidth, displayHeight := arcade.ViewManager.screen.displaySize()
+	boxStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorTeal)
+	s.DrawBox(1, 1, displayWidth-2, displayHeight-2, boxStyle, false)
 
+	switch gameRenderState {
+	case TronInitScreen:
+		myState := tg.getMyState()
+		style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorNames[myState.Color])
+		chr := getDirChr(myState.Direction)
+		s.DrawText(myState.X, myState.Y, style, chr)
+
+		// draw countdown
+		var countdownAscii []string
+		switch countdownNum {
+		case 1:
+			countdownAscii = COUNTDOWN_1
+		case 2:
+			countdownAscii = COUNTDOWN_2
+		case 3:
+			countdownAscii = COUNTDOWN_3
+		}
+
+		headerY := (displayHeight - len(countdownAscii)) / 2
+		headerX := (displayWidth - utf8.RuneCountInString(countdownAscii[0])) / 2
+		for i := range countdownAscii {
+			s.DrawText(headerX, i+headerY, boxStyle, countdownAscii[i])
+		}
+
+	case TronGameScreen:
+		tg.renderGame(s)
+	case TronWinScreen:
+		tg.renderGame(s)
+
+		// draw countdown
+		endGameText := ASCII_GAME_OVER
+		if tg.GameState.Winner == tg.Me {
+			endGameText = ASCII_YOU_WON
+		}
+
+		headerY := (displayHeight - len(endGameText)) / 2
+		headerX := (displayWidth - utf8.RuneCountInString(endGameText[0])) / 2
+		for i := range endGameText {
+			s.DrawText(headerX, i+headerY, boxStyle, endGameText[i])
+		}
+
+		s.DrawText((displayWidth-utf8.RuneCountInString(returnToLobbyText))/2, displayHeight-6, boxStyle, returnToLobbyText)
+
+	}
+
+}
+
+func (tg *TronGameView) renderGame(s *Screen) {
 	for row := 0; row < tg.GameState.Width; row++ {
 		for col := 0; col < tg.GameState.Height; col++ {
 			if ok, playerNum := tg.getCollision(tg.GameState.Collisions, row, col); ok && playerNum >= 0 {
@@ -220,7 +345,6 @@ func (tg *TronGameView) Render(s *Screen) {
 		}
 
 	}
-
 }
 
 func (tg *TronGameView) updateState() {
@@ -263,13 +387,15 @@ func (tg *TronGameView) updateSelf() {
 
 // lock this shit
 func (tg *TronGameView) updateOthers() {
+	mu.Lock()
 	for id, state := range tg.ClientStates {
 		if id != tg.Me && lastReceivedInp[id]+CLIENT_LAG_TIMESTEP < tg.Timestep {
-			mu.Lock()
+
 			tg.ClientStates[id] = tg.clientPredict(state, tg.Timestep)
-			mu.Unlock()
+
 		}
 	}
+	mu.Unlock()
 }
 
 func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int) TronClientState {
@@ -353,7 +479,6 @@ func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, T
 	if currFragments != FRAGMENTS {
 		return
 	}
-
 	gameState.Collisions = currCollisions
 	tg.GameState = gameState
 
@@ -396,8 +521,13 @@ func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientSt
 			update.PathY = append(state.PathY, update.PathY...)
 		}
 	} else {
-		// panic("committimestep: " + fmt.Sprintf("%d > %d", state.CommitTimestep, update.CommitTimestep))
-		return
+		if update.Timestep >= state.CommitTimestep {
+			diff := state.CommitTimestep - update.CommitTimestep
+			update.PathX = update.PathX[diff:]
+			update.PathY = update.PathY[diff:]
+		} else {
+			panic("update out of date: " + fmt.Sprintf("%d [%d] < %d [%d]", update.CommitTimestep, len(update.PathX), state.CommitTimestep, len(state.PathX)))
+		}
 	}
 
 	update.CommitTimestep = state.CommitTimestep
@@ -483,7 +613,9 @@ func (tg *TronGameView) recalculateCollisions() {
 
 func getStartingPosAndDir() ([][2]int, []TronDirection) {
 	width, height := arcade.ViewManager.screen.displaySize()
-	margin := int(math.Round(math.Min(float64(width)/10, float64(height)/10)))
+	width -= 1 // account for tron border
+	height -= 1
+	margin := int(math.Round(math.Min(float64(width)/8, float64(height)/8)))
 	return [][2]int{{margin, margin}, {width - margin, height - margin}, {width - margin, margin}, {margin, height - margin}, {width / 2, margin}, {width - margin, height / 2}, {width / 2, height - margin}, {margin, height / 2}}, []TronDirection{TronRight, TronLeft, TronDown, TronUp, TronDown, TronLeft, TronUp, TronRight}
 }
 
@@ -497,8 +629,25 @@ func (tg *TronGameView) die(player TronClientState) TronClientState {
 	return player
 }
 
+func (tg *TronGameView) shouldWin() (bool, string) {
+	winner := ""
+	if len(tg.ClientStates) == 1 {
+		winner = "can't win without friends :^)"
+	}
+
+	for id, client := range tg.ClientStates {
+		if client.Alive {
+			if winner != "" {
+				return false, ""
+			}
+			winner = id
+		}
+	}
+	return true, winner
+}
+
 func (tg *TronGameView) isOutOfBounds(x int, y int) bool {
-	return x <= 0 || x >= tg.GameState.Width-1 || y <= 0 || y >= tg.GameState.Height-1
+	return x <= 1 || x >= tg.GameState.Width-2 || y <= 1 || y >= tg.GameState.Height-2
 }
 
 func (tg *TronGameView) setCollision(collisions []byte, x int, y int, playerNum int) []byte {
