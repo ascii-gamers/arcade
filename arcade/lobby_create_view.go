@@ -2,7 +2,6 @@ package arcade
 
 import (
 	"encoding"
-	"fmt"
 	"strconv"
 	"unicode/utf8"
 
@@ -122,7 +121,6 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
 
 					arcade.lobbyMux.Lock()
-					fmt.Println("lobby updated w create")
 					arcade.Lobby = NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, arcade.Server.ID)
 					arcade.lobbyMux.Unlock()
 

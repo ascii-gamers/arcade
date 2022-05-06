@@ -51,7 +51,9 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 	switch evt := evt.(type) {
 	case *ClientDisconnectEvent:
-		arcade.Lobby.RemovePlayer(evt.ClientID)
+		if arcade.Lobby.HostID == arcade.Server.ID {
+			arcade.Lobby.RemovePlayer(evt.ClientID)
+		}
 	case *HeartbeatEvent:
 		if arcade.Lobby.HostID == arcade.Server.ID {
 			lobby := new(Lobby)
@@ -78,7 +80,6 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 					arcade.lobbyMux.RUnlock()
 					arcade.lobbyMux.Lock()
-					fmt.Println("lobby deleted self")
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
@@ -93,7 +94,6 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					// get rid of lobby
 					arcade.lobbyMux.RUnlock()
 					arcade.lobbyMux.Lock()
-					fmt.Println("lobby deleted self host")
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()

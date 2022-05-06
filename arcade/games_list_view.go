@@ -64,7 +64,7 @@ func NewGamesListView() *GamesListView {
 		helloMessageTimes: make(map[string]time.Time),
 	}
 
-	ticker := time.NewTicker(1000 * time.Millisecond)
+	ticker := time.NewTicker(time.Second)
 
 	go func() {
 		for {
@@ -218,7 +218,6 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 	case JoinReplyMessage:
 		if p.Error == OK {
 			arcade.lobbyMux.Lock()
-			fmt.Println("lobby updated w join reply")
 			arcade.Lobby = p.Lobby
 			arcade.Lobby.code = glv_code
 			arcade.lobbyMux.Unlock()
@@ -322,6 +321,7 @@ func (v *GamesListView) Render(s *Screen) {
 		lobby.mu.RLock()
 		y := tableY1 + i
 		if y == tableY2+1 {
+			lobby.mu.RUnlock()
 			break
 		}
 		rowSty := sty
