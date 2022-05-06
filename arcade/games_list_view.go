@@ -235,10 +235,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 		}
 	case LobbyEndMessage:
 		v.mu.Lock()
-		_, ok := v.lobbies[p.LobbyID]
-		if ok {
-			delete(v.lobbies, p.LobbyID)
-		}
+		delete(v.lobbies, p.LobbyID)
 		v.mu.Unlock()
 
 	}
@@ -307,6 +304,7 @@ func (v *GamesListView) Render(s *Screen) {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	s.DrawEmpty(tableX1, tableY1, tableX2, tableY1, sty)
 
 	for _, lobbyID := range keys {
 		lobby := v.lobbies[lobbyID]
