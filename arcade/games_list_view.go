@@ -237,6 +237,11 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 	case LobbyEndMessage:
 		v.mu.Lock()
 		delete(v.lobbies, p.LobbyID)
+		v.selectedRow--
+		if v.selectedRow < 0 {
+			v.selectedRow = 0
+		}
+
 		v.mu.Unlock()
 
 	}
@@ -247,7 +252,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 func (v *GamesListView) Render(s *Screen) {
 	// fmt.Println("HELP")
 	if glv_join_box == "" && len(glv_code_input_string) > 0 {
-		// s.Clear()
+		s.Clear()
 		glv_code_input_string = ""
 	}
 	// s.Clear()

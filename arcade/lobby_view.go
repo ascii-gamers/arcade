@@ -53,14 +53,16 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 	case *ClientDisconnectEvent:
 		arcade.Lobby.RemovePlayer(evt.ClientID)
 	case *HeartbeatEvent:
-		lobby := new(Lobby)
-		json.Unmarshal(evt.Metadata, lobby)
-		arcade.lobbyMux.RUnlock()
-		arcade.lobbyMux.Lock()
-		fmt.Println("lobby updated w heartbeat")
-		arcade.Lobby = lobby
-		arcade.lobbyMux.Unlock()
-		arcade.lobbyMux.RLock()
+		if arcade.Lobby.HostID == arcade.Server.ID {
+			lobby := new(Lobby)
+			json.Unmarshal(evt.Metadata, lobby)
+			arcade.lobbyMux.RUnlock()
+			arcade.lobbyMux.Lock()
+			// fmt.Println("lobby updated w heartbeat")
+			arcade.Lobby = lobby
+			arcade.lobbyMux.Unlock()
+			arcade.lobbyMux.RLock()
+		}
 		// do something with lobby
 	case *tcell.EventKey:
 		switch evt.Key() {
@@ -81,7 +83,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
 
-					arcade.Server.EndHeartbeats()
+					arcade.Server.EndAllHeartbeats()
 					arcade.ViewManager.SetView(NewGamesListView())
 				} else {
 					// first extract lobbyID for messages
@@ -96,7 +98,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
 
-					arcade.Server.EndHeartbeats()
+					arcade.Server.EndAllHeartbeats()
 					// send updates to everyone
 
 					arcade.Server.Network.ClientsRange(func(client *Client) bool {
@@ -169,6 +171,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		if lobbyID == p.LobbyID && arcade.Lobby.HostID == arcade.Server.ID {
 			arcade.Lobby.RemovePlayer(p.PlayerID)
 		}
+		arcade.Server.EndHeartbeats(p.PlayerID)
 		arcade.ViewManager.RequestRender()
 	case LobbyEndMessage:
 		// get rid of lobby
@@ -180,7 +183,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 			arcade.Lobby = &Lobby{}
 			arcade.lobbyMux.Unlock()
 
-			arcade.Server.EndHeartbeats()
+			arcade.Server.EndAllHeartbeats()
 			arcade.lobbyMux.RLock()
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
@@ -194,7 +197,6 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 }
 
 func (v *LobbyView) Render(s *Screen) {
-	s.Clear()
 	arcade.lobbyMux.RLock()
 	defer arcade.lobbyMux.RUnlock()
 
