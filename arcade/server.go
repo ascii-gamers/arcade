@@ -109,7 +109,7 @@ func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 }
 
 // connect connects to a client at a given address.
-func (s *Server) connect(c *Client) error {
+func (s *Server) Connect(c *Client) error {
 	sess, err := kcp.Dial(c.Addr)
 
 	if err != nil {
@@ -188,25 +188,24 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 		}
 		c.Neighbor = true
 
-		s.Network.AddClient(c)
-
 		c.connectedMux.Lock()
 		if !c.timedOut {
+			s.Network.AddClient(c)
+
 			c.connected = true
 			c.connectedCh <- true
+
+			arcade.ViewManager.ProcessEvent(NewClientConnectEvent(c.ID))
 		}
 		c.connectedMux.Unlock()
 	case RoutingMessage:
 		s.Network.UpdateRoutes(c, p.Distances)
 	default:
 		if msg.RecipientID != s.ID {
-			if !arcade.Distributor {
+			if arcade.Distributor {
+				fmt.Println("Forwarding message to", msg.RecipientID[:4])
 				fmt.Println(p)
-				panic(fmt.Sprintf("Recipient ID is %s, but server ID is %s", msg.RecipientID, s.ID))
 			}
-
-			fmt.Println("Forwarding message to", msg.RecipientID[:4])
-			fmt.Println(p)
 
 			s.RLock()
 			recipient, ok := s.Network.GetClient(msg.RecipientID)
@@ -318,8 +317,8 @@ func (s *Server) ScanLAN() {
 
 	for _, ip := range ips {
 		client := NewNeighboringClient(fmt.Sprintf("%s:6824", ip))
-		go arcade.Server.connect(client)
+		go arcade.Server.Connect(client)
 
-		time.Sleep(time.Millisecond)
+		time.Sleep(time.Microsecond * 500)
 	}
 }
