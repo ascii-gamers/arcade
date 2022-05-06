@@ -166,6 +166,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		if lobbyID == p.LobbyID && arcade.Lobby.HostID == arcade.Server.ID {
 			arcade.Lobby.RemovePlayer(p.PlayerID)
 		}
+		NewViewManager().RequestRender()
 	case LobbyEndMessage:
 		// get rid of lobby
 		if lobbyID == p.LobbyID {
