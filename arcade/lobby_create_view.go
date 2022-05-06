@@ -15,7 +15,7 @@ type LobbyCreateView struct {
 
 const lcv_borderIndex = 28
 
-var lcv_game_input_default = "[i] to edit, [enter] to save"
+var lcv_game_input_default = ""
 
 var lcv_privateOpt = [2]string{"no", "yes"}
 var lcv_gameOpt = [2]string{Tron, Pong}
@@ -27,8 +27,7 @@ var lcv_playerOpt = [2][]string{lcv_tronPlayerOpt[:], lcv_pongPlayerOpt[:]}
 var lcv_game_name = ""
 var lcv_game_user_input_indices = [4]int{-1, 0, 0, 0}
 var lcv_game_input_categories = [4]string{"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
-var lcv_editing = false
-var lcv_inputString = ""
+var lcv_editing = true
 
 const (
 	lcv_lobbyTableX1 = 16
@@ -72,9 +71,7 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 			lcv_editing = false
 		case tcell.KeyEnter:
 			if v.selectedRow == 0 {
-				lcv_game_name = lcv_inputString
 				lcv_editing = false
-				lcv_inputString = ""
 			}
 		case tcell.KeyLeft:
 			lcv_game_user_input_indices[v.selectedRow]--
@@ -100,19 +97,27 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 			if v.selectedRow == 2 {
 				lcv_game_user_input_indices[3] = 0
 			}
+		case tcell.KeyBackspace, tcell.KeyBackspace2:
+			if len(lcv_game_name) > 0 {
+				lcv_game_name = lcv_game_name[:len(lcv_game_name)-1]
+			}
+
 		case tcell.KeyRune:
-			if !lcv_editing {
-				switch evt.Rune() {
-				case 'c':
+			switch evt.Rune() {
+			case 'c':
+				if v.selectedRow != 0 || (v.selectedRow == 0 && !lcv_editing) {
 					arcade.ViewManager.SetView(NewGamesListView())
-				case 'p':
-					// save things
-					if lcv_game_name == "" {
-						v.selectedRow = 0
-						if lcv_game_input_default[0] != '*' {
-							lcv_game_input_default = "*" + lcv_game_input_default
-						}
-					}
+				}
+			case 'p':
+				// save things
+				if lcv_game_name == "" {
+					v.selectedRow = 0
+					lcv_editing = true
+					lcv_game_input_default = "*Name required"
+					return
+				}
+
+				if v.selectedRow != 0 || (v.selectedRow == 0 && !lcv_editing) {
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
 
 					arcade.lobbyMux.Lock()
@@ -121,12 +126,12 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 
 					// fmt.Println(server.clients)
 					arcade.ViewManager.SetView(NewLobbyView())
-				case 'i':
-					lcv_editing = true
-					lcv_inputString = ""
 				}
-			} else {
-				lcv_inputString += string(evt.Rune())
+			}
+
+			if v.selectedRow == 0 {
+				lcv_game_name += string(evt.Rune())
+				lcv_editing = true
 			}
 
 		}
@@ -202,10 +207,10 @@ func (v *LobbyCreateView) Render(s *Screen) {
 		// regarding name
 		switch inputField {
 		case "NAME":
-			if lcv_editing && i == v.selectedRow {
-				categoryInputString = lcv_inputString
-			} else if lcv_game_name == "" {
+			if lcv_game_name == "" {
 				categoryInputString = lcv_game_input_default
+			} else {
+				categoryInputString = lcv_game_name
 			}
 		case "PRIVATE?":
 			categoryInputString = lcv_privateOpt[categoryIndex]
