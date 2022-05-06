@@ -39,16 +39,20 @@ func parseMessage(data []byte) (interface{}, error) {
 	}
 
 	switch res.Type {
+	case "client_update":
+		p := ClientUpdateMessage[TronClientState]{}
+		json.Unmarshal(data, &p)
+		return p, nil
 	case "disconnect":
 		p := DisconnectMessage{}
 		json.Unmarshal(data, &p)
 		return p, nil
-	case "distance_update":
-		p := DistanceUpdateMessage{}
-		json.Unmarshal(data, &p)
-		return p, nil
 	case "error":
 		p := ErrorMessage{}
+		json.Unmarshal(data, &p)
+		return p, nil
+	case "game_update":
+		p := GameUpdateMessage[TronGameState, TronClientState]{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "heartbeat":
@@ -89,14 +93,6 @@ func parseMessage(data []byte) (interface{}, error) {
 		return p, nil
 	case "routing":
 		p := RoutingMessage{}
-		json.Unmarshal(data, &p)
-		return p, nil
-	case "game_update":
-		p := GameUpdateMessage[TronGameState, TronClientState]{}
-		json.Unmarshal(data, &p)
-		return p, nil
-	case "client_update":
-		p := ClientUpdateMessage[TronClientState]{}
 		json.Unmarshal(data, &p)
 		return p, nil
 	case "start_game":

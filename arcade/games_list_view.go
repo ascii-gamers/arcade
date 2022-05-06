@@ -19,6 +19,8 @@ type GamesListView struct {
 	lobbies      map[string]*Lobby
 	selectedRow  int
 	stopTickerCh chan bool
+
+	helloMessageTimes map[string]time.Time
 }
 
 var header = []string{
@@ -56,8 +58,14 @@ var glv_code = ""
 var lastTimeRefreshed = 0
 
 func NewGamesListView() *GamesListView {
-	view := &GamesListView{stopTickerCh: make(chan bool), lobbies: make(map[string]*Lobby)}
+	view := &GamesListView{
+		stopTickerCh:      make(chan bool),
+		lobbies:           make(map[string]*Lobby),
+		helloMessageTimes: make(map[string]time.Time),
+	}
+
 	ticker := time.NewTicker(1000 * time.Millisecond)
+
 	go func() {
 		for {
 			select {
@@ -75,6 +83,7 @@ func NewGamesListView() *GamesListView {
 			}
 		}
 	}()
+
 	return view
 }
 
@@ -93,6 +102,11 @@ func (v *GamesListView) SendHelloMessages() {
 		}
 
 		arcade.Server.Network.Send(client, NewHelloMessage())
+
+		v.mu.Lock()
+		v.helloMessageTimes[client.ID] = time.Now()
+		v.mu.Unlock()
+
 		return true
 	})
 }
@@ -102,6 +116,10 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 	case *ClientConnectEvent:
 		if client, ok := arcade.Server.Network.GetClient(evt.ClientID); ok {
 			arcade.Server.Network.Send(client, NewHelloMessage())
+
+			v.mu.Lock()
+			v.helloMessageTimes[client.ID] = time.Now()
+			v.mu.Unlock()
 		}
 	case *tcell.EventKey:
 		if len(err_msg) > 0 {
@@ -192,6 +210,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 	switch p := p.(type) {
 	case LobbyInfoMessage:
 		v.mu.Lock()
+		p.Lobby.Ping = int(time.Since(v.helloMessageTimes[from.ID]).Milliseconds())
 		v.lobbies[p.Lobby.ID] = p.Lobby
 		v.mu.Unlock()
 
@@ -293,7 +312,7 @@ func (v *GamesListView) Render(s *Screen) {
 		name := lobby.Name
 		game := lobby.GameType
 		players := fmt.Sprintf("%d/%d", len(lobby.PlayerIDs), lobby.Capacity)
-		ping := "25ms"
+		ping := fmt.Sprintf("%dms", lobby.Ping)
 		lobby.mu.RUnlock()
 
 		s.DrawEmpty(tableX1, y, nameColX-1, y, rowSty)

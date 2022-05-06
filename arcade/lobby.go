@@ -20,6 +20,7 @@ type Lobby struct {
 	Capacity  int
 	PlayerIDs []string
 	HostID    string
+	Ping      int
 }
 
 func NewLobby(name string, private bool, gameType string, capacity int, hostID string) *Lobby {
