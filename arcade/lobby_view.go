@@ -232,14 +232,15 @@ func (v *LobbyView) Render(s *Screen) {
 	s.DrawText((width-len(capacityHeader+capacityString))/2, lv_TableY1+3, sty, capacityHeader)
 	s.DrawText((width-len(capacityHeader+capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 
-	// Draw people
-	s.DrawText((width-len(capacityHeader+capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
-
 	// Draw footer with navigation keystrokes
 	if arcade.Server.ID == arcade.Lobby.HostID {
 		// I am host so I should see start game controls
+		hostLabelString := "You are the host."
+		s.DrawText((width-len(hostLabelString))/2, lv_TableY1+5, sty, hostLabelString)
 		s.DrawText((width-len(lobby_footer_host[0]))/2, height-2, sty, lobby_footer_host[0])
 	} else {
+		participantLabelString := "Waiting for host to start game..."
+		s.DrawText((width-len(participantLabelString))/2, lv_TableY1+5, sty, participantLabelString)
 		s.DrawText((width-len(lobby_footer_nonhost[0]))/2, height-2, sty, lobby_footer_nonhost[0])
 	}
 
