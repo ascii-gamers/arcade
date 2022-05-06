@@ -7,14 +7,16 @@ import (
 type JoinMessage struct {
 	Message
 	PlayerID string
-	Code   string
+	Code     string
+	LobbyID  string
 }
 
-func NewJoinMessage(code string, playerID string) *JoinMessage {
+func NewJoinMessage(code string, playerID string, lobbyID string) *JoinMessage {
 	return &JoinMessage{
-		Message: Message{Type: "join"},
-		PlayerID:  playerID,
-		Code:    code,
+		Message:  Message{Type: "join"},
+		PlayerID: playerID,
+		Code:     code,
+		LobbyID:  lobbyID,
 	}
 }
 

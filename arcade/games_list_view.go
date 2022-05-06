@@ -64,7 +64,7 @@ func NewGamesListView() *GamesListView {
 		helloMessageTimes: make(map[string]time.Time),
 	}
 
-	ticker := time.NewTicker(1000 * time.Millisecond)
+	ticker := time.NewTicker(time.Second)
 
 	go func() {
 		for {
@@ -93,13 +93,9 @@ func (v *GamesListView) Init() {
 
 func (v *GamesListView) SendHelloMessages() {
 	// Scan LAN for lobbies
-<<<<<<< HEAD
-	// go arcade.Server.ScanLAN()
-=======
 	if arcade.LAN {
 		go arcade.Server.ScanLAN()
 	}
->>>>>>> 591b6e05acc0ce79512ed6b0eae33858370bda4b
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *Client) bool {
@@ -161,7 +157,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 					selectedLobby := v.lobbies[selectedLobbyKey]
 					host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-					go arcade.Server.Network.Send(host, NewJoinMessage(glv_code, arcade.Server.ID))
+					go arcade.Server.Network.Send(host, NewJoinMessage(glv_code, arcade.Server.ID, selectedLobby.ID))
 				} else {
 					glv_join_box = "join_code"
 					err_msg = "Code must be four characters long."
@@ -196,7 +192,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 						} else {
 							host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-							go arcade.Server.Network.Send(host, NewJoinMessage("", arcade.Server.ID))
+							go arcade.Server.Network.Send(host, NewJoinMessage("", arcade.Server.ID, selectedLobby.ID))
 						}
 						v.mu.RUnlock()
 
@@ -239,16 +235,28 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 		} else if p.Error == ErrCapacity {
 			err_msg = "Game is now full."
 		}
+	case LobbyEndMessage:
+		v.mu.Lock()
+		delete(v.lobbies, p.LobbyID)
+		v.selectedRow--
+		if v.selectedRow < 0 {
+			v.selectedRow = 0
+		}
+
+		v.mu.Unlock()
+
 	}
 
 	return nil
 }
 
 func (v *GamesListView) Render(s *Screen) {
+	// fmt.Println("HELP")
 	if glv_join_box == "" && len(glv_code_input_string) > 0 {
 		s.Clear()
 		glv_code_input_string = ""
 	}
+	// s.Clear()
 
 	width, height := s.displaySize()
 
@@ -291,6 +299,11 @@ func (v *GamesListView) Render(s *Screen) {
 	s.DrawText(2, 6, sty, "╠")
 	s.DrawText(width-3, 6, sty, "╣")
 
+	// Clear screen of potentially old games
+	for m := tableY1; m <= tableY2; m++ {
+		s.DrawEmpty(tableX1, m, tableX2, m, sty)
+	}
+
 	// Draw selected row
 	selectedSty := tcell.StyleDefault.Background(tcell.ColorDarkGreen).Foreground(tcell.ColorWhite)
 	sty_bold := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorLightGreen)
@@ -309,6 +322,10 @@ func (v *GamesListView) Render(s *Screen) {
 		lobby := v.lobbies[lobbyID]
 		lobby.mu.RLock()
 		y := tableY1 + i
+		if y == tableY2+1 {
+			lobby.mu.RUnlock()
+			break
+		}
 		rowSty := sty
 
 		if i == v.selectedRow {

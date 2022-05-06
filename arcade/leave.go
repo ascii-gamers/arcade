@@ -7,12 +7,14 @@ import (
 type LeaveMessage struct {
 	Message
 	PlayerID string
+	LobbyID  string
 }
 
-func NewLeaveMessage(playerId string) *LeaveMessage {
+func NewLeaveMessage(playerID string, lobbyID string) *LeaveMessage {
 	return &LeaveMessage{
 		Message:  Message{Type: "leave"},
-		PlayerID: playerId,
+		PlayerID: playerID,
+		LobbyID:  lobbyID,
 	}
 }
 

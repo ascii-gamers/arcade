@@ -30,7 +30,6 @@ func (mgr *ViewManager) ProcessEvent(ev interface{}) {
 	if arcade.Distributor || mgr.view == nil {
 		return
 	}
-
 	mgr.view.ProcessEvent(ev)
 }
 
@@ -91,6 +90,35 @@ func (mgr *ViewManager) Start(v View) {
 		case *tcell.EventKey:
 			switch ev.Key() {
 			case tcell.KeyEscape, tcell.KeyCtrlC:
+				if arcade.Lobby.Name != "" {
+					if arcade.Lobby.HostID == arcade.Server.ID {
+						// send to all the players, similar to 'c'
+						lobbyID := arcade.Lobby.ID
+
+						// get rid of lobby
+						arcade.lobbyMux.Lock()
+						arcade.Lobby = &Lobby{}
+						arcade.lobbyMux.Unlock()
+
+						// arcade.Server.EndAllHeartbeats()
+						// send updates to everyone
+
+						arcade.Server.Network.ClientsRange(func(client *Client) bool {
+							if client.Distributor {
+								return true
+							}
+
+							arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
+
+							return true
+						})
+					} else {
+						// only send to host
+						host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
+						arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
+					}
+				}
+
 				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 				quit()
 			case tcell.KeyCtrlD:
