@@ -163,7 +163,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		}
 
 	case LeaveMessage:
-		if arcade.Lobby.HostID == arcade.Server.ID && lobbyID == p.LobbyID {
+		if lobbyID == p.LobbyID && arcade.Lobby.HostID == arcade.Server.ID {
 			arcade.Lobby.RemovePlayer(p.PlayerID)
 		}
 	case LobbyEndMessage:
@@ -175,7 +175,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 			arcade.Lobby = &Lobby{}
 			arcade.lobbyMux.Unlock()
 
-			arcade.Server.EndHeartbeats()
+			go arcade.Server.EndHeartbeats()
 			arcade.lobbyMux.RLock()
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
