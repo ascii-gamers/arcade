@@ -65,18 +65,7 @@ func NewGamesListView() *GamesListView {
 				// send out lobbyinfo
 				lastTimeRefreshed = (lastTimeRefreshed + 1) % 4
 				if lastTimeRefreshed == 0 {
-					// Scan on LAN
-					go arcade.Server.ScanLAN()
-
-					arcade.Server.Network.ClientsRange(func(client *Client) bool {
-						if client.Distributor {
-							return true
-						}
-
-						arcade.Server.Network.Send(client, NewHelloMessage())
-
-						return true
-					})
+					view.SendHelloMessages()
 				}
 				arcade.ViewManager.RequestRender()
 
@@ -90,27 +79,30 @@ func NewGamesListView() *GamesListView {
 }
 
 func (v *GamesListView) Init() {
-	actions := []func(){}
+	v.SendHelloMessages()
+}
 
+func (v *GamesListView) SendHelloMessages() {
+	// Scan LAN for lobbies
+	go arcade.Server.ScanLAN()
+
+	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *Client) bool {
 		if client.Distributor {
 			return true
 		}
 
-		actions = append(actions, func() {
-			arcade.Server.Network.Send(client, NewHelloMessage())
-		})
-
+		arcade.Server.Network.Send(client, NewHelloMessage())
 		return true
 	})
-
-	for _, action := range actions {
-		action()
-	}
 }
 
 func (v *GamesListView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
+	case *ClientConnectEvent:
+		if client, ok := arcade.Server.Network.GetClient(evt.ClientID); ok {
+			arcade.Server.Network.Send(client, NewHelloMessage())
+		}
 	case *tcell.EventKey:
 		if len(err_msg) > 0 {
 			err_msg = ""
