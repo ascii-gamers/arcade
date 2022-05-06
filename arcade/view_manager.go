@@ -111,6 +111,9 @@ func (mgr *ViewManager) Start(v View) {
 			case tcell.KeyCtrlR:
 				arcade.Server.Network.SetDropRate(0)
 				continue
+			case tcell.KeyCtrlS:
+				client := NewNeighboringClient("172.20.10.9:6824")
+				go arcade.Server.Connect(client)
 			}
 		}
 
@@ -140,7 +143,7 @@ func (mgr *ViewManager) RequestRender() {
 
 	if showDebug {
 		x, y := mgr.screen.offset()
-		w, _ := mgr.screen.displaySize()
+		w, h := mgr.screen.displaySize()
 
 		debugSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorRed)
 
@@ -176,6 +179,10 @@ func (mgr *ViewManager) RequestRender() {
 			s := fmt.Sprintf("%s: %dms", clientID[:4], info.GetMeanRTT().Milliseconds())
 			mgr.screen.DrawText(w+x-len(s), -y+i, debugSty, s)
 			i++
+		}
+
+		if ip, err := GetLocalIP(); err == nil {
+			mgr.screen.DrawText(-x, h+y-1, debugSty, fmt.Sprintf("Local IP: %s:%d", ip, arcade.Port))
 		}
 	}
 

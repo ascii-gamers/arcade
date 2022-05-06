@@ -11,6 +11,7 @@ import (
 type Arcade struct {
 	Distributor bool
 	Port        int
+	LAN         bool
 
 	ViewManager *ViewManager
 
@@ -41,9 +42,13 @@ func Start() {
 	port := flag.Int("port", 6824, "Port to listen on")
 	flag.IntVar(port, "p", 6824, "Port to listen on")
 
+	lan := flag.Bool("lan", false, "Scan local network for clients")
+
+	test := flag.Bool("t", false, "Test mode")
 	flag.Parse()
 
 	arcade.Distributor = *dist
+	arcade.LAN = *lan
 	arcade.Port = *port
 
 	// Start host server
@@ -68,6 +73,13 @@ func Start() {
 
 	// TODO: Make better solution for this later -- wait to connect to distributor
 	time.Sleep(10 * time.Millisecond)
+
+	if *test {
+		fmt.Println("sending...")
+		res, err := arcade.Server.Network.SendAndReceive(client, NewPingMessage())
+		fmt.Println(res, err)
+		time.Sleep(10 * time.Second)
+	}
 
 	// Start view manager
 	splashView := NewSplashView()

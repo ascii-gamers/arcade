@@ -13,7 +13,8 @@ import (
 )
 
 const timeoutInterval = 2500 * time.Millisecond
-const heartbeatInterval = time.Second
+const heartbeatInterval = 250 * time.Millisecond
+const rttAverageNum = 10
 
 type ConnectedClientInfo struct {
 	LastHeartbeat      time.Time
@@ -25,7 +26,7 @@ func (c *ConnectedClientInfo) GetMeanRTT() time.Duration {
 	var sum time.Duration
 	count := 0
 
-	for i := len(c.RTTs) - 1; i >= 0 && i >= len(c.RTTs)-6; i-- {
+	for i := len(c.RTTs) - 1; i >= 0 && i >= len(c.RTTs)-(rttAverageNum+1); i-- {
 		sum += c.RTTs[i]
 		count++
 	}
@@ -112,6 +113,18 @@ func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 	return s.connectedClients
 }
 
+func (s *Server) Disconnect(c *Client) {
+	c.Lock()
+	defer c.Unlock()
+
+	close(c.sendCh)
+	close(c.connectedCh)
+
+	if c.conn != nil {
+		c.conn.Close()
+	}
+}
+
 // connect connects to a client at a given address.
 func (s *Server) Connect(c *Client) error {
 	sess, err := kcp.Dial(c.Addr)
@@ -125,12 +138,13 @@ func (s *Server) Connect(c *Client) error {
 	c.connectedCh = make(chan bool)
 
 	msg := NewPingMessage()
-	s.Network.Send(c, msg)
 	msg.MessageID = uuid.NewString()
 
 	s.Lock()
 	s.pingMessageTimes[msg.MessageID] = time.Now()
 	s.Unlock()
+
+	s.Network.Send(c, msg)
 
 	// Timeout if we don't receive a response
 	time.AfterFunc(timeoutInterval, func() {
@@ -161,6 +175,9 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	}
 
 	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
+
+	// Signal message received if necessary
+	s.Network.SignalReceived(msg.MessageID, msg)
 
 	if arcade.Distributor {
 		fmt.Println(msg)
@@ -205,7 +222,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 		}
 		c.Neighbor = true
 
-		if !c.timedOut {
+		if !c.timedOut && !c.connected {
 			s.Network.AddClient(c)
 
 			c.connected = true

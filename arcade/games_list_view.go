@@ -93,7 +93,13 @@ func (v *GamesListView) Init() {
 
 func (v *GamesListView) SendHelloMessages() {
 	// Scan LAN for lobbies
+<<<<<<< HEAD
 	// go arcade.Server.ScanLAN()
+=======
+	if arcade.LAN {
+		go arcade.Server.ScanLAN()
+	}
+>>>>>>> 591b6e05acc0ce79512ed6b0eae33858370bda4b
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *Client) bool {

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type Network struct {
@@ -12,12 +15,18 @@ type Network struct {
 	clients  map[string]*Client
 	dropRate float64
 	me       string
+
+	pendingMessagesMux sync.RWMutex
+	pendingMessages    map[string]chan interface{}
 }
+
+const sendAndReceiveTimeout = time.Second
 
 func NewNetwork(me string) *Network {
 	return &Network{
-		clients: make(map[string]*Client),
-		me:      me,
+		clients:         make(map[string]*Client),
+		me:              me,
+		pendingMessages: make(map[string]chan interface{}),
 	}
 }
 
@@ -78,6 +87,54 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 	return true
 }
 
+func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, error) {
+	// Set message ID
+	messageID := uuid.NewString()
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
+
+	// Set up receive chan
+	recvCh := make(chan interface{}, 1)
+
+	n.pendingMessagesMux.Lock()
+	n.pendingMessages[messageID] = recvCh
+	n.pendingMessagesMux.Unlock()
+
+	// Send message
+	n.Send(client, msg)
+
+	time.AfterFunc(sendAndReceiveTimeout, func() {
+		n.pendingMessagesMux.Lock()
+		if _, ok := n.pendingMessages[messageID]; ok {
+			delete(n.pendingMessages, messageID)
+			close(recvCh)
+		}
+		n.pendingMessagesMux.Unlock()
+	})
+
+	// Wait for response
+	recvMsg, ok := <-recvCh
+
+	if !ok {
+		return nil, fmt.Errorf("Timed out")
+	}
+
+	n.pendingMessagesMux.Lock()
+	delete(n.pendingMessages, messageID)
+	n.pendingMessagesMux.Unlock()
+
+	return recvMsg, nil
+}
+
+func (n *Network) SignalReceived(messageID string, resp interface{}) {
+	n.pendingMessagesMux.RLock()
+	defer n.pendingMessagesMux.RUnlock()
+
+	if ch, ok := n.pendingMessages[messageID]; ok {
+		ch <- resp
+		close(ch)
+	}
+}
+
 func (n *Network) SendNeighbors(msg interface{}) {
 	n.RLock()
 	defer n.RUnlock()
@@ -134,11 +191,10 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 
 		// Bellman-Ford equation: Update least-cost paths to all other clients
 		if c, ok := routingTable[clientID]; ok && c.Distance < client.Distance {
-			// TODO: Fix this
 			fmt.Println("new path to", clientID, "cost=", c.Distance)
+
 			client.Lock()
 			client.Distance = c.Distance
-			panic("")
 
 			from.RLock()
 			client.NextHop = from.ID
