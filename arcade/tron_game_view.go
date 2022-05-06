@@ -250,6 +250,7 @@ func (tg *TronGameView) updateState() {
 
 func (tg *TronGameView) updateSelf() {
 	mu.Lock()
+	defer mu.Unlock()
 	state := tg.getMyState()
 	if !state.Alive {
 		return
@@ -278,7 +279,7 @@ func (tg *TronGameView) updateSelf() {
 
 	tg.setMyState(state)
 	tg.sendClientUpdate(state)
-	mu.Unlock()
+
 }
 
 // lock this shit
@@ -359,7 +360,6 @@ func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int)
 func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, TronClientState]) {
 	mu.Lock()
 	defer mu.Unlock()
-	// fmt.Println("IN GAME UPDATE")
 	width, height := arcade.ViewManager.screen.displaySize()
 	if data.ID != currGameUpdateId {
 		currGameUpdateId = data.ID
@@ -403,7 +403,7 @@ func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, T
 		// if id != tg.Me {
 		currClient := tg.ClientStates[id]
 		// fmt.Println(lastInp, currClient.CommitTimestep)
-		if lastInp > currClient.CommitTimestep {
+		if lastInp >= currClient.CommitTimestep {
 			diff := lastInp - currClient.CommitTimestep
 
 			currClient.CommitTimestep = lastInp
