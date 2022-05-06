@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 type Network struct {
@@ -12,12 +14,16 @@ type Network struct {
 	clients  map[string]*Client
 	dropRate float64
 	me       string
+
+	pendingMessagesMux sync.RWMutex
+	pendingMessages    map[string]chan interface{}
 }
 
 func NewNetwork(me string) *Network {
 	return &Network{
-		clients: make(map[string]*Client),
-		me:      me,
+		clients:         make(map[string]*Client),
+		me:              me,
+		pendingMessages: make(map[string]chan interface{}),
 	}
 }
 
@@ -76,6 +82,41 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 
 	servicer.send(msg)
 	return true
+}
+
+func (n *Network) SendAndReceive(client *Client, msg interface{}) interface{} {
+	// Set message ID
+	messageID := uuid.NewString()
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
+
+	// Set up receive chan
+	recvCh := make(chan interface{}, 1)
+
+	n.pendingMessagesMux.Lock()
+	n.pendingMessages[messageID] = recvCh
+	n.pendingMessagesMux.Unlock()
+
+	// Send message
+	n.Send(client, msg)
+
+	// Wait for response
+	recvMsg := <-recvCh
+
+	n.pendingMessagesMux.Lock()
+	delete(n.pendingMessages, messageID)
+	n.pendingMessagesMux.Unlock()
+
+	return recvMsg
+}
+
+func (n *Network) SignalReceived(messageID string, resp interface{}) {
+	n.pendingMessagesMux.RLock()
+	defer n.pendingMessagesMux.RUnlock()
+
+	if ch, ok := n.pendingMessages[messageID]; ok {
+		ch <- resp
+		close(ch)
+	}
 }
 
 func (n *Network) SendNeighbors(msg interface{}) {

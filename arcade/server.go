@@ -176,6 +176,9 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
 
+	// Signal message received if necessary
+	s.Network.SignalReceived(msg.MessageID, msg)
+
 	if arcade.Distributor {
 		fmt.Println(msg)
 		fmt.Printf("Received '%s' from %s\n", msg.Type, msg.SenderID[:4])
@@ -218,29 +221,8 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 			Distributor: p.Distributor,
 		}
 		c.Neighbor = true
-		c.Unlock()
 
-		// if existingClient, ok := s.Network.GetClient(c.ID); ok {
-		// 	existingClient.Lock()
-		// 	existingClient.Distance = float64(pingTime.Milliseconds())
-
-		// 	s.Disconnect(existingClient)
-		// 	existingClient.conn = c.conn
-
-		// 	// c.RLock()
-		// 	existingClient.NextHop = ""
-		// 	existingClient.ClientRoutingInfo = c.ClientRoutingInfo
-		// 	existingClient.Neighbor = true
-		// 	// c.RUnlock()
-
-		// 	// panic("asdf")
-
-		// 	existingClient.Unlock()
-		// 	return
-		// }
-
-		c.Lock()
-		if !c.timedOut {
+		if !c.timedOut && !c.connected {
 			s.Network.AddClient(c)
 
 			c.connected = true

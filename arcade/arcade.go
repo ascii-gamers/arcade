@@ -43,7 +43,6 @@ func Start() {
 	flag.IntVar(port, "p", 6824, "Port to listen on")
 
 	lan := flag.Bool("lan", false, "Scan local network for clients")
-
 	flag.Parse()
 
 	arcade.Distributor = *dist
