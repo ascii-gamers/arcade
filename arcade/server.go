@@ -157,6 +157,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 
 	if err != nil {
 		// Most likely malformed message/packet is too large, ignore
+		panic("BRUH")
 		return
 	}
 

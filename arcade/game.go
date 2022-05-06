@@ -3,7 +3,6 @@ package arcade
 import (
 	"encoding/json"
 	"sync"
-	"time"
 )
 
 const (
@@ -89,8 +88,11 @@ type ClientUpdateMessage[CS any] struct {
 
 type GameUpdateMessage[GS any, CS any] struct {
 	Message
-	GameUpdate   GS
-	ClientStates map[string]CS
+	GameUpdate GS
+	// ClientStates map[string]CS
+	LastInps    map[string]int
+	ID          string
+	FragmentNum int
 }
 
 type StartGameMessage struct {
@@ -116,44 +118,17 @@ func (m StartGameMessage) MarshalBinary() ([]byte, error) {
 
 func (g *Game[GS, CS]) start() {
 	g.Started = true
-	if g.Me == g.HostID && g.HostSyncPeriod > 0 {
-		go g.startHostSync()
-	}
+	// if g.Me == g.HostID && g.HostSyncPeriod > 0 {
+	// 	go g.startHostSync()
+	// }
 }
 
-func (g *Game[GS, CS]) startHostSync() {
-	for g.Started {
-		time.Sleep(time.Duration(g.HostSyncPeriod * int(time.Millisecond)))
-		g.sendGameUpdate()
-	}
-}
-
-func (g *Game[GS, CS]) sendClientUpdate(update CS) {
-	// g.ClientStates[g.Me] = update
-	clientUpdate := &ClientUpdateMessage[CS]{Message: Message{Type: "client_update"}, Id: g.Me, Update: update}
-
-	for clientId := range g.ClientStates {
-		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
-			arcade.Server.Network.Send(client, clientUpdate)
-		}
-	}
-}
-
-func (g *Game[GS, CS]) sendGameUpdate() {
-	if g.Me != g.HostID {
-		return
-	}
-
-	arcade.Server.RLock()
-	defer arcade.Server.RUnlock()
-
-	for clientId := range g.ClientStates {
-		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
-			data := &GameUpdateMessage[GS, CS]{Message{Type: "game_update"}, g.GameState, g.ClientStates}
-			arcade.Server.Network.Send(client, data)
-		}
-	}
-}
+// func (g *Game[GS, CS]) startHostSync() {
+// 	for g.Started {
+// 		time.Sleep(time.Duration(g.HostSyncPeriod * int(time.Millisecond)))
+// 		g.sendGameUpdate()
+// 	}
+// }
 
 // use these to generalize funcs in tron game
 

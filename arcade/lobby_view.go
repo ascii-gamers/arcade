@@ -147,7 +147,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 	// add capacity branch
 	case StartGameMessage:
 		arcade.Lobby.mu.RLock()
-		fmt.Println(p.GameID, arcade.Lobby.ID)
+		// fmt.Println(p.GameID, arcade.Lobby.ID)
 		if p.GameID == arcade.Lobby.ID {
 			NewGame(arcade.Lobby)
 		}
