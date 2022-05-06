@@ -189,6 +189,8 @@ func (v *LobbyView) Render(s *Screen) {
 	// panic("RENDER PANIC")
 	arcade.lobbyMux.RLock()
 	defer arcade.lobbyMux.RUnlock()
+	arcade.Lobby.mu.Lock()
+	defer arcade.Lobby.mu.Unlock()
 
 	width, height := s.displaySize()
 
