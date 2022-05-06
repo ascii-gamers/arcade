@@ -215,7 +215,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 				arcade.ViewManager.ProcessEvent(NewClientConnectEvent(c.ID))
 			}
 		}
-		c.connectedMux.Unlock()
+		c.Unlock()
 	case RoutingMessage:
 		s.Network.UpdateRoutes(c, p.Distances)
 	default:
