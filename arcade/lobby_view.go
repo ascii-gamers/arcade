@@ -79,7 +79,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
 
-					go arcade.Server.EndHeartbeats()
+					arcade.Server.EndHeartbeats()
 					arcade.ViewManager.SetView(NewGamesListView())
 				} else {
 					// first extract lobbyID for messages
@@ -93,7 +93,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
 
-					go arcade.Server.EndHeartbeats()
+					arcade.Server.EndHeartbeats()
 					// send updates to everyone
 
 					arcade.Server.Network.ClientsRange(func(client *Client) bool {
@@ -175,7 +175,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 			arcade.Lobby = &Lobby{}
 			arcade.lobbyMux.Unlock()
 
-			go arcade.Server.EndHeartbeats()
+			arcade.Server.EndHeartbeats()
 			arcade.lobbyMux.RLock()
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
