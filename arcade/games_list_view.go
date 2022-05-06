@@ -21,6 +21,7 @@ type GamesListView struct {
 	stopTickerCh chan bool
 
 	helloMessageTimes map[string]time.Time
+	lastTimeRefreshed int
 }
 
 var header = []string{
@@ -55,7 +56,6 @@ const (
 
 var glv_code_input_string = ""
 var glv_code = ""
-var lastTimeRefreshed = 0
 
 func NewGamesListView() *GamesListView {
 	view := &GamesListView{
@@ -71,7 +71,10 @@ func NewGamesListView() *GamesListView {
 			select {
 			case <-ticker.C:
 				// send out lobbyinfo
-				lastTimeRefreshed = (lastTimeRefreshed + 1) % 4
+				view.mu.Lock()
+				view.lastTimeRefreshed = (view.lastTimeRefreshed + 1) % 4
+				lastTimeRefreshed := view.lastTimeRefreshed
+				view.mu.Unlock()
 				if lastTimeRefreshed == 0 {
 					view.SendHelloMessages()
 				}
@@ -280,11 +283,14 @@ func (v *GamesListView) Render(s *Screen) {
 	// Draw footer with navigation keystrokes
 	s.DrawText((width-len(footer[0]))/2, height-2, sty, footer[0])
 
-	countdownMsg := fmt.Sprintf("Refreshing in %d", 4-lastTimeRefreshed)
+	v.mu.Lock()
+	countdownMsg := fmt.Sprintf("Refreshing in %d", 4-v.lastTimeRefreshed)
 	// Draw countdown
-	if lastTimeRefreshed == 0 {
+
+	if v.lastTimeRefreshed == 0 {
 		countdownMsg = "     Refreshing...     "
 	}
+	v.mu.Unlock()
 
 	s.DrawText((width-len(countdownMsg))/2, height-3, sty, countdownMsg)
 

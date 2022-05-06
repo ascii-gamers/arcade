@@ -70,8 +70,9 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 				arcade.Lobby.mu.RLock()
 				if arcade.Lobby.HostID != arcade.Server.ID {
 					// not the host, just leave the game
-					arcade.Lobby.mu.RUnlock()
 					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
+					arcade.Lobby.mu.RUnlock()
+
 					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
 
 					arcade.Lobby = &Lobby{}
@@ -136,17 +137,18 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		if arcade.Lobby.HostID == arcade.Server.ID {
 			if lobbyID == p.LobbyID {
 				arcade.Lobby.mu.RLock()
-				defer arcade.Lobby.mu.RUnlock()
+				playerIDlength := len(arcade.Lobby.PlayerIDs)
+				cap := arcade.Lobby.Capacity
+				lobby_code := arcade.Lobby.code
+				arcade.Lobby.mu.RUnlock()
 
-				if len(arcade.Lobby.PlayerIDs) == arcade.Lobby.Capacity {
+				if playerIDlength == cap {
 					return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
-				} else if arcade.Lobby.code != p.Code {
+				} else if lobby_code != p.Code {
 					return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
 				} else {
-					arcade.Lobby.mu.RUnlock()
 					arcade.Lobby.AddPlayer(p.PlayerID)
 					arcade.Server.BeginHeartbeats(p.PlayerID)
-					arcade.Lobby.mu.RLock()
 					return NewJoinReplyMessage(arcade.Lobby, OK)
 				}
 			} else {
@@ -156,11 +158,16 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		}
 
 	case LeaveMessage:
+		// panic("0")
 		if lobbyID == p.LobbyID && arcade.Lobby.HostID == arcade.Server.ID {
 			arcade.Lobby.RemovePlayer(p.PlayerID)
 		}
 		arcade.Server.EndHeartbeats(p.PlayerID)
+		// panic("1")
+		arcade.lobbyMux.Unlock()
 		arcade.ViewManager.RequestRender()
+		arcade.lobbyMux.Lock()
+		// panic("2")
 	case LobbyEndMessage:
 		// get rid of lobby
 		if lobbyID == p.LobbyID {
@@ -179,6 +186,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 }
 
 func (v *LobbyView) Render(s *Screen) {
+	// panic("RENDER PANIC")
 	arcade.lobbyMux.RLock()
 	defer arcade.lobbyMux.RUnlock()
 
@@ -241,5 +249,7 @@ func (v *LobbyView) Unload() {
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	arcade.lobbyMux.Lock()
+	defer arcade.lobbyMux.Unlock()
 	return arcade.Lobby
 }
