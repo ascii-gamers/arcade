@@ -247,6 +247,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 }
 
 func (v *GamesListView) Render(s *Screen) {
+	// fmt.Println("HELP")
 	if glv_join_box == "" && len(glv_code_input_string) > 0 {
 		s.Clear()
 		glv_code_input_string = ""

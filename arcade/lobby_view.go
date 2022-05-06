@@ -66,6 +66,8 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 		case tcell.KeyRune:
 			switch evt.Rune() {
 			case 'c':
+				arcade.Lobby.mu.RLock()
+				defer arcade.Lobby.mu.RUnlock()
 				if arcade.Lobby.HostID != arcade.Server.ID {
 					// not the host, just leave the game
 
@@ -100,6 +102,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 						return true
 					})
+					arcade.ViewManager.SetView(NewGamesListView())
 
 				}
 
@@ -128,31 +131,37 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 
 	arcade.Lobby.mu.RLock()
 	lobbyID := arcade.Lobby.ID
-	arcade.Lobby.mu.Unlock()
+	arcade.Lobby.mu.RUnlock()
 
 	switch p := p.(type) {
 	case HelloMessage:
+		// return nil
 		return NewLobbyInfoMessage(arcade.Lobby)
 	case JoinMessage:
-		if lobbyID == p.LobbyID {
-			arcade.Lobby.mu.RLock()
-			defer arcade.Lobby.mu.RUnlock()
-
-			if len(arcade.Lobby.PlayerIDs) == arcade.Lobby.Capacity {
-				return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
-			} else if arcade.Lobby.code != p.Code {
-				return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
-			} else {
-				arcade.Lobby.mu.RUnlock()
-				arcade.Lobby.AddPlayer(p.PlayerID)
-				arcade.Server.BeginHeartbeats(p.PlayerID)
+		if arcade.Lobby.HostID == arcade.Server.ID {
+			if lobbyID == p.LobbyID {
 				arcade.Lobby.mu.RLock()
-				return NewJoinReplyMessage(arcade.Lobby, OK)
+				defer arcade.Lobby.mu.RUnlock()
+
+				if len(arcade.Lobby.PlayerIDs) == arcade.Lobby.Capacity {
+					return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
+				} else if arcade.Lobby.code != p.Code {
+					return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
+				} else {
+					arcade.Lobby.mu.RUnlock()
+					arcade.Lobby.AddPlayer(p.PlayerID)
+					arcade.Server.BeginHeartbeats(p.PlayerID)
+					arcade.Lobby.mu.RLock()
+					return NewJoinReplyMessage(arcade.Lobby, OK)
+				}
+			} else {
+				// send lobby end
+				return NewLobbyEndMessage(lobbyID)
 			}
 		}
 
 	case LeaveMessage:
-		if lobbyID == p.LobbyID {
+		if arcade.Lobby.HostID == arcade.Server.ID && lobbyID == p.LobbyID {
 			arcade.Lobby.RemovePlayer(p.PlayerID)
 		}
 	case LobbyEndMessage:
@@ -169,7 +178,6 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		}
 	case StartGameMessage:
 		arcade.Lobby.mu.RLock()
-		// fmt.Println(p.GameID, arcade.Lobby.ID)
 		if p.GameID == arcade.Lobby.ID {
 			NewGame(arcade.Lobby)
 		}
