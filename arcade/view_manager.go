@@ -27,10 +27,9 @@ func (mgr *ViewManager) ProcessMessage(from *Client, p interface{}) interface{} 
 }
 
 func (mgr *ViewManager) ProcessEvent(ev interface{}) {
-	if arcade.Distributor {
+	if arcade.Distributor || mgr.view == nil {
 		return
 	}
-
 	mgr.view.ProcessEvent(ev)
 }
 
