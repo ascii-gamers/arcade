@@ -218,6 +218,7 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 	case JoinReplyMessage:
 		if p.Error == OK {
 			arcade.lobbyMux.Lock()
+			fmt.Println("lobby updated w join reply")
 			arcade.Lobby = p.Lobby
 			arcade.Lobby.code = glv_code
 			arcade.lobbyMux.Unlock()
@@ -246,9 +247,10 @@ func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} 
 func (v *GamesListView) Render(s *Screen) {
 	// fmt.Println("HELP")
 	if glv_join_box == "" && len(glv_code_input_string) > 0 {
-		s.Clear()
+		// s.Clear()
 		glv_code_input_string = ""
 	}
+	// s.Clear()
 
 	width, height := s.displaySize()
 

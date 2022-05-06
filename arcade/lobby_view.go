@@ -57,6 +57,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 		json.Unmarshal(evt.Metadata, lobby)
 		arcade.lobbyMux.RUnlock()
 		arcade.lobbyMux.Lock()
+		fmt.Println("lobby updated w heartbeat")
 		arcade.Lobby = lobby
 		arcade.lobbyMux.Unlock()
 		arcade.lobbyMux.RLock()
@@ -75,6 +76,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 					arcade.lobbyMux.RUnlock()
 					arcade.lobbyMux.Lock()
+					fmt.Println("lobby deleted self")
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
@@ -89,6 +91,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					// get rid of lobby
 					arcade.lobbyMux.RUnlock()
 					arcade.lobbyMux.Lock()
+					fmt.Println("lobby deleted self host")
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
@@ -166,13 +169,14 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 		if lobbyID == p.LobbyID && arcade.Lobby.HostID == arcade.Server.ID {
 			arcade.Lobby.RemovePlayer(p.PlayerID)
 		}
-		NewViewManager().RequestRender()
+		arcade.ViewManager.RequestRender()
 	case LobbyEndMessage:
 		// get rid of lobby
 		if lobbyID == p.LobbyID {
 
 			arcade.lobbyMux.RUnlock()
 			arcade.lobbyMux.Lock()
+			fmt.Println("lobby deleted from host")
 			arcade.Lobby = &Lobby{}
 			arcade.lobbyMux.Unlock()
 
@@ -190,6 +194,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 }
 
 func (v *LobbyView) Render(s *Screen) {
+	s.Clear()
 	arcade.lobbyMux.RLock()
 	defer arcade.lobbyMux.RUnlock()
 
