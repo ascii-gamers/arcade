@@ -11,6 +11,7 @@ import (
 type Arcade struct {
 	Distributor bool
 	Port        int
+	LAN         bool
 
 	ViewManager *ViewManager
 
@@ -41,9 +42,12 @@ func Start() {
 	port := flag.Int("port", 6824, "Port to listen on")
 	flag.IntVar(port, "p", 6824, "Port to listen on")
 
+	lan := flag.Bool("lan", false, "Scan local network for clients")
+
 	flag.Parse()
 
 	arcade.Distributor = *dist
+	arcade.LAN = *lan
 	arcade.Port = *port
 
 	// Start host server
