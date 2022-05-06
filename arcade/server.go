@@ -105,6 +105,16 @@ func (s *Server) BeginHeartbeats(clientID string) {
 	}
 }
 
+func (s *Server) EndHeartbeats() {
+	for {
+		s.Lock()
+
+		s.connectedClients = make(map[string]*ConnectedClientInfo)
+
+		s.Unlock()
+	}
+}
+
 func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 	s.RLock()
 	defer s.RUnlock()

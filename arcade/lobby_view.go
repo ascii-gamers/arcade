@@ -78,6 +78,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.Lobby = &Lobby{}
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
+					arcade.Server.EndHeartbeats()
 					arcade.ViewManager.SetView(NewGamesListView())
 				} else {
 					// first extract lobbyID for messages
@@ -92,7 +93,9 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.lobbyMux.Unlock()
 					arcade.lobbyMux.RLock()
 
+					go arcade.Server.EndHeartbeats()
 					// send updates to everyone
+
 					arcade.Server.Network.ClientsRange(func(client *Client) bool {
 						if client.Distributor {
 							return true
@@ -102,11 +105,10 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 						return true
 					})
+
 					arcade.ViewManager.SetView(NewGamesListView())
 
 				}
-
-				// delete game?
 			case 's':
 				//start gamex
 				arcade.Lobby.mu.RLock()
@@ -173,7 +175,7 @@ func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
 			arcade.Lobby = &Lobby{}
 			arcade.lobbyMux.Unlock()
 			arcade.lobbyMux.RLock()
-
+			arcade.Server.EndHeartbeats()
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
 	case StartGameMessage:
