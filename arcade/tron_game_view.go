@@ -2,7 +2,6 @@ package arcade
 
 import (
 	"encoding"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -188,14 +187,14 @@ func (tg *TronGameView) Render(s *Screen) {
 	// displayWidth, displayHeight := s.displaySize()
 	// s.DrawBox(0, 0, displayWidth-1, displayHeight-1, defaultStyle, true)
 
-	for row := 0; row < tg.GameState.Width; row++ {
-		for col := 0; col < tg.GameState.Height; col++ {
-			if ok, playerNum := tg.getCollision(tg.GameState.Collisions, row, col); ok && playerNum >= 0 {
-				style := tcell.StyleDefault.Foreground(tcell.ColorNames[TRON_COLORS[playerNum+1]])
-				s.DrawText(row, col, style, "-")
-			}
-		}
-	}
+	// for row := 0; row < tg.GameState.Width; row++ {
+	// 	for col := 0; col < tg.GameState.Height; col++ {
+	// 		if ok, playerNum := tg.getCollision(tg.GameState.Collisions, row, col); ok && playerNum >= 0 {
+	// 			style := tcell.StyleDefault.Foreground(tcell.ColorNames[TRON_COLORS[playerNum+1]])
+	// 			s.DrawText(row, col, style, "-")
+	// 		}
+	// 	}
+	// }
 
 	for row := 0; row < tg.GameState.Width; row++ {
 		for col := 0; col < tg.GameState.Height; col++ {
@@ -286,7 +285,9 @@ func (tg *TronGameView) updateSelf() {
 func (tg *TronGameView) updateOthers() {
 	for id, state := range tg.ClientStates {
 		if id != tg.Me && lastReceivedInp[id]+CLIENT_LAG_TIMESTEP < tg.Timestep {
+			mu.Lock()
 			tg.ClientStates[id] = tg.clientPredict(state, tg.Timestep)
+			mu.Unlock()
 		}
 	}
 }
@@ -349,9 +350,7 @@ func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int)
 		state = tg.die(state)
 	}
 
-	mu.Lock()
 	localCollisions = tg.setCollision(localCollisions, state.X, state.Y, state.PlayerNum)
-	mu.Unlock()
 
 	state.Timestep = tg.Timestep
 	return state
@@ -419,7 +418,6 @@ func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, T
 		}
 		// }
 	}
-	fmt.Println("recalculating")
 	tg.recalculateCollisions()
 }
 
@@ -493,12 +491,14 @@ func (tg *TronGameView) recalculateCollisions() {
 	// width, height := arcade.ViewManager.screen.displaySize()
 	// collisions := make([]byte, int(math.Ceil(float64(width*height)/2)))
 	// tg.GameState.Collisions = collisions
-	localCollisions := tg.GameState.Collisions
+	collisions := tg.GameState.Collisions
+	// fmt.Println(tg.GameState.Collisions)
 	for _, player := range tg.ClientStates {
 		for i := 0; i < len(player.PathX); i++ {
-			localCollisions = tg.setCollision(localCollisions, player.PathX[i], player.PathY[i], player.PlayerNum)
+			collisions = tg.setCollision(collisions, player.PathX[i], player.PathY[i], player.PlayerNum)
 		}
 	}
+	localCollisions = collisions
 }
 
 // GAME FUNCTIONS
