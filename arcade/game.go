@@ -95,13 +95,30 @@ type GameUpdateMessage[GS any, CS any] struct {
 	FragmentNum int
 }
 
+type AckGameUpdateMessage struct {
+	Message
+}
+
 type StartGameMessage struct {
 	Message
 	GameID string
 }
 
+type EndGameMessage struct {
+	Message
+	Winner string
+}
+
+func NewEndGameMessage(winner string) *EndGameMessage {
+	return &EndGameMessage{Message{Type: "end_game"}, winner}
+}
+
 func NewStartGameMessage(GameID string) *StartGameMessage {
 	return &StartGameMessage{Message{Type: "start_game"}, GameID}
+}
+
+func NewAckGameUpdateMessage() *AckGameUpdateMessage {
+	return &AckGameUpdateMessage{Message{Type: "ack_game_update"}}
 }
 
 func (m ClientUpdateMessage[any]) MarshalBinary() ([]byte, error) {
@@ -113,6 +130,14 @@ func (m GameUpdateMessage[GS, CS]) MarshalBinary() ([]byte, error) {
 }
 
 func (m StartGameMessage) MarshalBinary() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m AckGameUpdateMessage) MarshalBinary() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m EndGameMessage) MarshalBinary() ([]byte, error) {
 	return json.Marshal(m)
 }
 

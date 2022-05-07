@@ -145,10 +145,10 @@ func (s *Screen) Reset() {
 	s.Fill(' ', sty)
 
 	// Draw border around screen
-	// width, height := s.Size()
+	width, height := s.Size()
 	displayWidth, displayHeight := s.displaySize()
 
-	// if width >= displayWidth+2 && height >= displayHeight+2 {
-	s.DrawBox(0, 0, displayWidth-1, displayHeight-1, sty, true)
-	// }
+	if width >= displayWidth+2 && height >= displayHeight+2 {
+		s.DrawBox(0, 0, displayWidth-1, displayHeight-1, sty, true)
+	}
 }
