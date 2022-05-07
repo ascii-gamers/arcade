@@ -213,6 +213,40 @@ func (tg *TronGameView) ProcessEvent(ev interface{}) {
 	case *ClientDisconnectEvent:
 		// process disconnected client
 	case *tcell.EventKey:
+		if ev.Key() == tcell.KeyEnter {
+			mu.Lock()
+			gamestate := tg.GameState.Ended
+			mu.Unlock()
+			if gamestate {
+				// arcade.Lobby.mu.RLock()
+				// hostID := arcade.Lobby.HostID
+				// lobbyID := arcade.Lobby.ID
+				// arcade.Lobby.mu.RUnlock()
+
+				// if arcade.Server.ID == hostID {
+				arcade.lobbyMux.Lock()
+				arcade.Lobby = &Lobby{}
+				arcade.lobbyMux.Unlock()
+
+				arcade.Server.EndAllHeartbeats()
+				// send updates to everyone
+
+				// arcade.Server.Network.ClientsRange(func(client *Client) bool {
+				// 	if client.Distributor {
+				// 		return true
+				// 	}
+
+				// 	arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
+
+				// 	return true
+				// })
+
+				arcade.ViewManager.SetView(NewGamesListView())
+
+				// }
+			}
+			return
+		}
 		tg.ProcessEventKey(ev)
 	}
 }
@@ -242,37 +276,6 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 		}
 	case tcell.KeyCtrlG:
 		showCommits = !showCommits
-	case tcell.KeyEnter:
-		mu.Lock()
-		gamestate := tg.GameState.Ended
-		mu.Unlock()
-		if gamestate {
-			// arcade.Lobby.mu.RLock()
-			// hostID := arcade.Lobby.HostID
-			// lobbyID := arcade.Lobby.ID
-			// arcade.Lobby.mu.RUnlock()
-
-			// if arcade.Server.ID == hostID {
-			arcade.lobbyMux.Lock()
-			arcade.Lobby = &Lobby{}
-			arcade.lobbyMux.Unlock()
-			arcade.Server.EndAllHeartbeats()
-			// send updates to everyone
-
-			// arcade.Server.Network.ClientsRange(func(client *Client) bool {
-			// 	if client.Distributor {
-			// 		return true
-			// 	}
-
-			// 	arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
-
-			// 	return true
-			// })
-
-			arcade.ViewManager.SetView(NewGamesListView())
-
-			// }
-		}
 
 	}
 	tg.setMyState(state)
