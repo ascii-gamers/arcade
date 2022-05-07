@@ -184,6 +184,7 @@ func (tg *TronGameView) Init() {
 					tg.GameState.Ended = ended
 					tg.GameState.Winner = winner
 					tg.sendGameUpdate()
+					tg.sendEndGame(winner)
 				}
 			}
 			mu.Unlock()
@@ -252,6 +253,8 @@ func (tg *TronGameView) ProcessMessage(from *Client, p interface{}) interface{} 
 		tg.handleGameUpdate(p)
 	case ClientUpdateMessage[TronClientState]:
 		tg.handleClientUpdate(p)
+	case EndGameMessage:
+		tg.handleEndGame(p)
 	}
 	return nil
 }
@@ -521,6 +524,12 @@ func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientSt
 	lastReceivedInp[data.Id] = update.Timestep
 }
 
+func (tg *TronGameView) handleEndGame(data EndGameMessage) {
+	tg.GameState.Ended = true
+	tg.GameState.Winner = data.Winner
+	arcade.ViewManager.RequestRender()
+}
+
 func (tg *TronGameView) commitGameState() {
 	mu.Lock()
 	defer mu.Unlock()
@@ -539,6 +548,21 @@ func (tg *TronGameView) commitGameState() {
 	}
 	tg.GameState.Collisions = collisions
 	tg.recalculateCollisions()
+}
+
+func (g *Game[GS, CS]) sendEndGame(winner string) {
+	endGame := &EndGameMessage{Message: Message{Type: "end_game"}, Winner: winner}
+
+	for clientId := range g.ClientStates {
+		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
+			go func() {
+				var err error = nil
+				for err == nil {
+					_, err = arcade.Server.Network.SendAndReceive(client, endGame)
+				}
+			}()
+		}
+	}
 }
 
 func (g *Game[GS, CS]) sendClientUpdate(update CS) {
