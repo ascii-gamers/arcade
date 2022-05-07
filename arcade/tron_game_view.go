@@ -247,31 +247,31 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 		gamestate := tg.GameState.Ended
 		mu.Unlock()
 		if gamestate {
-			arcade.Lobby.mu.RLock()
-			hostID := arcade.Lobby.HostID
-			lobbyID := arcade.Lobby.ID
-			arcade.Lobby.mu.RUnlock()
+			// arcade.Lobby.mu.RLock()
+			// hostID := arcade.Lobby.HostID
+			// lobbyID := arcade.Lobby.ID
+			// arcade.Lobby.mu.RUnlock()
 
-			if arcade.Server.ID == hostID {
-				arcade.lobbyMux.Lock()
-				arcade.Lobby = &Lobby{}
-				arcade.lobbyMux.Unlock()
-				arcade.Server.EndAllHeartbeats()
-				// send updates to everyone
+			// if arcade.Server.ID == hostID {
+			arcade.lobbyMux.Lock()
+			arcade.Lobby = &Lobby{}
+			arcade.lobbyMux.Unlock()
+			arcade.Server.EndAllHeartbeats()
+			// send updates to everyone
 
-				arcade.Server.Network.ClientsRange(func(client *Client) bool {
-					if client.Distributor {
-						return true
-					}
+			// arcade.Server.Network.ClientsRange(func(client *Client) bool {
+			// 	if client.Distributor {
+			// 		return true
+			// 	}
 
-					arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
+			// 	arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
 
-					return true
-				})
+			// 	return true
+			// })
 
-				arcade.ViewManager.SetView(NewGamesListView())
+			arcade.ViewManager.SetView(NewGamesListView())
 
-			}
+			// }
 		}
 
 	}
