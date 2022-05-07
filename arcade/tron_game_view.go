@@ -777,3 +777,6 @@ func initCollisions() []byte {
 func (v *TronGameView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
 	return nil
 }
+
+func (v *TronGameView) Unload() {
+}
