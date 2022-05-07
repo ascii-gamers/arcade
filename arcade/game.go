@@ -104,6 +104,15 @@ type StartGameMessage struct {
 	GameID string
 }
 
+type EndGameMessage struct {
+	Message
+	Winner string
+}
+
+func NewEndGameMessage(winner string) *EndGameMessage {
+	return &EndGameMessage{Message{Type: "end_game"}, winner}
+}
+
 func NewStartGameMessage(GameID string) *StartGameMessage {
 	return &StartGameMessage{Message{Type: "start_game"}, GameID}
 }
@@ -125,6 +134,10 @@ func (m StartGameMessage) MarshalBinary() ([]byte, error) {
 }
 
 func (m AckGameUpdateMessage) MarshalBinary() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m EndGameMessage) MarshalBinary() ([]byte, error) {
 	return json.Marshal(m)
 }
 
