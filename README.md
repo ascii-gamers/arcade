@@ -3,6 +3,8 @@
 ## How to run
 
 ```
+git clone git@github.com:ascii-gamers/arcade.git
+cd arcade
 go run main.go
 ```
 
