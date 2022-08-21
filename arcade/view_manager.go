@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sync"
 
@@ -139,9 +140,6 @@ func (mgr *ViewManager) Start(v View) {
 			case tcell.KeyCtrlR:
 				arcade.Server.Network.SetDropRate(0)
 				continue
-			case tcell.KeyCtrlS:
-				client := NewNeighboringClient("172.20.10.9:6824")
-				go arcade.Server.Connect(client)
 			}
 		}
 
@@ -192,9 +190,9 @@ func (mgr *ViewManager) RequestRender() {
 		switch arcade.Server.Network.GetDropRate() {
 		case 0:
 			mgr.screen.DrawText(-x+len(text0)+1, -y+4, debugSty, "<--")
-		case 0.1:
+		case 1 - math.Sqrt(1-0.1):
 			mgr.screen.DrawText(-x+len(text10)+1, -y+3, debugSty, "<--")
-		case 0.5:
+		case 1 - math.Sqrt(1-0.5):
 			mgr.screen.DrawText(-x+len(text50)+1, -y+2, debugSty, "<--")
 		case 1:
 			mgr.screen.DrawText(-x+len(text100)+1, -y+1, debugSty, "<--")
