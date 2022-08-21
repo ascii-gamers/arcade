@@ -53,9 +53,6 @@ func Start() {
 	arcade.Server = NewServer("")
 	arcade.Lobby = &Lobby{}
 
-	// go arcade.Server.ScanLAN()
-	// time.Sleep(10 * time.Second)
-
 	if arcade.Distributor {
 		arcade.Server.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
 		arcade.Server.start()

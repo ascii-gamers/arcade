@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
 	"time"
@@ -234,7 +235,9 @@ func (n *Network) GetDropRate() float64 {
 	n.RLock()
 	defer n.RUnlock()
 
-	return n.dropRate
+	// Dropping is applied to sending and receiving, so do some math to get the
+	// correct rate. X + X * (1 - X) = Y, solve for Y
+	return 1 - math.Sqrt(1-n.dropRate)
 }
 
 func (n *Network) SetDropRate(rate float64) {
