@@ -14,7 +14,6 @@ type Network struct {
 
 	clients  map[string]*Client
 	dropRate float64
-	me       string
 
 	pendingMessagesMux sync.RWMutex
 	pendingMessages    map[string]chan interface{}
@@ -22,12 +21,21 @@ type Network struct {
 
 const sendAndReceiveTimeout = time.Second
 
-func NewNetwork(me string) *Network {
+func NewNetwork() *Network {
 	return &Network{
 		clients:         make(map[string]*Client),
-		me:              me,
 		pendingMessages: make(map[string]chan interface{}),
 	}
+}
+
+func (n *Network) Me() string {
+	ip, err := GetLocalIP()
+
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("%s:%d", ip, arcade.Port)
 }
 
 func (n *Network) GetClient(id string) (*Client, bool) {
@@ -66,7 +74,7 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 
 func (n *Network) Send(client *Client, msg interface{}) bool {
 	// Set sender and recipient IDs
-	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.Me()))
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
 	if client.NextHop == "" {
@@ -140,7 +148,7 @@ func (n *Network) SendNeighbors(msg interface{}) {
 	defer n.RUnlock()
 
 	// Set sender ID
-	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.Me()))
 
 	for _, client := range n.clients {
 		if !client.Neighbor {
@@ -207,7 +215,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 	}
 
 	for clientID, c := range routingTable {
-		if clientID == n.me {
+		if clientID == n.Me() {
 			continue
 		}
 

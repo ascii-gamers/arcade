@@ -59,6 +59,7 @@ type Client struct {
 func NewNeighboringClient(addr string) *Client {
 	return &Client{
 		Addr:     addr,
+		ID:       addr,
 		Neighbor: true,
 		sendCh:   make(chan []byte, maxBufferSize),
 	}

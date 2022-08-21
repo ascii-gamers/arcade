@@ -54,11 +54,12 @@ type Server struct {
 
 // NewServer creates the server with a given address.
 func NewServer(addr string) *Server {
-	serverID := uuid.NewString()
+	net := NewNetwork()
+
 	s := &Server{
 		Addr:             addr,
-		Network:          NewNetwork(serverID),
-		ID:               serverID,
+		Network:          NewNetwork(),
+		ID:               net.Me(),
 		connectedClients: make(map[string]*ConnectedClientInfo),
 		pingMessageTimes: make(map[string]time.Time),
 	}
@@ -141,6 +142,10 @@ func (s *Server) Disconnect(c *Client) {
 
 // connect connects to a client at a given address.
 func (s *Server) Connect(c *Client) error {
+	if _, ok := s.Network.GetClient(c.ID); ok {
+		return errors.New("client already connected")
+	}
+
 	sess, err := kcp.Dial(c.Addr)
 
 	if err != nil {
@@ -329,6 +334,7 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 func (s *Server) startWithNextOpenPort() {
 	for {
 		s.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
+		s.ID = s.Network.Me()
 		s.start()
 
 		arcade.Port++
@@ -346,6 +352,8 @@ func (s *Server) start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
+	go listenMulticast()
+
 	for {
 		// Wait for new client connections
 		s, err := listener.Accept()
@@ -356,20 +364,5 @@ func (s *Server) start() error {
 
 		client := NewNeighboringClient(s.RemoteAddr().String())
 		client.start(s)
-	}
-}
-
-func (s *Server) ScanLAN() {
-	ips, err := GetLANIPs()
-
-	if err != nil {
-		panic(err)
-	}
-
-	for _, ip := range ips {
-		client := NewNeighboringClient(fmt.Sprintf("%s:6824", ip))
-		go arcade.Server.Connect(client)
-
-		time.Sleep(time.Microsecond * 500)
 	}
 }

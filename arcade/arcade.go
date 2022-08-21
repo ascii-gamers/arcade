@@ -3,6 +3,7 @@ package arcade
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -42,13 +43,10 @@ func Start() {
 	port := flag.Int("port", 6824, "Port to listen on")
 	flag.IntVar(port, "p", 6824, "Port to listen on")
 
-	lan := flag.Bool("lan", false, "Scan local network for clients")
-
 	test := flag.Bool("t", false, "Test mode")
 	flag.Parse()
 
 	arcade.Distributor = *dist
-	arcade.LAN = *lan
 	arcade.Port = *port
 
 	// Start host server
@@ -69,6 +67,17 @@ func Start() {
 	// TODO: Make better solution for this later -- wait for server to start
 	time.Sleep(10 * time.Millisecond)
 
+	// Create log file
+	f, err := os.OpenFile(fmt.Sprintf("log-%d", arcade.Port), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer f.Close()
+	log.SetOutput(f)
+
+	// Connect to distributor
 	client := NewNeighboringClient(*distributorAddr)
 	go arcade.Server.Connect(client)
 
