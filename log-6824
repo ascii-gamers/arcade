@@ -1,0 +1,500 @@
+2022/08/23 15:22:42 new server 0.0.0.0:6824
+2022/08/23 15:22:42 listening 0.0.0.0:6824
+2022/08/23 15:22:42 dialing 54.80.111.42:6824
+2022/08/23 15:22:42 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8  c8977847-541d-416a-896a-5a8d59eb8a6c ping}}
+2022/08/23 15:22:46 new conn! [::]:6824 192.168.50.86:49328
+2022/08/23 15:22:46 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"","MessageID":"190945d3-dcbf-4bb7-ac1f-a65bcaa886da","Type":"ping"}
+2022/08/23 15:22:46 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8  5759214e-0812-4799-b661-5139aac1d87a ping}}
+2022/08/23 15:22:46 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69  190945d3-dcbf-4bb7-ac1f-a65bcaa886da ping}} net.PingMessage
+2022/08/23 15:22:47 replying with pong
+2022/08/23 15:22:47 REPLY:  &{{   pong} false}
+2022/08/23 15:22:47 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  pong} false}
+2022/08/23 15:22:47 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"pong","Distributor":false}
+2022/08/23 15:22:47 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  pong} false} net.PongMessage
+2022/08/23 15:22:47 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"hello"}
+2022/08/23 15:22:47 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  hello}} arcade.HelloMessage
+2022/08/23 15:22:47 connect! 192.168.50.86:6825
+2022/08/23 15:22:47 dialing 192.168.50.86:6825
+2022/08/23 15:22:47 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8  a85c2fe2-6426-438d-ac3f-9d9493d3a697 ping}}
+2022/08/23 15:22:47 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"","MessageID":"d843afb7-7352-4ec2-af32-8c37ffbcfde6","Type":"ping"}
+2022/08/23 15:22:47 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69  d843afb7-7352-4ec2-af32-8c37ffbcfde6 ping}} net.PingMessage
+2022/08/23 15:22:48 replying with pong
+2022/08/23 15:22:48 REPLY:  &{{   pong} false}
+2022/08/23 15:22:48 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  pong} false}
+2022/08/23 15:22:48 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"pong","Distributor":false}
+2022/08/23 15:22:48 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  pong} false} net.PongMessage
+2022/08/23 15:22:51 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"hello"}
+2022/08/23 15:22:51 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  hello}} arcade.HelloMessage
+2022/08/23 15:22:51 REPLY:  &{{   lobby_info} 0xc0004d4000}
+2022/08/23 15:22:51 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  lobby_info} 0xc0004d4000}
+2022/08/23 15:22:51 connect! 192.168.50.86:6825
+2022/08/23 15:22:52 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"join","PlayerID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","Code":"","LobbyID":"5f3dc9d6-5d00-435d-a984-0f4eb5e07e8d"}
+2022/08/23 15:22:52 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  join} 9e2893ce-ec5e-434d-b52b-427abc2b8c69  5f3dc9d6-5d00-435d-a984-0f4eb5e07e8d} arcade.JoinMessage
+2022/08/23 15:22:52 REPLY:  &{{   join_reply} 0xc0004d4000 OK}
+2022/08/23 15:22:52 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  join_reply} 0xc0004d4000 OK}
+2022/08/23 15:22:52 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":0,"Metadata":"eyJJRCI6IjVmM2RjOWQ2LTVkMDAtNDM1ZC1hOTg0LTBmNGViNWUwN2U4ZCIsIk5hbWUiOiJhc2RmIiwiQ29kZSI6IiIsIlByaXZhdGUiOmZhbHNlLCJHYW1lVHlwZSI6IlRyb24iLCJDYXBhY2l0eSI6MiwiUGxheWVySURzIjpbImY4ZTM1MzZhLWZhZWUtNGQ1OS1hMDMyLWQxMDFlNDU0ZDBiOCIsIjllMjg5M2NlLWVjNWUtNDM0ZC1iNTJiLTQyN2FiYzJiOGM2OSJdLCJIb3N0SUQiOiJmOGUzNTM2YS1mYWVlLTRkNTktYTAzMi1kMTAxZTQ1NGQwYjgiLCJQaW5nIjowLCJQbGF5ZXJDbGllbnRFbmRzIjp7fX0="}
+2022/08/23 15:22:52 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 0 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]} arcade.HeartbeatMessage
+2022/08/23 15:22:52 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 0 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]}
+2022/08/23 15:22:52 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":1,"Metadata":"eyJJRCI6IjVmM2RjOWQ2LTVkMDAtNDM1ZC1hOTg0LTBmNGViNWUwN2U4ZCIsIk5hbWUiOiJhc2RmIiwiQ29kZSI6IiIsIlByaXZhdGUiOmZhbHNlLCJHYW1lVHlwZSI6IlRyb24iLCJDYXBhY2l0eSI6MiwiUGxheWVySURzIjpbImY4ZTM1MzZhLWZhZWUtNGQ1OS1hMDMyLWQxMDFlNDU0ZDBiOCIsIjllMjg5M2NlLWVjNWUtNDM0ZC1iNTJiLTQyN2FiYzJiOGM2OSJdLCJIb3N0SUQiOiJmOGUzNTM2YS1mYWVlLTRkNTktYTAzMi1kMTAxZTQ1NGQwYjgiLCJQaW5nIjowLCJQbGF5ZXJDbGllbnRFbmRzIjp7fX0="}
+2022/08/23 15:22:52 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 1 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]} arcade.HeartbeatMessage
+2022/08/23 15:22:52 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 1 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]}
+2022/08/23 15:22:53 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":2,"Metadata":"eyJJRCI6IjVmM2RjOWQ2LTVkMDAtNDM1ZC1hOTg0LTBmNGViNWUwN2U4ZCIsIk5hbWUiOiJhc2RmIiwiQ29kZSI6IiIsIlByaXZhdGUiOmZhbHNlLCJHYW1lVHlwZSI6IlRyb24iLCJDYXBhY2l0eSI6MiwiUGxheWVySURzIjpbImY4ZTM1MzZhLWZhZWUtNGQ1OS1hMDMyLWQxMDFlNDU0ZDBiOCIsIjllMjg5M2NlLWVjNWUtNDM0ZC1iNTJiLTQyN2FiYzJiOGM2OSJdLCJIb3N0SUQiOiJmOGUzNTM2YS1mYWVlLTRkNTktYTAzMi1kMTAxZTQ1NGQwYjgiLCJQaW5nIjowLCJQbGF5ZXJDbGllbnRFbmRzIjp7fX0="}
+2022/08/23 15:22:53 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 2 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]} arcade.HeartbeatMessage
+2022/08/23 15:22:53 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 2 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]}
+2022/08/23 15:22:53 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":3,"Metadata":"eyJJRCI6IjVmM2RjOWQ2LTVkMDAtNDM1ZC1hOTg0LTBmNGViNWUwN2U4ZCIsIk5hbWUiOiJhc2RmIiwiQ29kZSI6IiIsIlByaXZhdGUiOmZhbHNlLCJHYW1lVHlwZSI6IlRyb24iLCJDYXBhY2l0eSI6MiwiUGxheWVySURzIjpbImY4ZTM1MzZhLWZhZWUtNGQ1OS1hMDMyLWQxMDFlNDU0ZDBiOCIsIjllMjg5M2NlLWVjNWUtNDM0ZC1iNTJiLTQyN2FiYzJiOGM2OSJdLCJIb3N0SUQiOiJmOGUzNTM2YS1mYWVlLTRkNTktYTAzMi1kMTAxZTQ1NGQwYjgiLCJQaW5nIjowLCJQbGF5ZXJDbGllbnRFbmRzIjp7fX0="}
+2022/08/23 15:22:53 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 3 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]} arcade.HeartbeatMessage
+2022/08/23 15:22:53 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 3 [123 34 73 68 34 58 34 53 102 51 100 99 57 100 54 45 53 100 48 48 45 52 51 53 100 45 97 57 56 52 45 48 102 52 101 98 53 101 48 55 101 56 100 34 44 34 78 97 109 101 34 58 34 97 115 100 102 34 44 34 67 111 100 101 34 58 34 34 44 34 80 114 105 118 97 116 101 34 58 102 97 108 115 101 44 34 71 97 109 101 84 121 112 101 34 58 34 84 114 111 110 34 44 34 67 97 112 97 99 105 116 121 34 58 50 44 34 80 108 97 121 101 114 73 68 115 34 58 91 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 57 101 50 56 57 51 99 101 45 101 99 53 101 45 52 51 52 100 45 98 53 50 98 45 52 50 55 97 98 99 50 98 56 99 54 57 34 93 44 34 72 111 115 116 73 68 34 58 34 102 56 101 51 53 51 54 97 45 102 97 101 101 45 52 100 53 57 45 97 48 51 50 45 100 49 48 49 101 52 53 52 100 48 98 56 34 44 34 80 105 110 103 34 58 48 44 34 80 108 97 121 101 114 67 108 105 101 110 116 69 110 100 115 34 58 123 125 125]}
+2022/08/23 15:22:53 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  start_game} 5f3dc9d6-5d00-435d-a984-0f4eb5e07e8d}
+2022/08/23 15:22:53 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":4,"Metadata":null}
+2022/08/23 15:22:53 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 4 []} arcade.HeartbeatMessage
+2022/08/23 15:22:53 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 4 []}
+2022/08/23 15:22:53 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":5,"Metadata":null}
+2022/08/23 15:22:53 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 5 []} arcade.HeartbeatMessage
+2022/08/23 15:22:53 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 5 []}
+2022/08/23 15:22:54 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":6,"Metadata":null}
+2022/08/23 15:22:54 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 6 []} arcade.HeartbeatMessage
+2022/08/23 15:22:54 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 6 []}
+2022/08/23 15:22:54 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"f47f73a4-2aff-4352-b60d-870274dc3ba4","Type":"RequestVote","Term":1,"CandidateID":1,"LastLogIndex":0,"LastLogTerm":0,"ClientId":1}
+2022/08/23 15:22:54 [RAFT]: runElection New term: 1
+2022/08/23 15:22:54 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8 f47f73a4-2aff-4352-b60d-870274dc3ba4 RequestVote} 1 1 0 0 1} raft.RequestVoteArgs
+2022/08/23 15:22:54 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:22:54 REPLY:  &{{   RequestVoteReply} 1 false 0}
+2022/08/23 15:22:54 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  RequestVoteReply} 1 false 0}
+2022/08/23 15:22:54 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 6ff75e05-103c-424d-8f8c-71f307a3995a RequestVote} 1 0 0 0 0}
+2022/08/23 15:22:54 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"RequestVoteReply","Term":1,"VoteGranted":false,"ClientId":1}
+2022/08/23 15:22:54 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  RequestVoteReply} 1 false 1} raft.RequestVoteReply
+2022/08/23 15:22:54 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":7,"Metadata":null}
+2022/08/23 15:22:54 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 7 []} arcade.HeartbeatMessage
+2022/08/23 15:22:54 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 7 []}
+2022/08/23 15:22:54 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":8,"Metadata":null}
+2022/08/23 15:22:54 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 8 []} arcade.HeartbeatMessage
+2022/08/23 15:22:54 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 8 []}
+2022/08/23 15:22:54 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"heartbeat","Seq":9,"Metadata":null}
+2022/08/23 15:22:54 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  heartbeat} 9 []} arcade.HeartbeatMessage
+2022/08/23 15:22:54 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  heartbeat} 9 []}
+2022/08/23 15:22:55 [RAFT]: runElection New term: 2
+2022/08/23 15:22:55 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 c3198035-a0b4-4976-a230-f5baaaf1dc6c RequestVote} 2 0 0 0 0}
+2022/08/23 15:22:55 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"baba1de4-03f9-42d6-97f7-727164360856","Type":"RequestVote","Term":2,"CandidateID":1,"LastLogIndex":0,"LastLogTerm":0,"ClientId":1}
+2022/08/23 15:22:55 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8 baba1de4-03f9-42d6-97f7-727164360856 RequestVote} 2 1 0 0 1} raft.RequestVoteArgs
+2022/08/23 15:22:55 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:22:55 REPLY:  &{{   RequestVoteReply} 2 false 0}
+2022/08/23 15:22:55 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  RequestVoteReply} 2 false 0}
+2022/08/23 15:22:55 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"RequestVoteReply","Term":2,"VoteGranted":false,"ClientId":1}
+2022/08/23 15:22:55 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  RequestVoteReply} 2 false 1} raft.RequestVoteReply
+2022/08/23 15:22:55 [RAFT]: runElection New term: 3
+2022/08/23 15:22:55 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 5da35c56-3712-450d-ae79-51630d984b8a RequestVote} 3 0 0 0 0}
+2022/08/23 15:22:55 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"RequestVoteReply","Term":2,"VoteGranted":true,"ClientId":1}
+2022/08/23 15:22:55 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  RequestVoteReply} 2 true 1} raft.RequestVoteReply
+2022/08/23 15:22:56 [RAFT]: runElection New term: 4
+2022/08/23 15:22:56 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"49f9f97a-a9d6-4fd7-a13e-ff4f5e2a532d","Type":"RequestVote","Term":4,"CandidateID":1,"LastLogIndex":0,"LastLogTerm":0,"ClientId":1}
+2022/08/23 15:22:56 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 0babe699-1881-42bf-84f7-7fc6c21c87d1 RequestVote} 4 0 0 0 0}
+2022/08/23 15:22:56 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8 49f9f97a-a9d6-4fd7-a13e-ff4f5e2a532d RequestVote} 4 1 0 0 1} raft.RequestVoteArgs
+2022/08/23 15:22:56 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:22:56 REPLY:  &{{   RequestVoteReply} 4 false 0}
+2022/08/23 15:22:56 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  RequestVoteReply} 4 false 0}
+2022/08/23 15:22:56 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"RequestVoteReply","Term":4,"VoteGranted":false,"ClientId":1}
+2022/08/23 15:22:56 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  RequestVoteReply} 4 false 1} raft.RequestVoteReply
+2022/08/23 15:22:57 [RAFT]: runElection New term: 5
+2022/08/23 15:22:57 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 18b985de-d05f-4045-844d-f959c351dc0a RequestVote} 5 0 0 0 0}
+2022/08/23 15:22:57 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"c711ca91-3b96-4858-9f5a-61cea77445e5","Type":"RequestVote","Term":5,"CandidateID":1,"LastLogIndex":0,"LastLogTerm":0,"ClientId":1}
+2022/08/23 15:22:57 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8 c711ca91-3b96-4858-9f5a-61cea77445e5 RequestVote} 5 1 0 0 1} raft.RequestVoteArgs
+2022/08/23 15:22:57 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:22:57 REPLY:  &{{   RequestVoteReply} 5 false 0}
+2022/08/23 15:22:57 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  RequestVoteReply} 5 false 0}
+2022/08/23 15:22:57 Receiving {"SenderID":"9e2893ce-ec5e-434d-b52b-427abc2b8c69","RecipientID":"f8e3536a-faee-4d59-a032-d101e454d0b8","MessageID":"","Type":"RequestVoteReply","Term":5,"VoteGranted":false,"ClientId":1}
+2022/08/23 15:22:57 notify parsed {{9e2893ce-ec5e-434d-b52b-427abc2b8c69 f8e3536a-faee-4d59-a032-d101e454d0b8  RequestVoteReply} 5 false 1} raft.RequestVoteReply
+2022/08/23 15:22:58 [RAFT]: runElection New term: 6
+2022/08/23 15:22:58 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 2967a75d-3b04-47db-82ba-3bc293269b30 RequestVote} 6 0 0 0 0}
+2022/08/23 15:22:58 [RAFT]: runElection New term: 7
+2022/08/23 15:22:58 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 7fd135a7-b724-4398-8a5f-117b04a8c476 RequestVote} 7 0 0 0 0}
+2022/08/23 15:22:59 [RAFT]: runElection New term: 8
+2022/08/23 15:22:59 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 357404df-8944-43d2-9c9b-d1216f57160f RequestVote} 8 0 0 0 0}
+2022/08/23 15:23:00 [RAFT]: runElection New term: 9
+2022/08/23 15:23:00 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 f6981425-f935-4fc4-8058-179e8e4f8df2 RequestVote} 9 0 0 0 0}
+2022/08/23 15:23:00 [RAFT]: runElection New term: 10
+2022/08/23 15:23:00 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 34d53300-cdc1-466f-829f-739b494b4f4e RequestVote} 10 0 0 0 0}
+2022/08/23 15:23:01 [RAFT]: runElection New term: 11
+2022/08/23 15:23:01 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 1dcd8946-89bd-49f8-aa8a-d798324e0f05 RequestVote} 11 0 0 0 0}
+2022/08/23 15:23:02 [RAFT]: runElection New term: 12
+2022/08/23 15:23:02 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 89cee3bd-527f-466c-9ded-e13685f58b2d RequestVote} 12 0 0 0 0}
+2022/08/23 15:23:03 [RAFT]: runElection New term: 13
+2022/08/23 15:23:03 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 e4fd2d8d-5e14-4ce4-9732-17b401406cf4 RequestVote} 13 0 0 0 0}
+2022/08/23 15:23:03 [RAFT]: runElection New term: 14
+2022/08/23 15:23:03 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 96d1f749-8c37-4f51-89c6-e3f704f73404 RequestVote} 14 0 0 0 0}
+2022/08/23 15:23:04 [RAFT]: runElection New term: 15
+2022/08/23 15:23:04 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 180c3e08-c552-4487-b6c0-849887bbcb2e RequestVote} 15 0 0 0 0}
+2022/08/23 15:23:05 [RAFT]: runElection New term: 16
+2022/08/23 15:23:05 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 bf28aef0-f7f8-464d-9143-a277b7a1e43e RequestVote} 16 0 0 0 0}
+2022/08/23 15:23:05 [RAFT]: runElection New term: 17
+2022/08/23 15:23:05 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 1ed81cd8-e879-4ee9-ac75-48f05dd36f64 RequestVote} 17 0 0 0 0}
+2022/08/23 15:23:06 [RAFT]: runElection New term: 18
+2022/08/23 15:23:06 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 86446e4a-20ca-4990-b5c4-82d495a4b43a RequestVote} 18 0 0 0 0}
+2022/08/23 15:23:07 [RAFT]: runElection New term: 19
+2022/08/23 15:23:07 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 13ade91f-502a-4aed-bda0-c4c545b6c987 RequestVote} 19 0 0 0 0}
+2022/08/23 15:23:08 [RAFT]: runElection New term: 20
+2022/08/23 15:23:08 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 f6aab9b3-78fd-4633-88ce-ab12a1eef3de RequestVote} 20 0 0 0 0}
+2022/08/23 15:23:08 [RAFT]: runElection New term: 21
+2022/08/23 15:23:08 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 8ff06c0f-a3a5-4ccd-a546-c66b41d4582f RequestVote} 21 0 0 0 0}
+2022/08/23 15:23:09 [RAFT]: runElection New term: 22
+2022/08/23 15:23:09 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 76f34d19-7c5d-4887-8b36-1decf4a81c72 RequestVote} 22 0 0 0 0}
+2022/08/23 15:23:10 [RAFT]: runElection New term: 23
+2022/08/23 15:23:10 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 30a45314-28a7-4c20-a9b6-b04bf30018b3 RequestVote} 23 0 0 0 0}
+2022/08/23 15:23:11 [RAFT]: runElection New term: 24
+2022/08/23 15:23:11 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 76f5eb2a-ee11-4197-be6b-c0dc340990b8 RequestVote} 24 0 0 0 0}
+2022/08/23 15:23:11 [RAFT]: runElection New term: 25
+2022/08/23 15:23:11 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 084e1bc8-63d9-4295-ba33-0e5d066d5bd4 RequestVote} 25 0 0 0 0}
+2022/08/23 15:23:12 [RAFT]: runElection New term: 26
+2022/08/23 15:23:12 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 f095dce6-8672-4ecd-b4a0-1a8e21f4b556 RequestVote} 26 0 0 0 0}
+2022/08/23 15:23:13 [RAFT]: runElection New term: 27
+2022/08/23 15:23:13 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 d4e882d8-2404-4990-b888-a941f09a253a RequestVote} 27 0 0 0 0}
+2022/08/23 15:23:14 [RAFT]: runElection New term: 28
+2022/08/23 15:23:14 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 85b13c8d-4bc3-4ceb-97cc-6779fd038a38 RequestVote} 28 0 0 0 0}
+2022/08/23 15:23:14 [RAFT]: runElection New term: 29
+2022/08/23 15:23:14 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 e78e3754-1bef-4d45-a367-80bb0e2544ff RequestVote} 29 0 0 0 0}
+2022/08/23 15:23:15 [RAFT]: runElection New term: 30
+2022/08/23 15:23:15 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 058dc09d-30c8-4ac3-8506-b63798f3f2c1 RequestVote} 30 0 0 0 0}
+2022/08/23 15:23:16 [RAFT]: runElection New term: 31
+2022/08/23 15:23:16 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 2cc9e32e-26ff-4cc2-bf23-fe8e80eaf5d7 RequestVote} 31 0 0 0 0}
+2022/08/23 15:23:17 [RAFT]: runElection New term: 32
+2022/08/23 15:23:17 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 c65d74c5-2f2c-4720-85c5-80aa296e4de2 RequestVote} 32 0 0 0 0}
+2022/08/23 15:23:17 [RAFT]: runElection New term: 33
+2022/08/23 15:23:17 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 cd4f64fd-7134-4514-9481-a2c2bdf7362c RequestVote} 33 0 0 0 0}
+2022/08/23 15:23:18 [RAFT]: runElection New term: 34
+2022/08/23 15:23:18 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 bdb71c85-aad2-4ee8-bf7e-ad600c6104b5 RequestVote} 34 0 0 0 0}
+2022/08/23 15:23:19 [RAFT]: runElection New term: 35
+2022/08/23 15:23:19 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 43c1314a-aaa7-43b8-bd2f-82c298675d1c RequestVote} 35 0 0 0 0}
+2022/08/23 15:23:20 [RAFT]: runElection New term: 36
+2022/08/23 15:23:20 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 d2ddba6a-f521-4d2d-bfa5-4d0b14c07976 RequestVote} 36 0 0 0 0}
+2022/08/23 15:23:20 [RAFT]: runElection New term: 37
+2022/08/23 15:23:20 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 352db16d-47b8-48c3-97bb-5ed92bfccc27 RequestVote} 37 0 0 0 0}
+2022/08/23 15:23:21 [RAFT]: runElection New term: 38
+2022/08/23 15:23:21 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69 ecaa36e1-45df-4262-a257-20dd28cc3e33 RequestVote} 38 0 0 0 0}
+2022/08/23 15:23:21 Sending &{{f8e3536a-faee-4d59-a032-d101e454d0b8 9e2893ce-ec5e-434d-b52b-427abc2b8c69  lobby_end} 5f3dc9d6-5d00-435d-a984-0f4eb5e07e8d}
+2022/08/23 15:27:17.649741 new server 0.0.0.0:6824
+2022/08/23 15:27:17.649906 listening 0.0.0.0:6824
+2022/08/23 15:27:17.660220 dialing 54.80.111.42:6824
+2022/08/23 15:27:20.237568 new conn! [::]:6824 192.168.50.86:55072
+2022/08/23 15:27:20.863863 connect! 192.168.50.86:6825
+2022/08/23 15:27:21.240676 replying with pong
+2022/08/23 15:27:21.240776 dialing 192.168.50.86:6825
+2022/08/23 15:27:22.244286 replying with pong
+2022/08/23 15:27:24.868427 connect! 192.168.50.86:6825
+2022/08/23 15:27:36.371055 [RAFT]: runElection New term: 1
+2022/08/23 15:27:36.371110 [RAFT]: runElection Won election!
+2022/08/23 15:27:41.609950 new server 0.0.0.0:6824
+2022/08/23 15:27:41.610260 listening 0.0.0.0:6824
+2022/08/23 15:27:41.620897 dialing 54.80.111.42:6824
+2022/08/23 15:27:44.835495 connect! 192.168.50.86:6825
+2022/08/23 15:27:44.835543 dialing 192.168.50.86:6825
+2022/08/23 15:27:45.835990 replying with pong
+2022/08/23 15:27:45.947534 sending hello to client '7ef04402-ac3d-468d-9744-a4bddae43373'
+2022/08/23 15:27:46.287210 new conn! [::]:6824 192.168.50.86:49553
+2022/08/23 15:27:47.288239 replying with pong
+2022/08/23 15:27:49.948941 sending hello to client '7ef04402-ac3d-468d-9744-a4bddae43373'
+2022/08/23 15:27:52.169904 [RAFT]: runElection New term: 1
+2022/08/23 15:27:52.170420 [RAFT]: RequestVote Reject, already voted for 1
+2022/08/23 15:27:53.053022 [RAFT]: runElection New term: 2
+2022/08/23 15:27:53.053492 [RAFT]: RequestVote Reject, already voted for 1
+2022/08/23 15:27:53.853677 [RAFT]: runElection New term: 3
+2022/08/23 15:27:53.853922 [RAFT]: RequestVote Reject, already voted for 1
+2022/08/23 15:27:54.585765 [RAFT]: runElection New term: 4
+2022/08/23 15:27:54.586274 [RAFT]: RequestVote Reject, already voted for 1
+2022/08/23 15:32:12.883662 new server 0.0.0.0:6824
+2022/08/23 15:32:12.883809 listening 0.0.0.0:6824
+2022/08/23 15:32:12.894118 dialing 54.80.111.42:6824
+2022/08/23 15:32:15.124665 new conn! [::]:6824 192.168.50.86:57303
+2022/08/23 15:32:16.128257 replying with pong
+2022/08/23 15:32:17.514611 connect! 192.168.50.86:6825
+2022/08/23 15:32:17.514704 dialing 192.168.50.86:6825
+2022/08/23 15:32:18.515338 replying with pong
+2022/08/23 15:32:20.133476 [RAFT]: random duration 781.3980863938859
+2022/08/23 15:32:20.919519 [RAFT]: random duration 882.1527264135037
+2022/08/23 15:32:20.919818 [RAFT]: runElection New term: 1
+2022/08/23 15:32:20.920262 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:32:21.802974 [RAFT]: random duration 799.3680159655471
+2022/08/23 15:32:21.803129 [RAFT]: runElection New term: 2
+2022/08/23 15:32:21.803367 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:32:22.603710 [RAFT]: random duration 731.3142561560941
+2022/08/23 15:32:22.603784 [RAFT]: random duration 727.3912491213797
+2022/08/23 15:32:22.603819 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:32:22.603982 [RAFT]: runElection New term: 4
+2022/08/23 15:32:23.333192 [RAFT]: random duration 806.0469218601328
+2022/08/23 15:32:23.333357 [RAFT]: random duration 619.6911057652428
+2022/08/23 15:32:23.333404 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:32:23.333520 [RAFT]: runElection New term: 6
+2022/08/23 15:32:23.954387 [RAFT]: random duration 646.9557764198373
+2022/08/23 15:32:23.954472 [RAFT]: runElection New term: 7
+2022/08/23 15:32:23.954689 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:32:24.602975 [RAFT]: random duration 629.0908556743453
+2022/08/23 15:32:24.603023 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:32:25.237318 [RAFT]: random duration 690.2735581755861
+2022/08/23 15:32:25.237501 [RAFT]: runElection New term: 9
+2022/08/23 15:32:25.237649 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:32:25.929601 [RAFT]: random duration 754.5637885506196
+2022/08/23 15:32:25.929760 [RAFT]: runElection New term: 10
+2022/08/23 15:32:25.930063 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:36:02.035695 new server 0.0.0.0:6824
+2022/08/23 15:36:02.035863 listening 0.0.0.0:6824
+2022/08/23 15:36:02.047352 dialing 54.80.111.42:6824
+2022/08/23 15:36:05.471466 new conn! [::]:6824 192.168.50.86:55778
+2022/08/23 15:36:06.002657 connect! 192.168.50.86:6825
+2022/08/23 15:36:06.471674 replying with pong
+2022/08/23 15:36:06.471783 dialing 192.168.50.86:6825
+2022/08/23 15:36:07.473434 replying with pong
+2022/08/23 15:36:10.007435 connect! 192.168.50.86:6825
+2022/08/23 15:36:11.310640 [RAFT]: random duration 792.5105645050452
+2022/08/23 15:36:12.064753 [RAFT]: random duration 827.5230863580769
+2022/08/23 15:36:12.064816 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:12.793345 [RAFT]: random duration 882.1814234987287
+2022/08/23 15:36:12.793448 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:13.668324 [RAFT]: random duration 624.1689538166872
+2022/08/23 15:36:13.669002 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:14.294960 [RAFT]: random duration 660.2882525254828
+2022/08/23 15:36:14.295057 [RAFT]: runElection New term: 4
+2022/08/23 15:36:14.958414 [RAFT]: random duration 830.6630984198782
+2022/08/23 15:36:14.958484 [RAFT]: runElection New term: 5
+2022/08/23 15:36:15.600487 [RAFT]: random duration 848.6791625656602
+2022/08/23 15:36:15.600534 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:16.324033 [RAFT]: random duration 732.4807288766453
+2022/08/23 15:36:16.324076 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:17.060791 [RAFT]: random duration 606.2048412545835
+2022/08/23 15:36:17.060890 [RAFT]: runElection New term: 8
+2022/08/23 15:36:17.668128 [RAFT]: random duration 875.2501106294353
+2022/08/23 15:36:17.668211 [RAFT]: runElection New term: 9
+2022/08/23 15:36:18.341927 [RAFT]: random duration 666.1314228953303
+2022/08/23 15:36:18.341963 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:18.956462 [RAFT]: random duration 724.4338375979121
+2022/08/23 15:36:18.956516 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:19.569405 [RAFT]: random duration 740.3760065882453
+2022/08/23 15:36:19.569436 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:36:20.314175 [RAFT]: random duration 783.8013234502109
+2022/08/23 15:36:20.314251 [RAFT]: runElection New term: 13
+2022/08/23 15:36:21.099285 [RAFT]: random duration 703.9674390434162
+2022/08/23 15:36:21.099380 [RAFT]: runElection New term: 14
+2022/08/23 15:36:21.713373 [RAFT]: random duration 867.6705940253682
+2022/08/23 15:36:21.713415 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:41:32.777278 new server 0.0.0.0:6824
+2022/08/23 15:41:32.777434 listening 0.0.0.0:6824
+2022/08/23 15:41:32.788895 dialing 54.80.111.42:6824
+2022/08/23 15:41:35.682189 new conn! [::]:6824 192.168.50.86:53253
+2022/08/23 15:41:36.686845 replying with pong
+2022/08/23 15:41:38.378511 connect! 192.168.50.86:6825
+2022/08/23 15:41:38.378596 dialing 192.168.50.86:6825
+2022/08/23 15:41:39.379860 replying with pong
+2022/08/23 15:41:40.179483 [RAFT]: random duration 788.0567433852622
+2022/08/23 15:41:40.887737 [RAFT]: random duration 737.7655546661902
+2022/08/23 15:41:40.887800 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:41:41.550129 [RAFT]: random duration 613.1568267949622
+2022/08/23 15:41:41.550182 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:41:42.164420 [RAFT]: random duration 707.611038852152
+2022/08/23 15:41:42.164586 [RAFT]: runElection New term: 3
+2022/08/23 15:41:42.164620 [RAFT]: runElection Received vote: true
+2022/08/23 15:41:42.164658 [RAFT]: runElection, early return not enough votes
+2022/08/23 15:41:42.873292 [RAFT]: random duration 845.2149859348442
+2022/08/23 15:41:42.873511 [RAFT]: runElection New term: 4
+2022/08/23 15:41:42.873596 [RAFT]: runElection Received vote: true
+2022/08/23 15:41:42.873653 [RAFT]: runElection, early return not enough votes
+2022/08/23 15:41:43.550884 [RAFT]: random duration 676.1117222582056
+2022/08/23 15:41:43.551010 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:41:44.228816 [RAFT]: random duration 631.1226951133765
+2022/08/23 15:41:44.229003 [RAFT]: runElection New term: 6
+2022/08/23 15:41:44.229058 [RAFT]: runElection Received vote: true
+2022/08/23 15:41:44.229094 [RAFT]: runElection, early return not enough votes
+2022/08/23 15:41:44.862706 [RAFT]: random duration 861.8387653820562
+2022/08/23 15:41:44.862889 [RAFT]: runElection New term: 7
+2022/08/23 15:41:44.862965 [RAFT]: runElection Received vote: true
+2022/08/23 15:41:44.863003 [RAFT]: runElection, early return not enough votes
+2022/08/23 15:41:45.655850 [RAFT]: random duration 874.6919953542965
+2022/08/23 15:41:45.655955 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:41:46.444637 [RAFT]: random duration 719.0047871089688
+2022/08/23 15:41:46.444695 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:41:47.064917 [RAFT]: random duration 686.8744525550914
+2022/08/23 15:41:47.064974 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:43:13.073249 new server 0.0.0.0:6824
+2022/08/23 15:43:13.073425 listening 0.0.0.0:6824
+2022/08/23 15:43:13.085216 dialing 54.80.111.42:6824
+2022/08/23 15:43:17.500796 new conn! [::]:6824 192.168.50.86:55154
+2022/08/23 15:43:18.216942 connect! 192.168.50.86:6825
+2022/08/23 15:43:18.504190 replying with pong
+2022/08/23 15:43:18.504226 dialing 192.168.50.86:6825
+2022/08/23 15:43:19.509623 sending hello to client '74a67ed0-23e0-4dcc-93e8-ec2a8939dab5'
+2022/08/23 15:43:19.509975 replying with pong
+2022/08/23 15:43:19.510320 new conn! [::]:6824 192.168.50.86:62894
+2022/08/23 15:43:20.511301 replying with pong
+2022/08/23 15:43:22.218638 connect! 192.168.50.86:6825
+2022/08/23 15:43:22.218731 dialing 192.168.50.86:6825
+2022/08/23 15:43:23.220653 replying with pong
+2022/08/23 15:43:24.074973 [RAFT]: random duration 701.6467458053733
+2022/08/23 15:43:24.780489 [RAFT]: random duration 683.1740662362707
+2022/08/23 15:43:24.780815 [RAFT]: runElection New term: 1
+2022/08/23 15:43:24.780855 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:43:24.780878 [RAFT]: runElection, return not enough
+2022/08/23 15:43:25.467101 [RAFT]: random duration 610.0920390620149
+2022/08/23 15:43:25.467284 [RAFT]: runElection New term: 2
+2022/08/23 15:43:25.467328 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:43:25.467349 [RAFT]: runElection, return not enough
+2022/08/23 15:45:15.819062 new server 0.0.0.0:6824
+2022/08/23 15:45:15.819192 listening 0.0.0.0:6824
+2022/08/23 15:45:15.829322 dialing 54.80.111.42:6824
+2022/08/23 15:45:18.759096 new conn! [::]:6824 192.168.50.86:51336
+2022/08/23 15:45:19.760312 replying with pong
+2022/08/23 15:45:20.811471 connect! 192.168.50.86:6825
+2022/08/23 15:45:20.811577 dialing 192.168.50.86:6825
+2022/08/23 15:45:21.812207 replying with pong
+2022/08/23 15:45:24.813582 connect! 192.168.50.86:6825
+2022/08/23 15:45:26.200151 [RAFT]: random duration 815.582348779243
+2022/08/23 15:45:27.021068 [RAFT]: random duration 673.07705545171
+2022/08/23 15:45:27.021486 [RAFT]: runElection New term: 1
+2022/08/23 15:45:27.021566 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:45:27.021608 [RAFT]: runElection, return not enough
+2022/08/23 15:45:27.695908 [RAFT]: random duration 857.8859597223319
+2022/08/23 15:45:27.696194 [RAFT]: runElection New term: 2
+2022/08/23 15:45:27.696291 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:45:27.696345 [RAFT]: runElection, return not enough
+2022/08/23 15:45:28.539811 [RAFT]: random duration 715.6780523033929
+2022/08/23 15:45:28.539868 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:45:29.256173 [RAFT]: random duration 891.4555849433971
+2022/08/23 15:45:29.256338 [RAFT]: runElection New term: 4
+2022/08/23 15:45:29.256431 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:45:29.256475 [RAFT]: runElection, return not enough
+2022/08/23 15:45:30.083317 [RAFT]: random duration 864.8597155132269
+2022/08/23 15:45:30.083387 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:45:30.946230 [RAFT]: random duration 619.8522454363424
+2022/08/23 15:45:30.946338 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:45:31.567681 [RAFT]: random duration 665.0560433891384
+2022/08/23 15:45:31.567790 [RAFT]: runElection New term: 7
+2022/08/23 15:45:31.567817 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:45:31.567832 [RAFT]: runElection, return not enough
+2022/08/23 15:45:32.236795 [RAFT]: random duration 857.0987341860246
+2022/08/23 15:45:32.237076 [RAFT]: runElection New term: 8
+2022/08/23 15:45:32.237176 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:45:32.237222 [RAFT]: runElection, return not enough
+2022/08/23 15:45:33.099916 [RAFT]: random duration 872.7784370848777
+2022/08/23 15:45:33.100023 [RAFT]: runElection New term: 9
+2022/08/23 15:45:33.100053 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:45:33.100077 [RAFT]: runElection, return not enough
+2022/08/23 15:45:33.100645 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:45:33.739737 [RAFT]: random duration 790.4140706843467
+2022/08/23 15:45:33.739898 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:45:34.531030 [RAFT]: random duration 834.1039165649024
+2022/08/23 15:45:34.531140 [RAFT]: runElection New term: 11
+2022/08/23 15:45:34.531193 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:45:34.531229 [RAFT]: runElection, return not enough
+2022/08/23 15:45:35.319095 [RAFT]: random duration 894.2787632636099
+2022/08/23 15:45:35.319242 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:45:36.204403 [RAFT]: random duration 676.2079450505521
+2022/08/23 15:45:36.204491 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:46:40.422263 new server 0.0.0.0:6824
+2022/08/23 15:46:40.422394 listening 0.0.0.0:6824
+2022/08/23 15:46:40.433586 dialing 54.80.111.42:6824
+2022/08/23 15:46:42.755326 new conn! [::]:6824 192.168.50.86:64670
+2022/08/23 15:46:43.755567 replying with pong
+2022/08/23 15:46:45.335879 connect! 192.168.50.86:6825
+2022/08/23 15:46:45.335973 dialing 192.168.50.86:6825
+2022/08/23 15:46:46.336650 replying with pong
+2022/08/23 15:46:47.267408 [RAFT]: random duration 745.6549726742617
+2022/08/23 15:46:48.014725 [RAFT]: random duration 612.6610373484422
+2022/08/23 15:46:48.015430 [RAFT]: runElection New term: 1
+2022/08/23 15:46:48.015530 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:46:48.015630 [RAFT]: runElection, return not enough
+2022/08/23 15:46:48.630430 [RAFT]: random duration 683.2892858137253
+2022/08/23 15:46:48.630684 [RAFT]: runElection New term: 2
+2022/08/23 15:46:48.630743 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:46:48.630776 [RAFT]: runElection, return not enough
+2022/08/23 15:46:49.016231 [RAFT]: vote error Timed out
+2022/08/23 15:46:49.314779 [RAFT]: random duration 886.3500471500075
+2022/08/23 15:46:49.314946 [RAFT]: runElection New term: 3
+2022/08/23 15:46:49.314988 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:46:49.315007 [RAFT]: runElection, return not enough
+2022/08/23 15:46:49.633965 [RAFT]: vote error Timed out
+2022/08/23 15:46:50.042468 [RAFT]: random duration 839.2073394847137
+2022/08/23 15:46:50.042546 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:46:50.315335 [RAFT]: vote error Timed out
+2022/08/23 15:46:50.864560 [RAFT]: random duration 866.2840537287811
+2022/08/23 15:46:50.864692 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:46:51.583090 [RAFT]: random duration 600.1224912450057
+2022/08/23 15:46:51.583176 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:46:52.185921 [RAFT]: random duration 875.5014260351338
+2022/08/23 15:46:52.186026 [RAFT]: runElection New term: 7
+2022/08/23 15:46:52.186052 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:46:52.186066 [RAFT]: runElection, return not enough
+2022/08/23 15:46:52.873120 [RAFT]: random duration 877.3161998615337
+2022/08/23 15:46:52.873169 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:46:53.186311 [RAFT]: vote error Timed out
+2022/08/23 15:46:53.755186 [RAFT]: random duration 744.4365729631832
+2022/08/23 15:46:53.755253 [RAFT]: runElection New term: 9
+2022/08/23 15:46:53.755270 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:46:53.755279 [RAFT]: runElection, return not enough
+2022/08/23 15:57:38.798075 new server 0.0.0.0:6824
+2022/08/23 15:57:38.798993 listening 0.0.0.0:6824
+2022/08/23 15:57:38.809284 ME:  
+2022/08/23 15:57:38.809349 dialing 54.80.111.42:6824
+2022/08/23 15:57:41.132805 new conn! [::]:6824 192.168.50.86:51733
+2022/08/23 15:57:41.132894 ME:  
+2022/08/23 15:57:42.133009 replying with pong
+2022/08/23 15:57:42.133088 REPLY:  &{{   pong} false} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:43.657344 REPLY:  &{{   lobby_info} 0xc0002c8000} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:43.657617 connect! 192.168.50.86:6825
+2022/08/23 15:57:43.657692 ME:  
+2022/08/23 15:57:43.657732 dialing 192.168.50.86:6825
+2022/08/23 15:57:44.658925 replying with pong
+2022/08/23 15:57:44.658954 REPLY:  &{{   join_reply} 0xc0002c8000 OK} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:44.659040 REPLY:  &{{   pong} false} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:46.707565 [RAFT]: random duration 706.8243181686055
+2022/08/23 15:57:47.414899 [RAFT]: random duration 752.2130711909804
+2022/08/23 15:57:47.415123 [RAFT]: runElection New term: 1
+2022/08/23 15:57:47.415163 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:57:47.415186 [RAFT]: runElection, return not enough
+2022/08/23 15:57:47.415419 [RAFT]: RequestVote Reject, already voted for 0
+2022/08/23 15:57:47.415450 REPLY:  &{{   RequestVoteReply} 1 false 0} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:48.064988 [RAFT]: random duration 801.9361074773221
+2022/08/23 15:57:48.065024 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:57:48.065055 REPLY:  &{{   RequestVoteReply} 1 true 0} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:48.415508 [RAFT]: vote error Timed out
+2022/08/23 15:57:48.724792 [RAFT]: random duration 659.3945252185459
+2022/08/23 15:57:48.725181 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:57:48.725209 REPLY:  &{{   RequestVoteReply} 2 true 0} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:49.385265 [RAFT]: random duration 778.1486405055562
+2022/08/23 15:57:49.385388 [RAFT]: runElection New term: 4
+2022/08/23 15:57:49.385419 [RAFT]: runElection Received vote: true, 0
+2022/08/23 15:57:49.385439 [RAFT]: runElection, return not enough
+2022/08/23 15:57:50.045260 [RAFT]: random duration 643.5049942496806
+2022/08/23 15:57:50.045414 [RAFT]: RequestVote Voted for 1
+2022/08/23 15:57:50.045432 REPLY:  &{{   RequestVoteReply} 4 true 0} 2b26d6ba-7ffd-4c2d-baa5-d499e2f594a1
+2022/08/23 15:57:50.388184 [RAFT]: vote error Timed out
+2022/08/23 16:14:28.435039 ME:  
+2022/08/23 16:14:59.734733 ME:  
+2022/08/23 16:14:59.734886 Received message: {{60bce811-db06-4834-9465-cae71fd2b3cf  4c4365d2-b895-46b8-99b3-63eb4b37ee68 ping}}
+2022/08/23 16:15:00.736285 REPLY:  &{{   pong} false} 60bce811-db06-4834-9465-cae71fd2b3cf
+2022/08/23 16:15:00.736480 REPLY:  &{{   error} Invalid recipient} 60bce811-db06-4834-9465-cae71fd2b3cf
+2022/08/23 16:15:00.736810 Received message: {{60bce811-db06-4834-9465-cae71fd2b3cf 64813340-27d3-4367-b292-6250adfb583a  pong} false}
+2022/08/23 16:20:05.581989 ME:  
+2022/08/23 16:20:16.468295 ME:  
+2022/08/23 16:20:16.468543 Received message: {{5934f0ae-5c2e-4a44-9e4a-920354e6a86f  80f8c6d8-a416-4886-acc6-338e2dff3ef3 ping}}
+2022/08/23 16:20:17.472346 REPLY:  &{{   pong} false} 5934f0ae-5c2e-4a44-9e4a-920354e6a86f
+2022/08/23 16:20:17.472375 ME:  
+2022/08/23 16:20:17.472496 REPLY:  &{{   error} Invalid recipient} 5934f0ae-5c2e-4a44-9e4a-920354e6a86f
+2022/08/23 16:20:17.472596 Received message: {{5934f0ae-5c2e-4a44-9e4a-920354e6a86f 8daeb62f-824b-4cb7-821a-a28d2d2121d4  pong} false}
+2022/08/23 16:20:17.473163 Received message: {{5934f0ae-5c2e-4a44-9e4a-920354e6a86f  0ad3bdf6-ddc3-4075-a8d3-5dddf5d0c858 ping}}
+2022/08/23 16:20:24.771191 ME:  
+2022/08/23 16:20:28.274898 ME:  
+2022/08/23 16:20:28.275577 Received message: {{2fd1a9d9-995f-47e8-85cc-34a7273d44cb  263d9ca6-a996-404e-a813-11b7ed3f85e1 ping}}
+2022/08/23 16:20:29.277374 REPLY:  &{{   pong} false} 2fd1a9d9-995f-47e8-85cc-34a7273d44cb
+2022/08/23 16:20:29.277593 REPLY:  &{{   error} Invalid recipient} 2fd1a9d9-995f-47e8-85cc-34a7273d44cb
+2022/08/23 16:20:29.278024 Received message: {{2fd1a9d9-995f-47e8-85cc-34a7273d44cb af78f45a-8893-4221-b119-2093f7b983a0  pong} false}
+2022/08/23 16:20:59.931171 ME:  
+2022/08/23 16:21:04.349193 ME:  
+2022/08/23 16:21:04.350080 Received message: {{29cf46ed-a76f-4315-bebe-67d0bc0f54b7  146afdd8-853a-4532-8dba-f644e1c19e7e ping}}
+2022/08/23 16:21:05.352065 ME:  
+2022/08/23 16:21:05.353105 Received message: {{29cf46ed-a76f-4315-bebe-67d0bc0f54b7  7147156e-333f-46a4-9906-220d55be1ab4 ping}}
+2022/08/23 16:21:06.356840 REPLY:  &{{   pong} false} 29cf46ed-a76f-4315-bebe-67d0bc0f54b7
+2022/08/23 16:21:06.357062 REPLY:  &{{   error} Invalid recipient} 29cf46ed-a76f-4315-bebe-67d0bc0f54b7
+2022/08/23 16:21:06.357207 REPLY:  &{{   pong} false} 29cf46ed-a76f-4315-bebe-67d0bc0f54b7
+2022/08/23 16:21:06.357336 REPLY:  &{{   error} Invalid recipient} 29cf46ed-a76f-4315-bebe-67d0bc0f54b7
+2022/08/23 16:21:06.357433 Received message: {{29cf46ed-a76f-4315-bebe-67d0bc0f54b7 544603d2-b35a-4a1a-a9b1-e1c9040976f7  pong} false}
+2022/08/23 16:21:59.066460 ME:  
+2022/08/23 16:22:05.778049 ME:  
+2022/08/23 16:22:05.778768 Received message: {{e1aa4890-f862-4862-8b79-41b85a066488  69fbac9a-4243-4f06-a16f-903907773e62 ping}}
+2022/08/23 16:22:06.781119 REPLY:  &{{   pong} false} e1aa4890-f862-4862-8b79-41b85a066488
+2022/08/23 16:22:06.781295 REPLY:  &{{   error} Invalid recipient} e1aa4890-f862-4862-8b79-41b85a066488
+2022/08/23 16:22:06.781585 Received message: {{e1aa4890-f862-4862-8b79-41b85a066488 f68c27f8-e851-4f50-a318-11aa6b045b33  pong} false}

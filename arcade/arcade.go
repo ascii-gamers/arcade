@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"arcade/arcade/message"
+	"arcade/raft"
 	"flag"
 	"fmt"
 	"log"
@@ -48,6 +49,7 @@ func Start() {
 
 	defer f.Close()
 	log.SetOutput(f)
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
 	// Register messages
 	message.Register(AckGameUpdateMessage{Message: message.Message{Type: "ack_game_update"}})
@@ -64,6 +66,16 @@ func Start() {
 	message.Register(LobbyEndMessage{Message: message.Message{Type: "lobby_end"}})
 	message.Register(LobbyInfoMessage{Message: message.Message{Type: "lobby_info"}})
 	message.Register(StartGameMessage{Message: message.Message{Type: "start_game"}})
+
+	// register Raft messages
+	message.Register(raft.RequestVoteArgs{Message: message.Message{Type: "RequestVote"}})
+	message.Register(raft.AppendEntriesArgs{Message: message.Message{Type: "AppendEntries"}})
+	message.Register(raft.InstallSnapshotArgs{Message: message.Message{Type: "InstallSnapshot"}})
+	message.Register(raft.ForwardedStartArgs{Message: message.Message{Type: "ForwardedStart"}})
+	message.Register(raft.RequestVoteReply{Message: message.Message{Type: "RequestVoteReply"}})
+	message.Register(raft.AppendEntriesReply{Message: message.Message{Type: "AppendEntriesReply"}})
+	message.Register(raft.InstallSnapshotReply{Message: message.Message{Type: "InstallSnapshotReply"}})
+	message.Register(raft.ForwardedStartReply{Message: message.Message{Type: "ForwardedStartReply"}})
 
 	arcade.Distributor = *dist
 	arcade.Port = *port

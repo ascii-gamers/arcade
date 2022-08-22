@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"arcade/arcade/message"
+	"arcade/raft"
 	"encoding/json"
 	"sync"
 )
@@ -61,15 +62,16 @@ type Game[GS any, CS any] struct {
 	PlayerIDs []string
 	mu        sync.Mutex
 
-	Me        string
-	GameState GS
+	Me string
+	// GameState GS
 	// clientIps []string
-	ClientStates   map[string]CS
+	// ClientStates   map[string]CS
 	Started        bool
 	HostID         string
 	HostSyncPeriod int
 	TimestepPeriod int
 	Timestep       int
+	RaftServer     *raft.Raft
 }
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")

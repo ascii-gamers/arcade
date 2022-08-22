@@ -16,6 +16,7 @@ func Notify(c interface{}, data []byte) []interface{} {
 	}
 
 	log.Println("Received message:", msg)
+	// log.Println("notify parsed", msg, reflect.TypeOf(msg))
 
 	replies := make([]interface{}, 0)
 

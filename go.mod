@@ -10,6 +10,7 @@ require (
 
 require (
 	github.com/gdamore/encoding v1.0.0 // indirect
+	github.com/jinzhu/copier v0.3.5 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/klauspost/reedsolomon v1.9.9 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect

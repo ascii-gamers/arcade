@@ -4,6 +4,7 @@ import (
 	"arcade/arcade/message"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"reflect"
@@ -70,6 +71,7 @@ func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
 		pingTimes: make(map[string]time.Time),
 	}
 
+	log.Println("ME: ", c.ID)
 	go func() {
 		for {
 			data, ok := <-c.recvCh
@@ -79,6 +81,7 @@ func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
 			}
 
 			for _, reply := range message.Notify(c, data) {
+				log.Println("REPLY: ", reply, c.ID)
 				n.Send(c, reply)
 			}
 		}
@@ -166,6 +169,9 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 
 func (n *Network) Send(client *Client, msg interface{}) bool {
 	// Set sender and recipient IDs
+	// fmt.Println("AFTER1.5", msg, reflect.TypeOf(msg).Kind())
+
+	// log.Println("in Send: ", msg)
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
@@ -188,6 +194,8 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 }
 
 func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, error) {
+
+	// log.Println("in SendAndReceive: ", msg)
 	// Set message ID
 	messageID := uuid.NewString()
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
