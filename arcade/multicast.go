@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"net"
+	"sync"
 )
 
 const multicastDiscoveryNetwork = "udp"
@@ -9,8 +10,12 @@ const multicastDiscoveryAddress = "224.6.8.24:4445"
 const maxDatagramSize = 8192
 
 var multicastConn *net.UDPConn
+var multicastConnMu sync.Mutex
 
 func discoverMulticast() {
+	multicastConnMu.Lock()
+	defer multicastConnMu.Unlock()
+
 	if multicastConn == nil {
 		addr, err := net.ResolveUDPAddr(multicastDiscoveryNetwork, multicastDiscoveryAddress)
 
