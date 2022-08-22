@@ -12,6 +12,8 @@ import (
 
 type LobbyView struct {
 	View
+
+	Lobby *Lobby
 }
 
 // const stickmen = []string{
@@ -39,28 +41,25 @@ var lobby_footer_nonhost = []string{
 	"[C]ancel",
 }
 
-func NewLobbyView() *LobbyView {
-	return &LobbyView{}
+func NewLobbyView(lobby *Lobby) *LobbyView {
+	return &LobbyView{Lobby: lobby}
 }
 
 func (v *LobbyView) Init() {
 }
 
 func (v *LobbyView) ProcessEvent(evt interface{}) {
-	arcade.lobbyMux.Lock()
-	defer arcade.lobbyMux.Unlock()
-
 	switch evt := evt.(type) {
 	case *ClientDisconnectEvent:
-		if arcade.Lobby.HostID == arcade.Server.ID {
-			arcade.Lobby.RemovePlayer(evt.ClientID)
+		if v.Lobby.HostID == arcade.Server.ID {
+			v.Lobby.RemovePlayer(evt.ClientID)
 		}
 	case *HeartbeatEvent:
-		if arcade.Lobby.HostID != arcade.Server.ID {
+		if v.Lobby.HostID != arcade.Server.ID {
 			lobby := new(Lobby)
 			json.Unmarshal(evt.Metadata, lobby)
 			// fmt.Println("lobby updated w heartbeat")
-			arcade.Lobby = lobby
+			v.Lobby = lobby
 		}
 		// do something with lobby
 	case *tcell.EventKey:
@@ -68,25 +67,25 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 		case tcell.KeyRune:
 			switch evt.Rune() {
 			case 'c':
-				arcade.Lobby.mu.RLock()
-				if arcade.Lobby.HostID != arcade.Server.ID {
+				v.Lobby.mu.RLock()
+				if v.Lobby.HostID != arcade.Server.ID {
 					// not the host, just leave the game
-					host, _ := arcade.Server.Network.GetClient(arcade.Lobby.HostID)
-					arcade.Lobby.mu.RUnlock()
+					host, _ := arcade.Server.Network.GetClient(v.Lobby.HostID)
+					v.Lobby.mu.RUnlock()
 
-					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, arcade.Lobby.ID))
+					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
 
-					arcade.Lobby = &Lobby{}
+					v.Lobby = &Lobby{}
 
 					arcade.Server.EndAllHeartbeats()
 					arcade.ViewManager.SetView(NewGamesListView())
 				} else {
 					// first extract lobbyID for messages
-					lobbyID := arcade.Lobby.ID
-					arcade.Lobby.mu.RUnlock()
+					lobbyID := v.Lobby.ID
+					v.Lobby.mu.RUnlock()
 
 					// get rid of lobby
-					arcade.Lobby = &Lobby{}
+					v.Lobby = &Lobby{}
 
 					arcade.Server.EndAllHeartbeats()
 					// send updates to everyone
@@ -106,80 +105,69 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 				}
 			case 's':
 				//start gamex
-				arcade.Lobby.mu.RLock()
-				if arcade.Lobby.HostID == arcade.Server.ID {
-					for _, playerId := range arcade.Lobby.PlayerIDs {
+				v.Lobby.mu.RLock()
+				if v.Lobby.HostID == arcade.Server.ID {
+					for _, playerId := range v.Lobby.PlayerIDs {
 						client, ok := arcade.Server.Network.GetClient(playerId)
 						if ok {
-							arcade.Server.Network.Send(client, NewStartGameMessage(arcade.Lobby.ID))
+							arcade.Server.Network.Send(client, NewStartGameMessage(v.Lobby.ID))
 						}
 					}
-					NewGame(arcade.Lobby)
+					NewGame(v.Lobby)
 				}
-				arcade.Lobby.mu.RUnlock()
+				v.Lobby.mu.RUnlock()
 			}
 		}
 	}
 }
 
 func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} {
-	arcade.lobbyMux.Lock()
-	defer arcade.lobbyMux.Unlock()
-
-	arcade.Lobby.mu.RLock()
-	lobbyID := arcade.Lobby.ID
-	arcade.Lobby.mu.RUnlock()
-
 	switch p := p.(type) {
 	case HelloMessage:
 		// return nil
-		return NewLobbyInfoMessage(arcade.Lobby)
+		return NewLobbyInfoMessage(v.Lobby)
 	case JoinMessage:
-		if arcade.Lobby.HostID == arcade.Server.ID {
-			if lobbyID == p.LobbyID {
-				arcade.Lobby.mu.RLock()
-				playerIDlength := len(arcade.Lobby.PlayerIDs)
-				cap := arcade.Lobby.Capacity
-				lobby_code := arcade.Lobby.Code
-				arcade.Lobby.mu.RUnlock()
+		if v.Lobby.HostID == arcade.Server.ID {
+			if v.Lobby.ID == p.LobbyID {
+				v.Lobby.mu.RLock()
+				playerIDlength := len(v.Lobby.PlayerIDs)
+				cap := v.Lobby.Capacity
+				lobby_code := v.Lobby.Code
+				v.Lobby.mu.RUnlock()
 
 				if playerIDlength == cap {
 					return NewJoinReplyMessage(&Lobby{}, ErrCapacity)
 				} else if lobby_code != p.Code {
 					return NewJoinReplyMessage(&Lobby{}, ErrWrongCode)
 				} else {
-					arcade.Lobby.AddPlayer(p.PlayerID)
+					v.Lobby.AddPlayer(p.PlayerID)
 					arcade.Server.BeginHeartbeats(p.PlayerID)
-					return NewJoinReplyMessage(arcade.Lobby, OK)
+					return NewJoinReplyMessage(v.Lobby, OK)
 				}
 			} else {
 				// send lobby end
-				return NewLobbyEndMessage(lobbyID)
+				return NewLobbyEndMessage(v.Lobby.ID)
 			}
 		}
 
 	case LeaveMessage:
-		// panic("0")
-		if lobbyID == p.LobbyID && arcade.Lobby.HostID == arcade.Server.ID {
-			arcade.Lobby.RemovePlayer(p.PlayerID)
+		if v.Lobby.ID == p.LobbyID && v.Lobby.HostID == arcade.Server.ID {
+			v.Lobby.RemovePlayer(p.PlayerID)
 		}
+
 		arcade.Server.EndHeartbeats(p.PlayerID)
-		// panic("1")
-		arcade.lobbyMux.Unlock()
 		arcade.ViewManager.RequestRender()
-		arcade.lobbyMux.Lock()
-		// panic("2")
 	case LobbyEndMessage:
 		// get rid of lobby
-		if lobbyID == p.LobbyID {
-			arcade.Lobby = &Lobby{}
+		if v.Lobby.ID == p.LobbyID {
+			v.Lobby = &Lobby{}
 
 			arcade.Server.EndAllHeartbeats()
 			arcade.ViewManager.SetView(NewGamesListView())
 		}
 	case StartGameMessage:
-		if p.GameID == lobbyID {
-			NewGame(arcade.Lobby)
+		if p.GameID == v.Lobby.ID {
+			NewGame(v.Lobby)
 		}
 		return nil
 	}
@@ -187,11 +175,8 @@ func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} 
 }
 
 func (v *LobbyView) Render(s *Screen) {
-	// panic("RENDER PANIC")
-	arcade.lobbyMux.RLock()
-	defer arcade.lobbyMux.RUnlock()
-	arcade.Lobby.mu.Lock()
-	defer arcade.Lobby.mu.Unlock()
+	v.Lobby.mu.Lock()
+	defer v.Lobby.mu.Unlock()
 
 	width, height := s.displaySize()
 
@@ -202,7 +187,7 @@ func (v *LobbyView) Render(s *Screen) {
 	// Draw GAME header
 
 	game_header := pong_header
-	if arcade.Lobby.GameType == Tron {
+	if v.Lobby.GameType == Tron {
 		game_header = tron_header
 	}
 	headerX := (width - utf8.RuneCountInString(game_header[0])) / 2
@@ -216,27 +201,27 @@ func (v *LobbyView) Render(s *Screen) {
 
 	// name
 	nameHeader := "Name: "
-	nameString := arcade.Lobby.Name
+	nameString := v.Lobby.Name
 	s.DrawText((width-len(nameHeader+nameString))/2, lv_TableY1+1, sty, nameHeader)
 	s.DrawText((width-len(nameHeader+nameString))/2+utf8.RuneCountInString(nameHeader), lv_TableY1+1, sty_bold, nameString)
 
 	// private
 	privateHeader := "Visibility: "
 	privateString := "public"
-	if arcade.Lobby.Private {
-		privateString = "private, Join Code: " + arcade.Lobby.Code
+	if v.Lobby.Private {
+		privateString = "private, Join Code: " + v.Lobby.Code
 	}
 	s.DrawText((width-len(privateHeader+privateString))/2, lv_TableY1+2, sty, privateHeader)
 	s.DrawText((width-len(privateHeader+privateString))/2+utf8.RuneCountInString(privateHeader), lv_TableY1+2, sty_bold, privateString)
 
 	// capacity
 	capacityHeader := "Game capacity: "
-	capacityString := fmt.Sprintf("(%v/%v)", len(arcade.Lobby.PlayerIDs), arcade.Lobby.Capacity)
+	capacityString := fmt.Sprintf("(%v/%v)", len(v.Lobby.PlayerIDs), v.Lobby.Capacity)
 	s.DrawText((width-len(capacityHeader+capacityString))/2, lv_TableY1+3, sty, capacityHeader)
 	s.DrawText((width-len(capacityHeader+capacityString))/2+utf8.RuneCountInString(capacityHeader), lv_TableY1+3, sty_bold, capacityString)
 
 	// Draw footer with navigation keystrokes
-	if arcade.Server.ID == arcade.Lobby.HostID {
+	if arcade.Server.ID == v.Lobby.HostID {
 		// I am host so I should see start game controls
 		hostLabelString := "You are the host."
 		s.DrawText((width-len(hostLabelString))/2, lv_TableY1+5, sty, hostLabelString)
@@ -250,10 +235,28 @@ func (v *LobbyView) Render(s *Screen) {
 }
 
 func (v *LobbyView) Unload() {
+	if v.Lobby.HostID == arcade.Server.ID {
+		// send to all the players, similar to 'c'
+		lobbyID := v.Lobby.ID
+
+		arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
+			if client.Distributor {
+				return true
+			}
+
+			arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
+
+			return true
+		})
+	} else {
+		// only send to host
+		host, _ := arcade.Server.Network.GetClient(v.Lobby.HostID)
+		arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
+	}
+
+	arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
-	arcade.lobbyMux.Lock()
-	defer arcade.lobbyMux.Unlock()
-	return arcade.Lobby
+	return v.Lobby
 }

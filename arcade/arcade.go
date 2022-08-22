@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -18,9 +17,6 @@ type Arcade struct {
 	ViewManager *ViewManager
 
 	Server *Server
-
-	lobbyMux sync.RWMutex
-	Lobby    *Lobby
 }
 
 var arcade = NewArcade()
@@ -74,7 +70,6 @@ func Start() {
 
 	// Start host server
 	arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port)
-	arcade.Lobby = &Lobby{}
 
 	if arcade.Distributor {
 		arcade.Server.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)

@@ -1,7 +1,6 @@
 package arcade
 
 import (
-	"log"
 	"net"
 )
 
@@ -63,7 +62,6 @@ func listenMulticast() {
 			continue
 		}
 
-		log.Println("connect!", addr)
 		arcade.Server.Network.Connect(addr, nil)
 	}
 }

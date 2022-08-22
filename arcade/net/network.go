@@ -4,7 +4,6 @@ import (
 	"arcade/arcade/message"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"reflect"
@@ -74,7 +73,6 @@ func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
 	go func() {
 		for {
 			data, ok := <-c.recvCh
-			log.Println("Receiving", string(data))
 
 			if !ok {
 				break
@@ -88,7 +86,6 @@ func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
 
 	if conn == nil {
 		var err error
-		log.Println("dialing", c.Addr)
 		conn, err = kcp.Dial(c.Addr)
 
 		if err != nil {
@@ -173,7 +170,6 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
 	if client.NextHop == "" {
-		log.Println("Sending", msg)
 		client.send(msg)
 		return true
 	}

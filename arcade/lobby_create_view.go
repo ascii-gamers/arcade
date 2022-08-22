@@ -121,12 +121,8 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 				if v.selectedRow != 0 || (v.selectedRow == 0 && !lcv_editing) {
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
 
-					arcade.lobbyMux.Lock()
-					arcade.Lobby = NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, arcade.Server.ID)
-					arcade.lobbyMux.Unlock()
-
-					// fmt.Println(server.clients)
-					arcade.ViewManager.SetView(NewLobbyView())
+					lobby := NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, arcade.Server.ID)
+					arcade.ViewManager.SetView(NewLobbyView(lobby))
 				}
 			}
 

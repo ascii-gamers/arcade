@@ -4,7 +4,6 @@ import (
 	"arcade/arcade/net"
 	"encoding"
 	"fmt"
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -102,7 +101,6 @@ func (v *GamesListView) SendHelloMessages() {
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
-		log.Println("sending hello to client '" + client.ID + "'")
 		if client.ID == "" || client.Distributor {
 			return true
 		}
@@ -223,14 +221,10 @@ func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interfac
 		arcade.ViewManager.RequestRender()
 	case JoinReplyMessage:
 		if p.Error == OK {
-			arcade.lobbyMux.Lock()
-			arcade.Lobby = p.Lobby
-			arcade.lobbyMux.Unlock()
-
 			err_msg = ""
 			glv_join_box = ""
 			glv_code_input_string = ""
-			arcade.ViewManager.SetView(NewLobbyView())
+			arcade.ViewManager.SetView(NewLobbyView(p.Lobby))
 
 			arcade.Server.BeginHeartbeats(p.Lobby.HostID)
 		} else if p.Error == ErrWrongCode {

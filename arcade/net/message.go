@@ -1,13 +1,11 @@
 package net
 
 import (
-	"log"
 	"time"
 )
 
 func (n *Network) processMessage(client, msg interface{}) interface{} {
 	c := client.(*Client)
-	log.Println("GOT IT")
 
 	switch msg := msg.(type) {
 	case PingMessage:
@@ -21,7 +19,6 @@ func (n *Network) processMessage(client, msg interface{}) interface{} {
 		n.clients[c.ID] = c
 		n.Unlock()
 
-		log.Println("replying with pong")
 		return NewPongMessage(n.distributor)
 	case PongMessage:
 		c.Lock()

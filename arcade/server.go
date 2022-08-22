@@ -4,7 +4,6 @@ import (
 	"arcade/arcade/message"
 	"arcade/arcade/net"
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 	"time"
@@ -55,7 +54,6 @@ type Server struct {
 
 // NewServer creates the server with a given address.
 func NewServer(addr string, port int) *Server {
-	log.Println("new server", addr)
 	id := uuid.NewString()
 	net := net.NewNetwork(id, port)
 
@@ -230,7 +228,6 @@ func (s *Server) handleMessage(client interface{}, msg interface{}) {
 
 // startServer starts listening for connections on a given address.
 func (s *Server) start() error {
-	log.Println("listening", s.Addr)
 	listener, err := kcp.Listen(s.Addr)
 
 	if err != nil {
@@ -250,7 +247,6 @@ func (s *Server) start() error {
 			panic(err)
 		}
 
-		log.Println("new conn!", conn.LocalAddr().String(), conn.RemoteAddr().String())
 		s.Network.Connect(conn.RemoteAddr().String(), conn)
 	}
 }
