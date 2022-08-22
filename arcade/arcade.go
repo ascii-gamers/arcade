@@ -54,14 +54,20 @@ func Start() {
 	log.SetOutput(f)
 
 	// Register messages
+	message.Register(AckGameUpdateMessage{Message: message.Message{Type: "ack_game_update"}})
+	message.Register(ClientUpdateMessage[TronClientState]{Message: message.Message{Type: "client_update"}})
 	message.Register(DisconnectMessage{Message: message.Message{Type: "disconnect"}})
+	message.Register(EndGameMessage{Message: message.Message{Type: "end_game"}})
+	message.Register(GameUpdateMessage[TronGameState, TronClientState]{Message: message.Message{Type: "game_update"}})
 	message.Register(HeartbeatMessage{Message: message.Message{Type: "heartbeat"}})
 	message.Register(HeartbeatReplyMessage{Message: message.Message{Type: "heartbeat_reply"}})
 	message.Register(HelloMessage{Message: message.Message{Type: "hello"}})
 	message.Register(JoinMessage{Message: message.Message{Type: "join"}})
 	message.Register(JoinReplyMessage{Message: message.Message{Type: "join_reply"}})
+	message.Register(LeaveMessage{Message: message.Message{Type: "leave"}})
 	message.Register(LobbyEndMessage{Message: message.Message{Type: "lobby_end"}})
 	message.Register(LobbyInfoMessage{Message: message.Message{Type: "lobby_info"}})
+	message.Register(StartGameMessage{Message: message.Message{Type: "start_game"}})
 
 	arcade.Distributor = *dist
 	arcade.Port = *port

@@ -28,7 +28,8 @@ func NewViewManager() *ViewManager {
 }
 
 func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
-	return mgr.view.ProcessMessage(from.(*net.Client), p)
+	res := mgr.view.ProcessMessage(from.(*net.Client), p)
+	return res
 }
 
 func (mgr *ViewManager) ProcessEvent(ev interface{}) {
@@ -50,6 +51,9 @@ func (mgr *ViewManager) SetView(v View) {
 	// Save view
 	mgr.view = v
 	mgr.view.Init()
+
+	// Render
+	mgr.RequestRender()
 }
 
 func (mgr *ViewManager) ToggleDebugPanel() {
