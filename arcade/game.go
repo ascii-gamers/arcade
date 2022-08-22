@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 	"sync"
 )
@@ -81,13 +82,13 @@ func NewGame(lobby *Lobby) {
 }
 
 type ClientUpdateMessage[CS any] struct {
-	Message
+	message.Message
 	Id     string
 	Update CS
 }
 
 type GameUpdateMessage[GS any, CS any] struct {
-	Message
+	message.Message
 	GameUpdate GS
 	// ClientStates map[string]CS
 	LastInps    map[string]int
@@ -96,29 +97,29 @@ type GameUpdateMessage[GS any, CS any] struct {
 }
 
 type AckGameUpdateMessage struct {
-	Message
+	message.Message
 }
 
 type StartGameMessage struct {
-	Message
+	message.Message
 	GameID string
 }
 
 type EndGameMessage struct {
-	Message
+	message.Message
 	Winner string
 }
 
 func NewEndGameMessage(winner string) *EndGameMessage {
-	return &EndGameMessage{Message{Type: "end_game"}, winner}
+	return &EndGameMessage{message.Message{Type: "end_game"}, winner}
 }
 
 func NewStartGameMessage(GameID string) *StartGameMessage {
-	return &StartGameMessage{Message{Type: "start_game"}, GameID}
+	return &StartGameMessage{message.Message{Type: "start_game"}, GameID}
 }
 
 func NewAckGameUpdateMessage() *AckGameUpdateMessage {
-	return &AckGameUpdateMessage{Message{Type: "ack_game_update"}}
+	return &AckGameUpdateMessage{message.Message{Type: "ack_game_update"}}
 }
 
 func (m ClientUpdateMessage[any]) MarshalBinary() ([]byte, error) {

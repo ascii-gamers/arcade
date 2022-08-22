@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"arcade/arcade/net"
 	"encoding"
 	"sync"
 	"time"
@@ -77,7 +78,7 @@ func (v *SplashView) ProcessEvent(evt interface{}) {
 	}
 }
 
-func (v *SplashView) ProcessMessage(from *Client, p interface{}) interface{} {
+func (v *SplashView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	return nil
 }
 

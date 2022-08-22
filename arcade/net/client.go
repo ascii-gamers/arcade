@@ -1,10 +1,10 @@
-package arcade
+package net
 
 import (
 	"encoding"
-	"math/rand"
 	"net"
 	"sync"
+	"time"
 )
 
 // Actually can't be increased past this number -- kcp-go enforces a packet
@@ -20,6 +20,14 @@ type ClientRoutingInfo struct {
 	// True if this client is a distributor.
 	Distributor bool
 }
+
+type ConnectionState int
+
+const (
+	Disconnected ConnectionState = iota
+	Connected
+	TimedOut
+)
 
 type Client struct {
 	sync.RWMutex
@@ -49,10 +57,13 @@ type Client struct {
 	conn net.Conn
 
 	sendCh chan []byte
+	recvCh chan []byte
 
-	connected   bool
-	timedOut    bool
+	State ConnectionState
+
 	connectedCh chan bool
+
+	pingTimes map[string]time.Time
 }
 
 // NewClient creates a client with the given address.
@@ -98,15 +109,17 @@ func (c *Client) readPump() {
 		data := make([]byte, n)
 		copy(data, buf[:n])
 
-		// Randomly drop packets if debugging
-		dropRate := arcade.Server.Network.GetDropRate()
+		c.recvCh <- data
 
-		if dropRate > 0 && rand.Float64() < dropRate {
-			continue
-		}
+		// // Randomly drop packets if debugging
+		// dropRate := arcade.Server.Network.GetDropRate()
 
-		// Handle the message
-		arcade.Server.handleMessage(c, data)
+		// if dropRate > 0 && rand.Float64() < dropRate {
+		// 	continue
+		// }
+
+		// // Handle the message
+		// arcade.Server.handleMessage(c, data)
 	}
 }
 
@@ -124,11 +137,12 @@ func (c *Client) writePump() {
 // send sends a message to the client.
 func (c *Client) send(msg interface{}) {
 	// Randomly drop packets if debugging
-	dropRate := arcade.Server.Network.GetDropRate()
+	// TODO: Fix
+	// dropRate := arcade.Server.Network.GetDropRate()
 
-	if dropRate > 0 && rand.Float64() < dropRate {
-		return
-	}
+	// if dropRate > 0 && rand.Float64() < dropRate {
+	// 	return
+	// }
 
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data

@@ -1,6 +1,8 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
+	"arcade/arcade/net"
 	"fmt"
 	"math"
 	"os"
@@ -20,11 +22,13 @@ type ViewManager struct {
 }
 
 func NewViewManager() *ViewManager {
-	return &ViewManager{}
+	mgr := &ViewManager{}
+	message.AddListener(mgr.ProcessMessage)
+	return mgr
 }
 
-func (mgr *ViewManager) ProcessMessage(from *Client, p interface{}) interface{} {
-	return mgr.view.ProcessMessage(from, p)
+func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
+	return mgr.view.ProcessMessage(from.(*net.Client), p)
 }
 
 func (mgr *ViewManager) ProcessEvent(ev interface{}) {
@@ -104,7 +108,7 @@ func (mgr *ViewManager) Start(v View) {
 						// arcade.Server.EndAllHeartbeats()
 						// send updates to everyone
 
-						arcade.Server.Network.ClientsRange(func(client *Client) bool {
+						arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
 							if client.Distributor {
 								return true
 							}
@@ -207,7 +211,7 @@ func (mgr *ViewManager) RequestRender() {
 			i++
 		}
 
-		if ip, err := GetLocalIP(); err == nil {
+		if ip, err := net.GetLocalIP(); err == nil {
 			mgr.screen.DrawText(-x, h+y-1, debugSty, fmt.Sprintf("Local IP: %s:%d", ip, arcade.Port))
 		}
 	}

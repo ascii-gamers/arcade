@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"arcade/arcade/net"
 	"encoding"
 	"strconv"
 	"unicode/utf8"
@@ -138,7 +139,7 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 	}
 }
 
-func (v *LobbyCreateView) ProcessMessage(from *Client, p interface{}) interface{} {
+func (v *LobbyCreateView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	return nil
 }
 

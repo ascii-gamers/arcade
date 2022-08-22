@@ -1,8 +1,10 @@
 package arcade
 
 import (
+	"arcade/arcade/net"
 	"encoding"
 	"fmt"
+	"log"
 	"sort"
 	"sync"
 	"time"
@@ -30,7 +32,7 @@ var header = []string{
 }
 
 var footer = []string{
-	"[C]reate new lobby      [J]oin selected lobby by IP address",
+	"[C]reate new lobby      [J]oin selected lobby",
 }
 
 var glv_join_box = ""
@@ -99,8 +101,9 @@ func (v *GamesListView) SendHelloMessages() {
 	go discoverMulticast()
 
 	// Send hello messages to everyone we find
-	arcade.Server.Network.ClientsRange(func(client *Client) bool {
-		if client.Distributor {
+	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
+		log.Println("sending hello to client '" + client.ID + "'")
+		if client.ID == "" || client.Distributor {
 			return true
 		}
 
@@ -209,7 +212,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 	}
 }
 
-func (v *GamesListView) ProcessMessage(from *Client, p interface{}) interface{} {
+func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case LobbyInfoMessage:
 		v.mu.Lock()

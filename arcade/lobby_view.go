@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"arcade/arcade/net"
 	"encoding"
 	"encoding/json"
 	"fmt"
@@ -90,7 +91,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 					arcade.Server.EndAllHeartbeats()
 					// send updates to everyone
 
-					arcade.Server.Network.ClientsRange(func(client *Client) bool {
+					arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
 						if client.Distributor {
 							return true
 						}
@@ -121,7 +122,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 	}
 }
 
-func (v *LobbyView) ProcessMessage(from *Client, p interface{}) interface{} {
+func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	arcade.lobbyMux.Lock()
 	defer arcade.lobbyMux.Unlock()
 

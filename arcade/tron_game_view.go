@@ -1,6 +1,8 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
+	"arcade/arcade/net"
 	"encoding"
 	"fmt"
 	"math"
@@ -282,7 +284,7 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 	processedInp = true
 }
 
-func (tg *TronGameView) ProcessMessage(from *Client, p interface{}) interface{} {
+func (tg *TronGameView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case GameUpdateMessage[TronGameState, TronClientState]:
 		tg.handleGameUpdate(p)
@@ -586,7 +588,7 @@ func (tg *TronGameView) commitGameState() {
 }
 
 func (g *Game[GS, CS]) sendEndGame(winner string) {
-	endGame := &EndGameMessage{Message: Message{Type: "end_game"}, Winner: winner}
+	endGame := &EndGameMessage{Message: message.Message{Type: "end_game"}, Winner: winner}
 
 	for clientId := range g.ClientStates {
 		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
@@ -601,7 +603,7 @@ func (g *Game[GS, CS]) sendEndGame(winner string) {
 }
 
 func (g *Game[GS, CS]) sendClientUpdate(update CS) {
-	clientUpdate := &ClientUpdateMessage[CS]{Message: Message{Type: "client_update"}, Id: g.Me, Update: update}
+	clientUpdate := &ClientUpdateMessage[CS]{Message: message.Message{Type: "client_update"}, Id: g.Me, Update: update}
 
 	for clientId := range g.ClientStates {
 		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
@@ -626,7 +628,7 @@ func (tg *TronGameView) sendGameUpdate() {
 				size := len(gameState.Collisions)
 				frag := gameState.Collisions[i*size/FRAGMENTS : int(math.Min(float64(size), float64((i+1)*size/FRAGMENTS)))]
 				gameState.Collisions = frag
-				data := &GameUpdateMessage[TronGameState, TronClientState]{Message{Type: "game_update"}, gameState, lastReceivedInp, id, i}
+				data := &GameUpdateMessage[TronGameState, TronClientState]{message.Message{Type: "game_update"}, gameState, lastReceivedInp, id, i}
 				arcade.Server.Network.Send(client, data)
 			}
 

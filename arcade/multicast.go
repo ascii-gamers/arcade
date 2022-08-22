@@ -26,7 +26,7 @@ func discoverMulticast() {
 		}
 	}
 
-	multicastConn.Write([]byte(arcade.Server.Network.Me()))
+	multicastConn.Write([]byte(arcade.Server.Network.Addr()))
 }
 
 // listenMulticast binds to a UDP multicast address and responds with a
@@ -59,11 +59,11 @@ func listenMulticast() {
 
 		addr := string(buffer[:numBytes])
 
-		if addr == arcade.Server.Network.Me() {
+		if addr == arcade.Server.Network.Addr() {
 			continue
 		}
 
 		log.Println("connect!", addr)
-		arcade.Server.Connect(NewNeighboringClient(addr))
+		arcade.Server.Network.Connect(addr, nil)
 	}
 }

@@ -1,11 +1,12 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 )
 
 type HeartbeatMessage struct {
-	Message
+	message.Message
 
 	Seq      int
 	Metadata []byte
@@ -13,7 +14,7 @@ type HeartbeatMessage struct {
 
 func NewHeartbeatMessage(seq int, metadata []byte) *HeartbeatMessage {
 	return &HeartbeatMessage{
-		Message:  Message{Type: "heartbeat"},
+		Message:  message.Message{Type: "heartbeat"},
 		Seq:      seq,
 		Metadata: metadata,
 	}

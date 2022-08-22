@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"arcade/arcade/net"
 	"encoding"
 
 	"github.com/gdamore/tcell/v2"
@@ -41,7 +42,7 @@ func (v *UsernameView) ProcessEvent(evt interface{}) {
 	}
 }
 
-func (v *UsernameView) ProcessMessage(from *Client, p interface{}) interface{} {
+func (v *UsernameView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	return nil
 }
 

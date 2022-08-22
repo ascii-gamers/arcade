@@ -1,4 +1,4 @@
-package arcade
+package net
 
 import (
 	"errors"

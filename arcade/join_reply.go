@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 )
 
@@ -13,14 +14,14 @@ const (
 type JoinErr string
 
 type JoinReplyMessage struct {
-	Message
+	message.Message
 	Lobby *Lobby
 	Error JoinErr
 }
 
 func NewJoinReplyMessage(lobby *Lobby, err JoinErr) *JoinReplyMessage {
 	return &JoinReplyMessage{
-		Message: Message{Type: "join_reply"},
+		Message: message.Message{Type: "join_reply"},
 		Lobby:   lobby,
 		Error:   err,
 	}

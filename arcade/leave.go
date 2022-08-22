@@ -1,18 +1,19 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 )
 
 type LeaveMessage struct {
-	Message
+	message.Message
 	PlayerID string
 	LobbyID  string
 }
 
 func NewLeaveMessage(playerID string, lobbyID string) *LeaveMessage {
 	return &LeaveMessage{
-		Message:  Message{Type: "leave"},
+		Message:  message.Message{Type: "leave"},
 		PlayerID: playerID,
 		LobbyID:  lobbyID,
 	}

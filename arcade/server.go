@@ -1,9 +1,10 @@
 package arcade
 
 import (
-	"encoding"
-	"errors"
+	"arcade/arcade/message"
+	"arcade/arcade/net"
 	"fmt"
+	"log"
 	"reflect"
 	"sync"
 	"time"
@@ -41,7 +42,7 @@ func (c *ConnectedClientInfo) GetMeanRTT() time.Duration {
 type Server struct {
 	sync.RWMutex
 
-	Network *Network
+	Network *net.Network
 
 	Addr string
 	ID   string
@@ -53,13 +54,15 @@ type Server struct {
 }
 
 // NewServer creates the server with a given address.
-func NewServer(addr string) *Server {
-	net := NewNetwork()
+func NewServer(addr string, port int) *Server {
+	log.Println("new server", addr)
+	id := uuid.NewString()
+	net := net.NewNetwork(id, port)
 
 	s := &Server{
 		Addr:             addr,
-		Network:          NewNetwork(),
-		ID:               net.Me(),
+		Network:          net,
+		ID:               id,
 		connectedClients: make(map[string]*ConnectedClientInfo),
 		pingMessageTimes: make(map[string]time.Time),
 	}
@@ -128,157 +131,57 @@ func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 	return s.connectedClients
 }
 
-func (s *Server) Disconnect(c *Client) {
-	c.Lock()
-	defer c.Unlock()
+func (s *Server) handleMessage(client interface{}, msg interface{}) {
+	c := client.(*net.Client)
 
-	close(c.sendCh)
-	close(c.connectedCh)
-
-	if c.conn != nil {
-		c.conn.Close()
-	}
-}
-
-// connect connects to a client at a given address.
-func (s *Server) Connect(c *Client) error {
-	if _, ok := s.Network.GetClient(c.ID); ok {
-		return errors.New("client already connected")
-	}
-
-	sess, err := kcp.Dial(c.Addr)
-
-	if err != nil {
-		return err
-	}
-
-	c.start(sess)
-
-	c.connectedCh = make(chan bool)
-
-	msg := NewPingMessage()
-	msg.MessageID = uuid.NewString()
-
-	s.Lock()
-	s.pingMessageTimes[msg.MessageID] = time.Now()
-	s.Unlock()
-
-	s.Network.Send(c, msg)
-
-	// Timeout if we don't receive a response
-	time.AfterFunc(timeoutInterval, func() {
-		c.Lock()
-		defer c.Unlock()
-
-		if !c.connected {
-			c.timedOut = true
-			c.connectedCh <- false
-		}
-	})
-
-	if !<-c.connectedCh {
-		return errors.New("client timed out")
-	}
-
-	go s.Network.PropagateRoutes()
-
-	return nil
-}
-
-func (s *Server) handleMessage(c *Client, data []byte) {
-	p, err := parseMessage(data)
-
-	if err != nil {
-		// Most likely malformed message/packet is too large, ignore
-		// panic("BRUH")
-		return
-	}
-
-	msg := reflect.ValueOf(p).FieldByName("Message").Interface().(Message)
+	baseMsg := reflect.ValueOf(msg).FieldByName("Message").Interface().(message.Message)
 
 	// Signal message received if necessary
-	s.Network.SignalReceived(msg.MessageID, msg)
+	s.Network.SignalReceived(baseMsg.MessageID, msg)
 
 	if arcade.Distributor {
 		fmt.Println(msg)
-		fmt.Printf("Received '%s' from %s\n", msg.Type, msg.SenderID[:4])
+		fmt.Printf("Received '%s' from %s\n", baseMsg.Type, baseMsg.SenderID[:4])
 
-		if msg.Type == "error" {
-			fmt.Println(p)
+		if baseMsg.Type == "error" {
+			fmt.Println(msg)
 		}
 	}
 
 	// Process message and prepare response
 	var res interface{}
 
-	switch p := p.(type) {
+	switch msg := msg.(type) {
 	case DisconnectMessage:
 		arcade.ViewManager.ProcessEvent(&ClientDisconnectEvent{
 			ClientID: c.ID,
 		})
 
-		s.Network.DeleteClient(c.ID)
-	case PingMessage:
-		c.ID = msg.SenderID
-		c.ClientRoutingInfo = ClientRoutingInfo{
-			Distance: 1,
-		}
-		c.Neighbor = true
-
-		s.Network.AddClient(c)
-
-		res = NewPongMessage(arcade.Distributor)
-	case PongMessage:
-		s.Lock()
-		pingTime := time.Since(s.pingMessageTimes[msg.MessageID])
-		delete(s.pingMessageTimes, msg.MessageID)
-		s.Unlock()
-
-		c.Lock()
-		c.ID = msg.SenderID
-		c.ClientRoutingInfo = ClientRoutingInfo{
-			Distance:    float64(pingTime.Milliseconds()),
-			Distributor: p.Distributor,
-		}
-		c.Neighbor = true
-
-		if !c.timedOut && !c.connected {
-			s.Network.AddClient(c)
-
-			c.connected = true
-			c.connectedCh <- true
-
-			if !c.Distributor {
-				arcade.ViewManager.ProcessEvent(NewClientConnectEvent(c.ID))
-			}
-		}
-		c.Unlock()
-	case RoutingMessage:
-		s.Network.UpdateRoutes(c, p.Distances)
+		s.Network.Disconnect(c.ID)
 	default:
-		if msg.RecipientID != s.ID {
+		if baseMsg.RecipientID != s.ID {
 			if arcade.Distributor {
-				fmt.Println("Forwarding message to", msg.RecipientID[:4])
-				fmt.Println(p)
+				fmt.Println("Forwarding message to", baseMsg.RecipientID[:4])
+				fmt.Println(msg)
 			}
 
 			s.RLock()
-			recipient, ok := s.Network.GetClient(msg.RecipientID)
+			recipient, ok := s.Network.GetClient(baseMsg.RecipientID)
 			s.RUnlock()
 
 			if ok {
-				recipient.sendCh <- data
+				s.Network.Send(recipient, msg)
 				return
 			} else {
 				res = NewErrorMessage("Invalid recipient")
 			}
 		} else {
 			if arcade.Distributor {
-				fmt.Println(p)
-				panic("Recipient: " + msg.RecipientID + ", self: " + s.ID)
+				fmt.Println(msg)
+				panic("Recipient: " + baseMsg.RecipientID + ", self: " + s.ID)
 			}
 
-			switch p := p.(type) {
+			switch msg := msg.(type) {
 			case HeartbeatMessage:
 				s.Lock()
 				if _, ok := s.connectedClients[msg.SenderID]; ok {
@@ -288,23 +191,23 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 				s.Unlock()
 
 				// Send heartbeat metadata to view
-				arcade.ViewManager.ProcessEvent(NewHeartbeatEvent(p.Metadata))
+				arcade.ViewManager.ProcessEvent(NewHeartbeatEvent(msg.Metadata))
 
 				// Reply to heartbeat
-				res = NewHeartbeatReplyMessage(p.Seq)
+				res = NewHeartbeatReplyMessage(msg.Seq)
 			case HeartbeatReplyMessage:
 				if msg.RecipientID == s.ID {
 					s.Lock()
 					if _, ok := s.connectedClients[msg.SenderID]; ok {
 						s.connectedClients[msg.SenderID].LastHeartbeat = time.Now()
-						s.connectedClients[msg.SenderID].RTTs = append(s.connectedClients[msg.SenderID].RTTs, time.Since(s.connectedClients[msg.SenderID].HeartbeatSendTimes[p.Seq]))
+						s.connectedClients[msg.SenderID].RTTs = append(s.connectedClients[msg.SenderID].RTTs, time.Since(s.connectedClients[msg.SenderID].HeartbeatSendTimes[msg.Seq]))
 					}
 					s.Unlock()
 
 					arcade.ViewManager.RequestDebugRender()
 				}
 			default:
-				res = processMessage(c, p)
+				res = ProcessMessage(c, msg)
 			}
 		}
 	}
@@ -316,37 +219,22 @@ func (s *Server) handleMessage(c *Client, data []byte) {
 	}
 
 	// Set sender and recipient IDs
-	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(msg.SenderID))
+	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(baseMsg.SenderID))
 	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(s.ID))
 
 	// Set message ID if there was one in the sent packet
-	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(msg.MessageID))
+	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(baseMsg.MessageID))
 
-	resData, err := res.(encoding.BinaryMarshaler).MarshalBinary()
-
-	if err != nil {
-		panic(err)
-	}
-
-	c.sendCh <- resData
-}
-
-func (s *Server) startWithNextOpenPort() {
-	for {
-		s.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
-		s.ID = s.Network.Me()
-		s.start()
-
-		arcade.Port++
-	}
+	s.Network.Send(c, res)
 }
 
 // startServer starts listening for connections on a given address.
 func (s *Server) start() error {
+	log.Println("listening", s.Addr)
 	listener, err := kcp.Listen(s.Addr)
 
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	fmt.Printf("Listening at %s...\n", s.Addr)
@@ -356,13 +244,13 @@ func (s *Server) start() error {
 
 	for {
 		// Wait for new client connections
-		s, err := listener.Accept()
+		conn, err := listener.Accept()
 
 		if err != nil {
 			panic(err)
 		}
 
-		client := NewNeighboringClient(s.RemoteAddr().String())
-		client.start(s)
+		log.Println("new conn!", conn.LocalAddr().String(), conn.RemoteAddr().String())
+		s.Network.Connect(conn.RemoteAddr().String(), conn)
 	}
 }

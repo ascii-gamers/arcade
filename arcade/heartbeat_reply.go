@@ -1,18 +1,19 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 )
 
 type HeartbeatReplyMessage struct {
-	Message
+	message.Message
 
 	Seq int
 }
 
 func NewHeartbeatReplyMessage(seq int) *HeartbeatReplyMessage {
 	return &HeartbeatReplyMessage{
-		Message: Message{Type: "heartbeat_reply"},
+		Message: message.Message{Type: "heartbeat_reply"},
 		Seq:     seq,
 	}
 }

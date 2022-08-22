@@ -1,11 +1,12 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 )
 
 type JoinMessage struct {
-	Message
+	message.Message
 	PlayerID string
 	Code     string
 	LobbyID  string
@@ -13,7 +14,7 @@ type JoinMessage struct {
 
 func NewJoinMessage(code string, playerID string, lobbyID string) *JoinMessage {
 	return &JoinMessage{
-		Message:  Message{Type: "join"},
+		Message:  message.Message{Type: "join"},
 		PlayerID: playerID,
 		Code:     code,
 		LobbyID:  lobbyID,

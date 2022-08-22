@@ -1,19 +1,24 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 )
 
 type DisconnectMessage struct {
-	Message
+	message.Message
 }
 
 func NewDisconnectMessage() *DisconnectMessage {
 	return &DisconnectMessage{
-		Message: Message{Type: "disconnect"},
+		Message: message.Message{Type: "disconnect"},
 	}
 }
 
 func (m DisconnectMessage) MarshalBinary() ([]byte, error) {
 	return json.Marshal(m)
+}
+
+func (m DisconnectMessage) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, &m)
 }

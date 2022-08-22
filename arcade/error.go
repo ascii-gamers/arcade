@@ -1,18 +1,19 @@
 package arcade
 
 import (
+	"arcade/arcade/message"
 	"encoding/json"
 )
 
 type ErrorMessage struct {
-	Message
+	message.Message
 
 	Text string
 }
 
 func NewErrorMessage(msg string) *ErrorMessage {
 	return &ErrorMessage{
-		Message: Message{Type: "error"},
+		Message: message.Message{Type: "error"},
 		Text:    msg,
 	}
 }
