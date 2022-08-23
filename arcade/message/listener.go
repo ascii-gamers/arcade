@@ -1,6 +1,9 @@
 package message
 
-import "log"
+import (
+	"log"
+	"reflect"
+)
 
 var listeners = make([]func(c, data interface{}) interface{}, 0)
 
@@ -25,6 +28,9 @@ func Notify(c interface{}, data []byte) []interface{} {
 		if reply == nil {
 			continue
 		}
+
+		messageID := reflect.ValueOf(msg).FieldByName("Message").FieldByName("MessageID").String()
+		reflect.ValueOf(reply).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
 
 		replies = append(replies, reply)
 	}
