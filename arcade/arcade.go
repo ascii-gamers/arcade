@@ -66,6 +66,7 @@ func Start() {
 	message.Register(LobbyEndMessage{Message: message.Message{Type: "lobby_end"}})
 	message.Register(LobbyInfoMessage{Message: message.Message{Type: "lobby_info"}})
 	message.Register(StartGameMessage{Message: message.Message{Type: "start_game"}})
+	message.Register(ErrorMessage{Message: message.Message{Type: "error"}})
 
 	// register Raft messages
 	message.Register(raft.RequestVoteArgs{Message: message.Message{Type: "RequestVote"}})

@@ -1,7 +1,5 @@
 package message
 
-import "log"
-
 var listeners = make([]func(c, data interface{}) interface{}, 0)
 
 func AddListener(listener func(c, data interface{}) interface{}) {
@@ -15,7 +13,7 @@ func Notify(c interface{}, data []byte) []interface{} {
 		panic(err)
 	}
 
-	log.Println("Received message:", msg)
+	// log.Println("Received message:", msg)
 	// log.Println("notify parsed", msg, reflect.TypeOf(msg))
 
 	replies := make([]interface{}, 0)

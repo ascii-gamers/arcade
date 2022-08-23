@@ -71,7 +71,7 @@ func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
 		pingTimes: make(map[string]time.Time),
 	}
 
-	log.Println("ME: ", c.ID)
+	// log.Println("ME: ", c.ID)
 	go func() {
 		for {
 			data, ok := <-c.recvCh
@@ -81,7 +81,7 @@ func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
 			}
 
 			for _, reply := range message.Notify(c, data) {
-				log.Println("REPLY: ", reply, c.ID)
+				// log.Println("REPLY: ", reply, c.ID)
 				n.Send(c, reply)
 			}
 		}
@@ -234,10 +234,12 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, 
 }
 
 func (n *Network) SignalReceived(messageID string, resp interface{}) {
+
 	n.pendingMessagesMux.RLock()
 	defer n.pendingMessagesMux.RUnlock()
-
+	log.Println("SIGNAL RECEIVED", n.pendingMessages)
 	if ch, ok := n.pendingMessages[messageID]; ok {
+		log.Println("SIGNAL RECEIVED", "found message")
 		ch <- resp
 		close(ch)
 	}

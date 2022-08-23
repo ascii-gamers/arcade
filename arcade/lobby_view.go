@@ -235,26 +235,26 @@ func (v *LobbyView) Render(s *Screen) {
 }
 
 func (v *LobbyView) Unload() {
-	if v.Lobby.HostID == arcade.Server.ID {
-		// send to all the players, similar to 'c'
-		lobbyID := v.Lobby.ID
+	// if v.Lobby.HostID == arcade.Server.ID {
+	// 	// send to all the players, similar to 'c'
+	// 	lobbyID := v.Lobby.ID
 
-		arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
-			if client.Distributor {
-				return true
-			}
+	// 	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
+	// 		if client.Distributor {
+	// 			return true
+	// 		}
 
-			arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
+	// 		arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
 
-			return true
-		})
-	} else {
-		// only send to host
-		host, _ := arcade.Server.Network.GetClient(v.Lobby.HostID)
-		arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
-	}
+	// 		return true
+	// 	})
+	// } else {
+	// 	// only send to host
+	// 	host, _ := arcade.Server.Network.GetClient(v.Lobby.HostID)
+	// 	arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
+	// }
 
-	arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
+	// arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {

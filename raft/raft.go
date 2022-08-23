@@ -665,7 +665,7 @@ func (rf *Raft) startNewTerm(term int, peer int, leader int) {
 func (rf *Raft) resetElectionTimeout() {
 	// Set electionTimeout at random duration within range from now
 	randomDuration := electionTimeoutMin + rand.Float64()*(electionTimeoutMax-electionTimeoutMin)
-	log.Println("[RAFT]:", "random duration", randomDuration)
+	// log.Println("[RAFT]:", "random duration", randomDuration)
 	rf.electionTimeout = time.Now().Add(time.Duration(randomDuration) * time.Millisecond)
 
 	// Call electionTicker at electionTimeout plus one millisecond
