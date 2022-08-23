@@ -2,7 +2,9 @@ package arcade
 
 import (
 	"encoding"
+	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"sync"
@@ -122,6 +124,21 @@ type TronCommand struct {
 	Direction TronDirection
 }
 
+func (tc TronCommand) String() string {
+	var dir string
+	switch tc.Direction {
+	case TronDown:
+		dir = "TronDown"
+	case TronUp:
+		dir = "TronUp"
+	case TronLeft:
+		dir = "TronLeft"
+	case TronRight:
+		dir = "TronRight"
+	}
+	return fmt.Sprintf("[CMD]%s: %s]", tc.PlayerID[:3], dir)
+}
+
 // BASIC QUEUE IMPLEMENTATION
 
 type BasicQueue[T any] []T
@@ -208,7 +225,7 @@ func NewTronGameView(lobby *Lobby) *TronGameView {
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 2000,
-			TimestepPeriod: 100,
+			TimestepPeriod: 200,
 			Timestep:       0,
 		},
 	}
@@ -534,19 +551,19 @@ func (tg *TronGameView) updateSelf() {
 
 }
 
-func copyGameState(gameState TronGameState) TronGameState {
-	collisions := gameState.Collisions
-	clientState := gameState.ClientStates
-	copy := gameState
-	copy.ClientStates = clientState
-	copy.Collisions = collisions
-	return copy
-}
-
 func (tg *TronGameView) updateWorkingGameState() {
-	log, commitIndex := tg.RaftServer.GetLog()
-	entries := log.GetEntries()[commitIndex:]
-	// fmt.Print(entries)
+	raftLog, commitIndex := tg.RaftServer.GetLog()
+	entries := raftLog.GetEntries()[commitIndex:]
+
+	convertedEntries := []TronCommand{}
+	for _, entry := range entries {
+		if cmd, ok := readLogEntryAsTronCmd(entry.Command); ok {
+			convertedEntries = append(convertedEntries, cmd)
+		}
+	}
+
+	// log.Println("[RAFT]:", "entries on", tg.Me, convertedEntries)
+
 	workingGameState := TronGameState{}
 	copier.CopyWithOption(&workingGameState, &tg.CommitedGameState, copier.Option{DeepCopy: true})
 
@@ -555,12 +572,13 @@ func (tg *TronGameView) updateWorkingGameState() {
 	lastDelayedTimeByPlayer := make(map[string]int)
 	var processedLogs BasicQueue[TronCommand]
 
-	if len(tg.MoveQueue) > 0 {
-		fmt.Print(len(tg.MoveQueue))
-	}
-
 	for _, entry := range entries {
-		cmd := entry.Command.(TronCommand)
+
+		cmd, ok := readLogEntryAsTronCmd(entry.Command)
+		if !ok {
+			log.Println("[RAFT]:", "FAILED TO PARSE ENTRY", entry.Command)
+			continue
+		}
 
 		if cmd.Timestep > latestTimestep {
 			latestTimestep = cmd.Timestep
@@ -968,4 +986,15 @@ func (v *TronGameView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
 }
 
 func (v *TronGameView) Unload() {
+}
+
+func readLogEntryAsTronCmd(entry interface{}) (TronCommand, bool) {
+	var cmd TronCommand
+
+	if jsonStr, err := json.Marshal(entry); err == nil {
+		if err := json.Unmarshal(jsonStr, &cmd); err == nil {
+			return cmd, true
+		}
+	}
+	return cmd, false
 }

@@ -144,6 +144,7 @@ func (c *Client) send(msg interface{}) {
 	// 	return
 	// }
 
+	// log.Println("SENDING: ", msg)
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data
 }

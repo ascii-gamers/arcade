@@ -4,7 +4,6 @@ import (
 	"arcade/arcade/message"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"reflect"
@@ -237,9 +236,7 @@ func (n *Network) SignalReceived(messageID string, resp interface{}) {
 
 	n.pendingMessagesMux.RLock()
 	defer n.pendingMessagesMux.RUnlock()
-	log.Println("SIGNAL RECEIVED", n.pendingMessages)
 	if ch, ok := n.pendingMessages[messageID]; ok {
-		log.Println("SIGNAL RECEIVED", "found message")
 		ch <- resp
 		close(ch)
 	}

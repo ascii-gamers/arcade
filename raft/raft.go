@@ -271,7 +271,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 	// }()
 
 	if args.Term < rf.currentTerm {
-		log.Println("[RAFT]: RequestVote", "Reject, args.Term < currentTerm")
+		// // //log.Println("[RAFT]: RequestVote", "Reject, args.Term < currentTerm")
 		return &reply
 	} else if args.Term > rf.currentTerm {
 		rf.startNewTerm(args.Term, NullPeer, NullPeer)
@@ -279,12 +279,12 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 	}
 
 	if rf.votedFor != NullPeer && rf.votedFor != args.CandidateID {
-		log.Println("[RAFT]: RequestVote", "Reject, already voted for "+strconv.Itoa(rf.votedFor))
+		// // //log.Println("[RAFT]: RequestVote", "Reject, already voted for "+strconv.Itoa(rf.votedFor))
 		return &reply
 	}
 
 	if rf.log.LastTerm() > args.LastLogTerm || (rf.log.LastTerm() == args.LastLogTerm && rf.log.LastIndex() > args.LastLogIndex) {
-		log.Println("[RAFT]: RequestVote", "Reject, log not up to date")
+		// // //log.Println("[RAFT]: RequestVote", "Reject, log not up to date")
 		return &reply
 	}
 
@@ -293,7 +293,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 	rf.votedFor = args.CandidateID
 	rf.persist(nil)
 
-	log.Println("[RAFT]: RequestVote", "Voted for "+strconv.Itoa(args.CandidateID))
+	// // //log.Println("[RAFT]: RequestVote", "Voted for "+strconv.Itoa(args.CandidateID))
 
 	reply.VoteGranted = true
 
@@ -602,9 +602,11 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	defer rf.Unlock()
 
 	if rf.state != Leader {
-		if rf.currentLeader > 0 {
+		log.Println("[RAFT]", "currentLeader", rf.currentLeader)
+		if rf.currentLeader >= 0 {
 			args := &ForwardedStartArgs{Message: message.Message{Type: "ForwardedStart"}, ClientId: rf.me, Command: command}
 			leader := rf.peers[rf.currentLeader]
+			log.Println("[RAFT]", "currentLeader2", leader.ID)
 			if reply, err := rf.network.SendAndReceive(leader, args); err == nil {
 				reply := reply.(ForwardedStartReply)
 				return reply.Index, reply.Term, false
@@ -626,6 +628,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 }
 
 func (rf *Raft) ForwardedStart(args *ForwardedStartArgs) *ForwardedStartReply {
+	log.Println("[RAFT]", "FORWARDEDSTART", args)
 	if rf.state == Leader {
 		ind, term, _ := rf.Start(args.Command)
 		return &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, ind, term}
@@ -665,7 +668,7 @@ func (rf *Raft) startNewTerm(term int, peer int, leader int) {
 func (rf *Raft) resetElectionTimeout() {
 	// Set electionTimeout at random duration within range from now
 	randomDuration := electionTimeoutMin + rand.Float64()*(electionTimeoutMax-electionTimeoutMin)
-	// log.Println("[RAFT]:", "random duration", randomDuration)
+	// // // //log.Println("[RAFT]:", "random duration", randomDuration)
 	rf.electionTimeout = time.Now().Add(time.Duration(randomDuration) * time.Millisecond)
 
 	// Call electionTicker at electionTimeout plus one millisecond
@@ -680,7 +683,7 @@ func (rf *Raft) runElection() {
 	rf.state = Candidate
 	rf.persist(nil)
 
-	log.Println("[RAFT]:", "runElection", "New term: "+strconv.Itoa(rf.currentTerm))
+	// // //log.Println("[RAFT]:", "runElection", "New term: "+strconv.Itoa(rf.currentTerm))
 
 	args := &RequestVoteArgs{
 		Message:      message.Message{Type: "RequestVote"},
@@ -703,11 +706,11 @@ func (rf *Raft) runElection() {
 
 		go func(votes chan *RequestVoteReply, peer *net.Client) {
 			if reply, err := rf.network.SendAndReceive(peer, args); err == nil {
-				log.Println("[RAFT]:", "RECEIVED vote", reply)
-				reply := reply.(*RequestVoteReply)
-				votes <- reply
+				// // //log.Println("[RAFT]:", "RECEIVED vote", reply)
+				reply := reply.(RequestVoteReply)
+				votes <- &reply
 			} else {
-				log.Println("[RAFT]:", "vote error", err)
+				// // //log.Println("[RAFT]:", "vote error", err)
 			}
 		}(votes, peer)
 	}
@@ -725,15 +728,15 @@ func (rf *Raft) runElection() {
 			rf.Lock()
 			defer rf.Unlock()
 
-			log.Println("[RAFT]:", "runElection", fmt.Sprintf("Received vote: %t, %d", reply.VoteGranted, reply.ClientId))
+			// // //log.Println("[RAFT]:", "runElection", fmt.Sprintf("Received vote: %t, %d", reply.VoteGranted, reply.ClientId))
 
 			if rf.state != Candidate || rf.currentTerm != args.Term {
-				log.Println("[RAFT]:", "runElection, return", "bruh wut")
+				// // //log.Println("[RAFT]:", "runElection, return", "bruh wut")
 				return
 			}
 
 			if reply.Term > rf.currentTerm {
-				log.Println("[RAFT]:", "runElection, return", "overriden")
+				// // //log.Println("[RAFT]:", "runElection, return", "overriden")
 				rf.startNewTerm(reply.Term, NullPeer, reply.ClientId)
 				rf.persist(nil)
 				return
@@ -746,7 +749,7 @@ func (rf *Raft) runElection() {
 			voteCount++
 			fmt.Print(voteCount, len(rf.peers)/2)
 			if voteCount <= len(rf.peers)/2 {
-				log.Println("[RAFT]:", "runElection, return", "not enough")
+				// // //log.Println("[RAFT]:", "runElection, return", "not enough")
 				return
 			}
 
@@ -755,7 +758,7 @@ func (rf *Raft) runElection() {
 				return
 			}
 
-			log.Println("[RAFT]:", "runElection", "Won election!")
+			// // //log.Println("[RAFT]:", "runElection", "Won election!")
 
 			rf.state = Leader
 			rf.nextIndex = make([]int, len(rf.peers))
@@ -880,8 +883,9 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 		prevLogTerm = rf.log.GetLastIncludedTerm()
 	}
 
+	log.Println("[RAFT]", "entries len", len(entries))
 	args := &AppendEntriesArgs{
-		Message:      message.Message{Type: "AppendEntriesArgs"},
+		Message:      message.Message{Type: "AppendEntries"},
 		Term:         rf.currentTerm,
 		ClientId:     rf.me,
 		PrevLogIndex: prevLogIndex,
@@ -1049,7 +1053,11 @@ func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
 		return rf.AppendEntries(&data)
 	case InstallSnapshotArgs:
 		return rf.InstallSnapshot(&data)
+	case ForwardedStartArgs:
+		return rf.ForwardedStart(&data)
+
 	}
+
 	return nil
 }
 
