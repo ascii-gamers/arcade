@@ -65,7 +65,9 @@ func NewServer(addr string, port int) *Server {
 		pingMessageTimes: make(map[string]time.Time),
 	}
 
+	message.AddListener(s.handleMessage)
 	go s.startHeartbeats()
+
 	return s
 }
 
@@ -129,7 +131,7 @@ func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 	return s.connectedClients
 }
 
-func (s *Server) handleMessage(client interface{}, msg interface{}) {
+func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	c := client.(*net.Client)
 
 	baseMsg := reflect.ValueOf(msg).FieldByName("Message").Interface().(message.Message)
@@ -146,9 +148,7 @@ func (s *Server) handleMessage(client interface{}, msg interface{}) {
 		}
 	}
 
-	// Process message and prepare response
-	var res interface{}
-
+	// Process message and return response
 	switch msg := msg.(type) {
 	case DisconnectMessage:
 		arcade.ViewManager.ProcessEvent(&ClientDisconnectEvent{
@@ -169,9 +169,9 @@ func (s *Server) handleMessage(client interface{}, msg interface{}) {
 
 			if ok {
 				s.Network.Send(recipient, msg)
-				return
+				return nil
 			} else {
-				res = NewErrorMessage("Invalid recipient")
+				return NewErrorMessage("Invalid recipient")
 			}
 		} else {
 			if arcade.Distributor {
@@ -192,7 +192,7 @@ func (s *Server) handleMessage(client interface{}, msg interface{}) {
 				arcade.ViewManager.ProcessEvent(NewHeartbeatEvent(msg.Metadata))
 
 				// Reply to heartbeat
-				res = NewHeartbeatReplyMessage(msg.Seq)
+				return NewHeartbeatReplyMessage(msg.Seq)
 			case HeartbeatReplyMessage:
 				if msg.RecipientID == s.ID {
 					s.Lock()
@@ -205,25 +205,12 @@ func (s *Server) handleMessage(client interface{}, msg interface{}) {
 					arcade.ViewManager.RequestDebugRender()
 				}
 			default:
-				res = ProcessMessage(c, msg)
+				return ProcessMessage(c, msg)
 			}
 		}
 	}
 
-	if res == nil {
-		return
-	} else if err, ok := res.(error); ok {
-		res = NewErrorMessage(err.Error())
-	}
-
-	// Set sender and recipient IDs
-	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(baseMsg.SenderID))
-	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(s.ID))
-
-	// Set message ID if there was one in the sent packet
-	reflect.ValueOf(res).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(baseMsg.MessageID))
-
-	s.Network.Send(c, res)
+	return nil
 }
 
 // startServer starts listening for connections on a given address.
