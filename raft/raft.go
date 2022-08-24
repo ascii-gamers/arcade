@@ -369,17 +369,17 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 
 	// 1
 	if args.Term < rf.currentTerm {
-		rf.print("AppendEntries", "Term too smol")
+		log.Println("[RAFT]", "AppendEntries", "Term too smol")
 		return reply
 	}
 
 	if args.Term > rf.currentTerm || rf.state == Candidate {
-		rf.print("AppendEntries", "New term: "+strconv.Itoa(rf.currentTerm))
+		log.Println("[RAFT]", "AppendEntries", "New term: "+strconv.Itoa(rf.currentTerm))
 		rf.startNewTerm(args.Term, NullPeer, args.ClientId)
 		rf.persist(nil)
 	}
 
-	rf.print("AppendEntries", fmt.Sprintf("Received %d entries, prevLogIndex=%d, conflictIndex=%d", len(args.Entries), args.PrevLogIndex, reply.ConflictIndex))
+	// log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Received %d entries, prevLogIndex=%d, conflictIndex=%d", len(args.Entries), args.PrevLogIndex, reply.ConflictIndex))
 
 	rf.resetElectionTimeout()
 
@@ -388,20 +388,20 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 	needsConflictIndexUpdate := false
 
 	if ok {
-		rf.print("AppendEntries", fmt.Sprintf("Entry index: %d, entry term: %d", entry.Index, entry.Term))
+		// log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Entry index: %d, entry term: %d", entry.Index, entry.Term))
 		needsConflictIndexUpdate = entry.Term != args.PrevLogTerm
 	} else if args.PrevLogIndex <= rf.log.GetLastIncludedIndex() && args.PrevLogTerm == rf.log.GetLastIncludedTerm() {
-		rf.print("AppendEntries", "Contains last included entry")
+		// log.Println("[RAFT]", "AppendEntries", "Contains last included entry")
 	} else if args.PrevLogIndex != 0 {
-		rf.print("AppendEntries", fmt.Sprintf("Log doesn't contain entry at index %d with term %d, lastIndex=%d, lastTerm=%d", args.PrevLogIndex, args.PrevLogTerm, rf.log.LastIndex(), rf.log.LastTerm()))
-		rf.print("AppendEntries", fmt.Sprintf("%v", rf.log.GetEntries()))
+		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Log doesn't contain entry at index %d with term %d, lastIndex=%d, lastTerm=%d", args.PrevLogIndex, args.PrevLogTerm, rf.log.LastIndex(), rf.log.LastTerm()))
+		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("%v", rf.log.GetEntries()))
 		return reply
 	} else if args.PrevLogIndex < 0 {
 		panic("prevLogIndex should never be negative")
 	}
 
 	if needsConflictIndexUpdate {
-		rf.print("AppendEntries", fmt.Sprintf("Failed condition 2, cmd=%v, idx=%d, %d != %d", entry.Command, entry.Index, entry.Term, args.PrevLogTerm))
+		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Failed condition 2, cmd=%v, idx=%d, %d != %d", entry.Command, entry.Index, entry.Term, args.PrevLogTerm))
 
 		rf.log.Iter(func(e LogEntry) bool {
 			if e.Term == entry.Term {
@@ -412,7 +412,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 			return true
 		})
 
-		rf.print("AppendEntries", fmt.Sprintf("Conflict index: %d", reply.ConflictIndex))
+		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Conflict index: %d", reply.ConflictIndex))
 
 		return reply
 	}
@@ -434,7 +434,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 		if _, ok := rf.log.GetEntry(entry.Index); !ok && entry.Index > rf.log.LastIndex() {
 			rf.log.AppendEntry(entry)
 			needsPersist = true
-			rf.print("AppendEntries", fmt.Sprintf("Appending, %v, %d", entry.Command, entry.Index))
+			// log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Appending, %v, %d", entry.Command, entry.Index))
 		}
 	}
 
@@ -446,7 +446,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 	if args.LeaderCommit > rf.commitIndex {
 		oldCommitIndex := rf.commitIndex
 		rf.commitIndex = min(args.LeaderCommit, rf.log.LastIndex())
-		rf.print("AppendEntries", fmt.Sprintf("Updated commit index from %d to %d", oldCommitIndex, rf.commitIndex))
+		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Updated commit index from %d to %d", oldCommitIndex, rf.commitIndex))
 		go rf.commit()
 	}
 
@@ -602,11 +602,12 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	defer rf.Unlock()
 
 	if rf.state != Leader {
-		log.Println("[RAFT]", "currentLeader", rf.currentLeader)
+		// log.Println("[RAFT]", "currentLeader", rf.currentLeader)
 		if rf.currentLeader >= 0 {
 			args := &ForwardedStartArgs{Message: message.Message{Type: "ForwardedStart"}, ClientId: rf.me, Command: command}
 			leader := rf.peers[rf.currentLeader]
-			log.Println("[RAFT]", "currentLeader2", leader.ID)
+			// log.Println("[RAFT]", "currentLeader2", leader.ID)
+			log.Println("[RAFT]", "sending forwardedstart")
 			if reply, err := rf.network.SendAndReceive(leader, args); err == nil {
 				reply := reply.(ForwardedStartReply)
 				return reply.Index, reply.Term, false
@@ -628,7 +629,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 }
 
 func (rf *Raft) ForwardedStart(args *ForwardedStartArgs) *ForwardedStartReply {
-	log.Println("[RAFT]", "FORWARDEDSTART", args)
+	log.Println("[RAFT]", "rec forwardedstart")
 	if rf.state == Leader {
 		ind, term, _ := rf.Start(args.Command)
 		return &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, ind, term}
@@ -883,7 +884,6 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 		prevLogTerm = rf.log.GetLastIncludedTerm()
 	}
 
-	log.Println("[RAFT]", "entries len", len(entries))
 	args := &AppendEntriesArgs{
 		Message:      message.Message{Type: "AppendEntries"},
 		Term:         rf.currentTerm,
@@ -895,15 +895,18 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 	}
 
 	go func() {
+		// log.Println("[RAFT]", "AppendEntries", len(args.Entries))
 		reply, err := rf.network.SendAndReceive(peer, args)
 
-		if err == nil || len(entries) == 0 {
+		if err != nil || len(entries) == 0 {
 			return
 		}
 
 		if reply, ok := reply.(AppendEntriesReply); ok {
 			rf.Lock()
 			defer rf.Unlock()
+
+			// log.Println("[RAFT]", "AppendEntries reply", reply)
 
 			if rf.killed() || rf.state != Leader || rf.currentTerm != args.Term {
 				return
@@ -916,10 +919,12 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 			}
 
 			if reply.Success {
+				// log.Println("[RAFT]", "AppendEntries", "advance index")
 				rf.matchIndex[server] = args.PrevLogIndex + len(entries)
 				rf.nextIndex[server] = rf.matchIndex[server] + 1
 				rf.print("sendAppendEntries", fmt.Sprintf("Success, updating nextIndex[%d] to %d", server, rf.nextIndex[server]))
 			} else {
+				// log.Println("[RAFT]", "AppendEntries", "conflict")
 				rf.nextIndex[server] = reply.ConflictIndex
 			}
 
@@ -1050,6 +1055,9 @@ func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
 	case RequestVoteArgs:
 		return rf.RequestVote(&data)
 	case AppendEntriesArgs:
+		defer func() {
+			// log.Println("[RAFT]", "resulting log len", len(rf.log.entries))
+		}()
 		return rf.AppendEntries(&data)
 	case InstallSnapshotArgs:
 		return rf.InstallSnapshot(&data)

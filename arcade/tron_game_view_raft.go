@@ -225,7 +225,7 @@ func NewTronGameView(lobby *Lobby) *TronGameView {
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 2000,
-			TimestepPeriod: 200,
+			TimestepPeriod: 100,
 			Timestep:       0,
 		},
 	}
@@ -552,8 +552,8 @@ func (tg *TronGameView) updateSelf() {
 }
 
 func (tg *TronGameView) updateWorkingGameState() {
-	raftLog, commitIndex := tg.RaftServer.GetLog()
-	entries := raftLog.GetEntries()[commitIndex:]
+	raftLog, _ := tg.RaftServer.GetLog()
+	entries := raftLog.GetEntries()
 
 	convertedEntries := []TronCommand{}
 	for _, entry := range entries {
@@ -656,6 +656,8 @@ func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int)
 				continue
 			}
 
+			gameState.Collisions = tg.setCollision(gameState.Collisions, clientState.X, clientState.Y, clientState.PlayerNum)
+
 			newX := clientState.X
 			newY := clientState.Y
 
@@ -675,14 +677,12 @@ func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int)
 			clientState.X = newX
 			clientState.Y = newY
 
-			gameState.Collisions = tg.setCollision(gameState.Collisions, clientState.X, clientState.Y, clientState.PlayerNum)
-
 			gameState.ClientStates[playerId] = clientState
 		}
 
 		// can def optimize out this 2nd loop
 		for playerId, clientState := range gameState.ClientStates {
-			if tg.shouldDie(clientState) {
+			if tg.shouldDie(clientState, gameState) {
 				gameState.ClientStates[playerId] = tg.die(clientState)
 			}
 		}
@@ -858,9 +858,9 @@ func getStartingPosAndDir() ([][2]int, []TronDirection) {
 	return [][2]int{{margin, margin}, {width - margin, height - margin}, {width - margin, margin}, {margin, height - margin}, {width / 2, margin}, {width - margin, height / 2}, {width / 2, height - margin}, {margin, height / 2}}, []TronDirection{TronRight, TronLeft, TronDown, TronUp, TronDown, TronLeft, TronUp, TronRight}
 }
 
-func (tg *TronGameView) shouldDie(player TronClientState) bool {
-	collides, playerNum := tg.getCollision(tg.WorkingGameState.Collisions, player.X, player.Y)
-	return tg.isOutOfBounds(player.X, player.Y) || (collides && player.PlayerNum != playerNum)
+func (tg *TronGameView) shouldDie(player TronClientState, gameState TronGameState) bool {
+	collides, _ := tg.getCollision(gameState.Collisions, player.X, player.Y)
+	return tg.isOutOfBounds(player.X, player.Y) || collides
 }
 
 func (tg *TronGameView) die(player TronClientState) TronClientState {
