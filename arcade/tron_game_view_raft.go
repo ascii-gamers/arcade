@@ -210,6 +210,7 @@ type TronGameView struct {
 	WorkingGameState  TronGameState
 	MoveQueue         []TronCommand
 	LatestInputDir    TronDirection
+	ApplyChan         chan raft.ApplyMsg
 }
 
 const CLIENT_LAG_TIMESTEP = 0
@@ -274,7 +275,7 @@ func (tg *TronGameView) Init() {
 			me = i
 		}
 	}
-	applyChan := make(chan raft.ApplyMsg)
+	tg.ApplyChan = make(chan raft.ApplyMsg)
 
 	clients := []*net.Client{}
 	for _, playerId := range tg.PlayerIDs {
@@ -289,7 +290,7 @@ func (tg *TronGameView) Init() {
 
 	// JANK
 	// fmt.Println("CLIENTS: ", clients)
-	tg.RaftServer = raft.Make(clients, me, applyChan, arcade.Server.Network)
+	tg.RaftServer = raft.Make(clients, me, tg.ApplyChan, arcade.Server.Network)
 
 	width, height := arcade.ViewManager.screen.displaySize()
 
@@ -533,8 +534,16 @@ func (tg *TronGameView) renderGame(s *Screen) {
 	}
 }
 
-func (tg *TronGameView) updateState() {
-
+// JANK: This applies entries in order without processing out of order timesteps. This could cause jumps in game state
+// i.e. entries {timestep}: [A{32}, B{24}, C{28}]. This would be processed as [A{32}, B{33}, C{37}], but cmd C could be
+// commited before timestep 37
+func (tg *TronGameView) handleApplyMsg() {
+	applyMsg := <-tg.ApplyChan
+	if applyMsg.CommandValid {
+		if cmd, ok := readLogEntryAsTronCmd(applyMsg.Command); ok {
+			tg.CommitedGameState = tg.applyCommandToGameState(tg.CommitedGameState, cmd)
+		}
+	}
 }
 
 func (tg *TronGameView) updateSelf() {
@@ -547,6 +556,10 @@ func (tg *TronGameView) updateSelf() {
 		tg.RaftServer.Start(cmd)
 		tg.MoveQueue = append(tg.MoveQueue, cmd)
 		needToProcessInput = false
+
+		myState := tg.getMyState()
+		myState.Direction = cmd.Direction
+		tg.WorkingGameState.ClientStates[tg.Me] = myState
 	}
 
 }
@@ -637,6 +650,17 @@ func (tg *TronGameView) updateWorkingGameState() {
 	tg.WorkingGameState = workingGameState
 }
 
+// applies game state without increasing timestep
+func (tg *TronGameView) applyCommandToGameState(gameState TronGameState, cmd TronCommand) TronGameState {
+	clientState := gameState.ClientStates[cmd.PlayerID]
+	switch cmd.Type {
+	case TronMoveCmd:
+		clientState.Direction = cmd.Direction
+	}
+	gameState.ClientStates[cmd.PlayerID] = clientState
+	return gameState
+}
+
 // blindly truncates move queue if id matches. Could potentially cut out earlier cmds in the moveQueue
 func (tg *TronGameView) truncateMoveQueueIfNecessary(cmd TronCommand) {
 	mu.Lock()
@@ -689,80 +713,6 @@ func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int)
 	}
 	return gameState
 }
-
-// func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, TronClientState]) {
-// 	mu.Lock()
-// 	defer mu.Unlock()
-// 	if data.ID != currGameUpdateId {
-// 		currGameUpdateId = data.ID
-// 		currFragments = 0
-// 		currCollisions = initCollisions()
-// 	}
-
-// 	gameState := data.GameUpdate
-// 	size := len(currCollisions)
-// 	currCollisions = append(append(currCollisions[:data.FragmentNum*size/FRAGMENTS], gameState.Collisions...), currCollisions[int(math.Min(float64(size), float64((data.FragmentNum+1)*size/FRAGMENTS))):]...)
-// 	currFragments += 1
-
-// 	if currFragments != FRAGMENTS {
-// 		return
-// 	}
-// 	gameState.Collisions = currCollisions
-// 	tg.GameState = gameState
-
-// 	for id, lastInp := range data.LastInps {
-// 		currClient := tg.ClientStates[id]
-// 		if lastInp >= currClient.CommitTimestep {
-// 			diff := lastInp - currClient.CommitTimestep
-
-// 			currClient.CommitTimestep = lastInp
-// 			currClient.PathX = currClient.PathX[int(math.Min(float64(diff), float64(len(currClient.PathX)))):]
-// 			currClient.PathY = currClient.PathY[int(math.Min(float64(diff), float64(len(currClient.PathY)))):]
-// 			if lastReceivedInp[id] < lastInp {
-// 				lastReceivedInp[id] = lastInp
-// 			}
-// 			tg.ClientStates[id] = currClient
-// 		} else {
-// 			panic("incoming client < currclient commitTimestep")
-// 		}
-// 	}
-// 	tg.recalculateCollisions()
-// }
-
-// func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientState]) {
-// 	mu.Lock()
-// 	defer mu.Unlock()
-// 	update := data.Update
-// 	state := tg.ClientStates[data.Id]
-
-// 	if state.CommitTimestep <= update.CommitTimestep {
-// 		if update.CommitTimestep <= state.Timestep+1 {
-// 			diff := update.CommitTimestep - state.CommitTimestep
-// 			update.PathX = append(state.PathX[:diff], update.PathX...)
-// 			update.PathY = append(state.PathY[:diff], update.PathY...)
-// 		} else {
-// 			update = tg.clientPredict(state, update.CommitTimestep-1) // client predict to fill gap
-// 			update.PathX = append(state.PathX, update.PathX...)
-// 			update.PathY = append(state.PathY, update.PathY...)
-// 		}
-// 	} else {
-// 		if update.Timestep >= state.CommitTimestep {
-// 			diff := state.CommitTimestep - update.CommitTimestep
-// 			update.PathX = update.PathX[diff:]
-// 			update.PathY = update.PathY[diff:]
-// 		} else {
-// 			panic("update out of date: " + fmt.Sprintf("%d [%d] < %d [%d]", update.CommitTimestep, len(update.PathX), state.CommitTimestep, len(state.PathX)))
-// 		}
-// 	}
-
-// 	update.CommitTimestep = state.CommitTimestep
-
-// 	tg.ClientStates[data.Id] = update
-// 	arcade.ViewManager.RequestRender()
-// 	tg.recalculateCollisions()
-
-// 	lastReceivedInp[data.Id] = update.Timestep
-// }
 
 func (tg *TronGameView) handleEndGame(data EndGameMessage) {
 	tg.WorkingGameState.Ended = true

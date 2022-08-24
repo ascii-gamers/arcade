@@ -748,7 +748,7 @@ func (rf *Raft) runElection() {
 			}
 
 			voteCount++
-			fmt.Print(voteCount, len(rf.peers)/2)
+
 			if voteCount <= len(rf.peers)/2 {
 				// // //log.Println("[RAFT]:", "runElection, return", "not enough")
 				return
