@@ -32,7 +32,7 @@ type Network struct {
 const timeoutInterval = time.Second
 const sendAndReceiveTimeout = time.Second
 
-func NewNetwork(me string, port int) *Network {
+func NewNetwork(me string, port int, distributor bool) *Network {
 	message.Register(PingMessage{Message: message.Message{Type: "ping"}})
 	message.Register(PongMessage{Message: message.Message{Type: "pong"}})
 	message.Register(RoutingMessage{Message: message.Message{Type: "routing"}})
@@ -41,10 +41,16 @@ func NewNetwork(me string, port int) *Network {
 		clients:         make(map[string]*Client),
 		me:              me,
 		port:            port,
+		distributor:     distributor,
 		pendingMessages: make(map[string]chan interface{}),
 	}
 
-	message.AddListener(n.processMessage)
+	message.AddListener(message.Listener{
+		Distributor: true,
+		ServerID:    n.me,
+		Handle:      n.processMessage,
+	})
+
 	return n
 }
 
@@ -110,23 +116,23 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	clientID := p.SenderID
 
 	c.Lock()
+	c.Distributor = p.Distributor
 	c.ID = clientID
 	c.ClientRoutingInfo = ClientRoutingInfo{
 		Distance:    float64(end.Sub(start)),
-		Distributor: n.distributor,
+		Distributor: p.Distributor,
 	}
 	c.Neighbor = true
 
 	if c.State == Disconnected {
 		c.State = Connected
-		distributor := c.Distributor
 		c.Unlock()
 
 		n.Lock()
 		n.clients[clientID] = c
 		n.Unlock()
 
-		if !distributor {
+		if !p.Distributor && n.Delegate != nil {
 			n.Delegate.ClientConnected(clientID)
 		}
 	} else {

@@ -2,7 +2,6 @@ package arcade
 
 import (
 	"arcade/arcade/message"
-	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"fmt"
 	"reflect"
@@ -55,9 +54,9 @@ type Server struct {
 }
 
 // NewServer creates the server with a given address.
-func NewServer(addr string, port int, mgr *ViewManager) *Server {
+func NewServer(addr string, port int, distributor bool, mgr *ViewManager) *Server {
 	id := uuid.NewString()
-	net := net.NewNetwork(id, port)
+	net := net.NewNetwork(id, port, distributor)
 
 	s := &Server{
 		mgr:              mgr,
@@ -68,7 +67,12 @@ func NewServer(addr string, port int, mgr *ViewManager) *Server {
 		pingMessageTimes: make(map[string]time.Time),
 	}
 
-	message.AddListener(s.handleMessage)
+	message.AddListener(message.Listener{
+		Distributor: true,
+		ServerID:    id,
+		Handle:      s.handleMessage,
+	})
+
 	go s.startHeartbeats()
 
 	return s
@@ -160,6 +164,12 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	switch msg := msg.(type) {
 	case DisconnectMessage:
 		s.Network.Disconnect(c.ID)
+	case net.PingMessage:
+		break
+	case net.PongMessage:
+		break
+	case net.RoutingMessage:
+		break
 	default:
 		if baseMsg.RecipientID != s.ID {
 			if arcade.Distributor {
@@ -228,7 +238,7 @@ func (s *Server) Start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	go multicast.Listen(s.ID, s)
+	// go multicast.Listen(s.ID, s)
 
 	for {
 		// Wait for new client connections

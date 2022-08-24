@@ -29,8 +29,8 @@ func Start() {
 	dist := flag.Bool("distributor", false, "Run as a distributor")
 	flag.BoolVar(dist, "d", false, "Run as a distributor")
 
-	distributorAddr := flag.String("distributor-addr", "54.80.111.42:6824", "Distributor address")
-	flag.StringVar(distributorAddr, "da", "54.80.111.42:6824", "Distributor address")
+	distributorAddr := flag.String("distributor-addr", "149.28.43.157:6824", "Distributor address")
+	flag.StringVar(distributorAddr, "da", "149.28.43.157:6824", "Distributor address")
 
 	port := flag.Int("port", 6824, "Port to listen on")
 	flag.IntVar(port, "p", 6824, "Port to listen on")
@@ -67,16 +67,16 @@ func Start() {
 	arcade.Distributor = *dist
 	arcade.Port = *port
 
-	// Start host server
-	mgr := NewViewManager()
-	arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port, mgr)
-	arcade.Server.Network.Delegate = mgr
-
 	if arcade.Distributor {
-		arcade.Server.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
+		arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port, *dist, nil)
 		arcade.Server.Start()
 		os.Exit(0)
 	}
+
+	// Start host server
+	mgr := NewViewManager()
+	arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port, *dist, mgr)
+	arcade.Server.Network.Delegate = mgr
 
 	go arcade.Server.Start()
 
@@ -85,9 +85,6 @@ func Start() {
 
 	// Connect to distributor
 	go arcade.Server.Network.Connect(*distributorAddr, "", nil)
-
-	// TODO: Make better solution for this later -- wait to connect to distributor
-	time.Sleep(10 * time.Millisecond)
 
 	// Start view manager
 	splashView := NewSplashView(mgr)

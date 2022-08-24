@@ -22,7 +22,11 @@ type ViewManager struct {
 
 func NewViewManager() *ViewManager {
 	mgr := &ViewManager{}
-	message.AddListener(mgr.ProcessMessage)
+
+	message.AddListener(message.Listener{
+		Handle: mgr.ProcessMessage,
+	})
+
 	return mgr
 }
 
