@@ -11,6 +11,8 @@ import (
 
 type LobbyCreateView struct {
 	View
+	mgr *ViewManager
+
 	selectedRow int
 }
 
@@ -46,8 +48,8 @@ var lcv_game_footer = []string{
 	"[P]ublish game       [C]ancel",
 }
 
-func NewLobbyCreateView() *LobbyCreateView {
-	return &LobbyCreateView{}
+func NewLobbyCreateView(mgr *ViewManager) *LobbyCreateView {
+	return &LobbyCreateView{mgr: mgr}
 }
 
 func (v *LobbyCreateView) Init() {
@@ -107,7 +109,7 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 			switch evt.Rune() {
 			case 'c':
 				if v.selectedRow != 0 || (v.selectedRow == 0 && !lcv_editing) {
-					arcade.ViewManager.SetView(NewGamesListView())
+					v.mgr.SetView(NewGamesListView(v.mgr))
 				}
 			case 'p':
 				// save things
@@ -122,7 +124,7 @@ func (v *LobbyCreateView) ProcessEvent(evt interface{}) {
 					intVar, _ := strconv.Atoi(lcv_playerOpt[lcv_game_user_input_indices[2]][lcv_game_user_input_indices[3]])
 
 					lobby := NewLobby(lcv_game_name, (lcv_game_user_input_indices[1] == 1), lcv_gameOpt[lcv_game_user_input_indices[2]], intVar, arcade.Server.ID)
-					arcade.ViewManager.SetView(NewLobbyView(lobby))
+					v.mgr.SetView(NewLobbyView(v.mgr, lobby))
 				}
 			}
 

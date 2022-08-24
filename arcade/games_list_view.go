@@ -1,6 +1,7 @@
 package arcade
 
 import (
+	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"encoding"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 
 type GamesListView struct {
 	View
+	mgr *ViewManager
 
 	mu sync.RWMutex
 
@@ -21,7 +23,6 @@ type GamesListView struct {
 	selectedRow  int
 	stopTickerCh chan bool
 
-	helloMessageTimes map[string]time.Time
 	lastTimeRefreshed int
 }
 
@@ -58,73 +59,91 @@ const (
 var glv_code_input_string = ""
 var glv_code = ""
 
-func NewGamesListView() *GamesListView {
-	view := &GamesListView{
+func NewGamesListView(mgr *ViewManager) *GamesListView {
+	return &GamesListView{
+		mgr:               mgr,
 		stopTickerCh:      make(chan bool),
 		lobbies:           make(map[string]*Lobby),
-		helloMessageTimes: make(map[string]time.Time),
+		lastTimeRefreshed: 3,
 	}
+}
 
+func (v *GamesListView) Init() {
 	ticker := time.NewTicker(time.Second)
 
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				// send out lobbyinfo
-				view.mu.Lock()
-				view.lastTimeRefreshed = (view.lastTimeRefreshed + 1) % 4
-				lastTimeRefreshed := view.lastTimeRefreshed
-				view.mu.Unlock()
-				if lastTimeRefreshed == 0 {
-					view.SendHelloMessages()
-				}
-				arcade.ViewManager.RequestRender()
+				v.mu.Lock()
+				v.lastTimeRefreshed = (v.lastTimeRefreshed + 1) % 6
 
-			case <-view.stopTickerCh:
+				if v.lastTimeRefreshed == 0 {
+					// Send out hello messages when the timer hits zero
+					go v.SendHelloMessages()
+				}
+
+				v.mu.Unlock()
+				v.mgr.RequestRender()
+			case <-v.stopTickerCh:
 				ticker.Stop()
 				return
 			}
 		}
 	}()
 
-	return view
-}
-
-func (v *GamesListView) Init() {
-	v.SendHelloMessages()
+	go v.SendHelloMessages()
 }
 
 func (v *GamesListView) SendHelloMessages() {
 	// Scan LAN for lobbies
-	go discoverMulticast()
+	go multicast.Discover(arcade.Server.Addr, arcade.Server.ID)
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
-		if client.ID == "" || client.Distributor {
+		if client.State != net.Connected || client.Distributor {
 			return true
 		}
 
-		arcade.Server.Network.Send(client, NewHelloMessage())
-
-		v.mu.Lock()
-		v.helloMessageTimes[client.ID] = time.Now()
-		v.mu.Unlock()
-
+		go v.QueryClient(client)
 		return true
 	})
 }
 
+// QueryClient sends a HelloMessage to the client and waits for a reply. If a
+// LobbyInfoMessage is received, the client immediately re-renders the view
+// with the new lobby included.
+func (v *GamesListView) QueryClient(client *net.Client) {
+	start := time.Now()
+	res, err := arcade.Server.Network.SendAndReceive(client, NewHelloMessage())
+	end := time.Now()
+
+	p, ok := res.(LobbyInfoMessage)
+
+	if !ok || err != nil {
+		return
+	}
+
+	v.mu.Lock()
+	p.Lobby.Ping = int(end.Sub(start).Milliseconds())
+	v.lobbies[p.Lobby.ID] = p.Lobby
+	v.mu.Unlock()
+
+	v.mgr.RequestRender()
+}
+
 func (v *GamesListView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
-	case *ClientConnectEvent:
+	case *ClientConnectedEvent:
 		if client, ok := arcade.Server.Network.GetClient(evt.ClientID); ok {
-			arcade.Server.Network.Send(client, NewHelloMessage())
-
-			v.mu.Lock()
-			v.helloMessageTimes[client.ID] = time.Now()
-			v.mu.Unlock()
+			go v.QueryClient(client)
 		}
+	case *ClientDisconnectedEvent:
+		v.mu.Lock()
+		delete(v.lobbies, evt.ClientID)
+		v.mu.Unlock()
+
+		v.mgr.RequestRender()
 	case *tcell.EventKey:
 		if len(err_msg) > 0 {
 			err_msg = ""
@@ -171,11 +190,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				switch evt.Rune() {
 				case 'c':
 					glv_join_box = ""
-					arcade.ViewManager.SetView(NewLobbyCreateView())
-				case 't':
-					// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
-					// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
-					// mgr.SetView(tg)
+					v.mgr.SetView(NewLobbyCreateView(v.mgr))
 				case 'j':
 					if len(v.lobbies) != 0 {
 						v.mu.RLock()
@@ -212,19 +227,12 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 
 func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
-	case LobbyInfoMessage:
-		v.mu.Lock()
-		p.Lobby.Ping = int(time.Since(v.helloMessageTimes[from.ID]).Milliseconds())
-		v.lobbies[p.Lobby.ID] = p.Lobby
-		v.mu.Unlock()
-
-		arcade.ViewManager.RequestRender()
 	case JoinReplyMessage:
 		if p.Error == OK {
 			err_msg = ""
 			glv_join_box = ""
 			glv_code_input_string = ""
-			arcade.ViewManager.SetView(NewLobbyView(p.Lobby))
+			v.mgr.SetView(NewLobbyView(v.mgr, p.Lobby))
 
 			arcade.Server.BeginHeartbeats(p.Lobby.HostID)
 		} else if p.Error == ErrWrongCode {
@@ -257,12 +265,6 @@ func (v *GamesListView) Render(s *Screen) {
 
 	width, height := s.displaySize()
 
-	// if glv_join_box == "" {
-	// 	sty_black := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorBlack)
-	// 	s.DrawBox(joinbox_X1, joinbox_Y1, joinbox_X2, joinbox_Y2, sty_black, true)
-
-	// }
-
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 
@@ -278,10 +280,9 @@ func (v *GamesListView) Render(s *Screen) {
 	s.DrawText((width-len(footer[0]))/2, height-2, sty, footer[0])
 
 	v.mu.Lock()
-	countdownMsg := fmt.Sprintf("Refreshing in %d", 4-v.lastTimeRefreshed)
-	// Draw countdown
+	countdownMsg := fmt.Sprintf("Refreshing in %d", 6-v.lastTimeRefreshed)
 
-	if v.lastTimeRefreshed == 0 {
+	if v.lastTimeRefreshed < 3 {
 		countdownMsg = "     Refreshing...     "
 	}
 	v.mu.Unlock()
@@ -363,6 +364,7 @@ func (v *GamesListView) Render(s *Screen) {
 		s.DrawText((width-len(codeHeader)-5)/2, joinbox_Y1+2, sty, codeHeader)
 		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader), joinbox_Y1+2, sty_bold, glv_code_input_string)
 		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader)+len(glv_code_input_string), joinbox_Y1+2, sty_bold, "    ")
+
 		if len(err_msg) > 0 {
 			shortString := err_msg + " Press any key to continue."
 			s.DrawText((width-len(shortString))/2, joinbox_Y1+4, sty_bold, shortString)

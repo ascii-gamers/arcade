@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"arcade/arcade/message"
+	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"fmt"
 	"reflect"
@@ -40,6 +41,7 @@ func (c *ConnectedClientInfo) GetMeanRTT() time.Duration {
 
 type Server struct {
 	sync.RWMutex
+	mgr *ViewManager
 
 	Network *net.Network
 
@@ -53,11 +55,12 @@ type Server struct {
 }
 
 // NewServer creates the server with a given address.
-func NewServer(addr string, port int) *Server {
+func NewServer(addr string, port int, mgr *ViewManager) *Server {
 	id := uuid.NewString()
 	net := net.NewNetwork(id, port)
 
 	s := &Server{
+		mgr:              mgr,
 		Addr:             addr,
 		Network:          net,
 		ID:               id,
@@ -79,12 +82,12 @@ func (s *Server) startHeartbeats() {
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
-				arcade.ViewManager.ProcessEvent(NewClientDisconnectEvent(clientID))
+				s.Network.Disconnect(clientID)
 				delete(s.connectedClients, clientID)
 				continue
 			}
 
-			metadata := arcade.ViewManager.GetHeartbeatMetadata()
+			metadata := s.mgr.GetHeartbeatMetadata()
 
 			client.Lock()
 			s.Network.Send(client, NewHeartbeatMessage(client.Seq, metadata))
@@ -136,6 +139,11 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 	baseMsg := reflect.ValueOf(msg).FieldByName("Message").Interface().(message.Message)
 
+	// Ping messages may not have a recipient ID set
+	if baseMsg.RecipientID == "" {
+		baseMsg.RecipientID = s.ID
+	}
+
 	// Signal message received if necessary
 	s.Network.SignalReceived(baseMsg.MessageID, msg)
 
@@ -151,10 +159,6 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	// Process message and return response
 	switch msg := msg.(type) {
 	case DisconnectMessage:
-		arcade.ViewManager.ProcessEvent(&ClientDisconnectEvent{
-			ClientID: c.ID,
-		})
-
 		s.Network.Disconnect(c.ID)
 	default:
 		if baseMsg.RecipientID != s.ID {
@@ -171,7 +175,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 				s.Network.Send(recipient, msg)
 				return nil
 			} else {
-				return NewErrorMessage("Invalid recipient")
+				return NewErrorMessage("invalid recipient")
 			}
 		} else {
 			if arcade.Distributor {
@@ -189,7 +193,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 				s.Unlock()
 
 				// Send heartbeat metadata to view
-				arcade.ViewManager.ProcessEvent(NewHeartbeatEvent(msg.Metadata))
+				s.mgr.ProcessEvent(NewHeartbeatEvent(msg.Metadata))
 
 				// Reply to heartbeat
 				return NewHeartbeatReplyMessage(msg.Seq)
@@ -202,10 +206,10 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 					}
 					s.Unlock()
 
-					arcade.ViewManager.RequestDebugRender()
+					s.mgr.RequestDebugRender()
 				}
 			default:
-				return ProcessMessage(c, msg)
+				return ProcessMessage(c, msg, s.mgr)
 			}
 		}
 	}
@@ -213,8 +217,8 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	return nil
 }
 
-// startServer starts listening for connections on a given address.
-func (s *Server) start() error {
+// Start starts listening for connections on a given address.
+func (s *Server) Start() error {
 	listener, err := kcp.Listen(s.Addr)
 
 	if err != nil {
@@ -224,7 +228,7 @@ func (s *Server) start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	go listenMulticast()
+	go multicast.Listen(s.ID, s)
 
 	for {
 		// Wait for new client connections
@@ -234,6 +238,17 @@ func (s *Server) start() error {
 			panic(err)
 		}
 
-		s.Network.Connect(conn.RemoteAddr().String(), conn)
+		s.Network.Connect(conn.RemoteAddr().String(), "", conn)
 	}
+}
+
+//
+// MulticastDelegate methods
+//
+
+func (s *Server) ClientDiscovered(addr, id string) {
+	s.RLock()
+	defer s.RUnlock()
+
+	s.Network.Connect(addr, id, nil)
 }

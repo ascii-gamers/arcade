@@ -17,6 +17,8 @@ import (
 type Network struct {
 	sync.RWMutex
 
+	Delegate NetworkDelegate
+
 	clients     map[string]*Client
 	distributor bool
 	dropRate    float64
@@ -51,76 +53,84 @@ func (n *Network) Addr() string {
 	return fmt.Sprintf("%s:%d", ip, n.port)
 }
 
-func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
-	n.Lock()
-	defer n.Unlock()
+func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
+	c, ok := n.GetClient(id)
 
-	// TODO: Handle this
-	for _, client := range n.clients {
-		if client.Addr == addr {
-			return nil, errors.New("already connected to " + addr)
+	if !ok || c.State == Disconnected {
+		c = &Client{
+			Delegate: n,
+			Addr:     addr,
+			ID:       id,
+			Neighbor: true,
+			recvCh:   make(chan []byte, maxBufferSize),
+			sendCh:   make(chan []byte, maxBufferSize),
 		}
-	}
 
-	c := &Client{
-		Addr:      addr,
-		Neighbor:  true,
-		recvCh:    make(chan []byte, maxBufferSize),
-		sendCh:    make(chan []byte, maxBufferSize),
-		pingTimes: make(map[string]time.Time),
-	}
+		go func() {
+			for {
+				data, ok := <-c.recvCh
 
-	// log.Println("ME: ", c.ID)
-	go func() {
-		for {
-			data, ok := <-c.recvCh
+				if !ok {
+					break
+				}
 
-			if !ok {
-				break
+				for _, reply := range message.Notify(c, data) {
+					n.Send(c, reply)
+				}
 			}
+		}()
 
-			for _, reply := range message.Notify(c, data) {
-				// log.Println("REPLY: ", reply, c.ID)
-				n.Send(c, reply)
+		if conn == nil {
+			var err error
+			conn, err = kcp.Dial(c.Addr)
+
+			if err != nil {
+				return nil, err
 			}
 		}
-	}()
 
-	if conn == nil {
-		var err error
-		conn, err = kcp.Dial(c.Addr)
-
-		if err != nil {
-			return nil, err
-		}
+		c.start(conn)
 	}
 
-	c.start(conn)
+	// Send ping and wait for reply
+	start := time.Now()
+	res, err := n.SendAndReceive(c, NewPingMessage())
+	end := time.Now()
 
-	c.connectedCh = make(chan bool)
+	p, ok := res.(PongMessage)
 
-	msg := NewPingMessage()
-	msg.Message.MessageID = uuid.NewString()
+	if !ok || err != nil {
+		c.Lock()
+		c.State = TimedOut
+		c.Unlock()
+
+		return nil, errors.New("timed out")
+	}
+
+	clientID := p.SenderID
 
 	c.Lock()
-	c.pingTimes[msg.Message.MessageID] = time.Now()
-	c.Unlock()
+	c.ID = clientID
+	c.ClientRoutingInfo = ClientRoutingInfo{
+		Distance:    float64(end.Sub(start)),
+		Distributor: n.distributor,
+	}
+	c.Neighbor = true
 
-	n.Send(c, msg)
+	if c.State == Disconnected {
+		c.State = Connected
+		distributor := c.Distributor
+		c.Unlock()
 
-	// Timeout if we don't receive a response
-	time.AfterFunc(timeoutInterval, func() {
-		c.Lock()
-		defer c.Unlock()
+		n.Lock()
+		n.clients[clientID] = c
+		n.Unlock()
 
-		if c.State != Connected {
-			c.State = TimedOut
-			c.connectedCh <- false
+		if !distributor {
+			n.Delegate.ClientConnected(clientID)
 		}
-	})
-
-	if !<-c.connectedCh {
-		return nil, errors.New("client timed out")
+	} else {
+		c.Unlock()
 	}
 
 	go n.PropagateRoutes()
@@ -135,16 +145,7 @@ func (n *Network) Disconnect(id string) {
 		return
 	}
 
-	c.Lock()
-	defer c.Unlock()
-
-	close(c.sendCh)
-	close(c.recvCh)
-	close(c.connectedCh)
-
-	if c.conn != nil {
-		c.conn.Close()
-	}
+	c.disconnect()
 }
 
 func (n *Network) GetClient(id string) (*Client, bool) {
@@ -157,9 +158,10 @@ func (n *Network) GetClient(id string) (*Client, bool) {
 
 func (n *Network) ClientsRange(f func(*Client) bool) {
 	n.RLock()
-	defer n.RUnlock()
+	clients := n.clients
+	n.RUnlock()
 
-	for _, client := range n.clients {
+	for _, client := range clients {
 		if !f(client) {
 			break
 		}
@@ -222,7 +224,7 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, 
 	recvMsg, ok := <-recvCh
 
 	if !ok {
-		return nil, fmt.Errorf("Timed out")
+		return nil, fmt.Errorf("timed out")
 	}
 
 	n.pendingMessagesMux.Lock()
@@ -343,4 +345,12 @@ func (n *Network) SetDropRate(rate float64) {
 	defer n.Unlock()
 
 	n.dropRate = rate
+}
+
+//
+// ClientDelegate methods
+//
+
+func (n *Network) ClientDisconnected(clientID string) {
+	n.Delegate.ClientDisconnected(clientID)
 }

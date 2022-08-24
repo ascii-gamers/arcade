@@ -12,6 +12,7 @@ import (
 
 type LobbyView struct {
 	View
+	mgr *ViewManager
 
 	Lobby *Lobby
 }
@@ -41,8 +42,11 @@ var lobby_footer_nonhost = []string{
 	"[C]ancel",
 }
 
-func NewLobbyView(lobby *Lobby) *LobbyView {
-	return &LobbyView{Lobby: lobby}
+func NewLobbyView(mgr *ViewManager, lobby *Lobby) *LobbyView {
+	return &LobbyView{
+		mgr:   mgr,
+		Lobby: lobby,
+	}
 }
 
 func (v *LobbyView) Init() {
@@ -50,7 +54,7 @@ func (v *LobbyView) Init() {
 
 func (v *LobbyView) ProcessEvent(evt interface{}) {
 	switch evt := evt.(type) {
-	case *ClientDisconnectEvent:
+	case *ClientDisconnectedEvent:
 		if v.Lobby.HostID == arcade.Server.ID {
 			v.Lobby.RemovePlayer(evt.ClientID)
 		}
@@ -75,17 +79,12 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
 
-					v.Lobby = &Lobby{}
-
 					arcade.Server.EndAllHeartbeats()
-					arcade.ViewManager.SetView(NewGamesListView())
+					v.mgr.SetView(NewGamesListView(v.mgr))
 				} else {
 					// first extract lobbyID for messages
 					lobbyID := v.Lobby.ID
 					v.Lobby.mu.RUnlock()
-
-					// get rid of lobby
-					v.Lobby = &Lobby{}
 
 					arcade.Server.EndAllHeartbeats()
 					// send updates to everyone
@@ -100,7 +99,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 						return true
 					})
 
-					arcade.ViewManager.SetView(NewGamesListView())
+					v.mgr.SetView(NewGamesListView(v.mgr))
 
 				}
 			case 's':
@@ -113,7 +112,7 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 							arcade.Server.Network.Send(client, NewStartGameMessage(v.Lobby.ID))
 						}
 					}
-					NewGame(v.Lobby)
+					NewGame(v.mgr, v.Lobby)
 				}
 				v.Lobby.mu.RUnlock()
 			}
@@ -124,7 +123,6 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case HelloMessage:
-		// return nil
 		return NewLobbyInfoMessage(v.Lobby)
 	case JoinMessage:
 		if v.Lobby.HostID == arcade.Server.ID {
@@ -156,18 +154,18 @@ func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} 
 		}
 
 		arcade.Server.EndHeartbeats(p.PlayerID)
-		arcade.ViewManager.RequestRender()
+		v.mgr.RequestRender()
 	case LobbyEndMessage:
 		// get rid of lobby
 		if v.Lobby.ID == p.LobbyID {
 			v.Lobby = &Lobby{}
 
 			arcade.Server.EndAllHeartbeats()
-			arcade.ViewManager.SetView(NewGamesListView())
+			v.mgr.SetView(NewGamesListView(v.mgr))
 		}
 	case StartGameMessage:
 		if p.GameID == v.Lobby.ID {
-			NewGame(v.Lobby)
+			NewGame(v.mgr, v.Lobby)
 		}
 		return nil
 	}

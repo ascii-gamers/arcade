@@ -15,8 +15,6 @@ type Arcade struct {
 	Port        int
 	LAN         bool
 
-	ViewManager *ViewManager
-
 	Server *Server
 }
 
@@ -25,7 +23,6 @@ var arcade = NewArcade()
 func NewArcade() *Arcade {
 	return &Arcade{
 		Distributor: false,
-		ViewManager: NewViewManager(),
 	}
 }
 
@@ -48,6 +45,7 @@ func Start() {
 	}
 
 	defer f.Close()
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.SetOutput(f)
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
@@ -56,6 +54,7 @@ func Start() {
 	message.Register(ClientUpdateMessage[TronClientState]{Message: message.Message{Type: "client_update"}})
 	message.Register(DisconnectMessage{Message: message.Message{Type: "disconnect"}})
 	message.Register(EndGameMessage{Message: message.Message{Type: "end_game"}})
+	message.Register(ErrorMessage{Message: message.Message{Type: "error"}})
 	message.Register(GameUpdateMessage[TronGameState, TronClientState]{Message: message.Message{Type: "game_update"}})
 	message.Register(HeartbeatMessage{Message: message.Message{Type: "heartbeat"}})
 	message.Register(HeartbeatReplyMessage{Message: message.Message{Type: "heartbeat_reply"}})
@@ -82,26 +81,28 @@ func Start() {
 	arcade.Port = *port
 
 	// Start host server
-	arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port)
+	mgr := NewViewManager()
+	arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port, mgr)
+	arcade.Server.Network.Delegate = mgr
 
 	if arcade.Distributor {
 		arcade.Server.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
-		arcade.Server.start()
+		arcade.Server.Start()
 		os.Exit(0)
 	}
 
-	go arcade.Server.start()
+	go arcade.Server.Start()
 
 	// TODO: Make better solution for this later -- wait for server to start
 	time.Sleep(10 * time.Millisecond)
 
 	// Connect to distributor
-	go arcade.Server.Network.Connect(*distributorAddr, nil)
+	go arcade.Server.Network.Connect(*distributorAddr, "", nil)
 
 	// TODO: Make better solution for this later -- wait to connect to distributor
 	time.Sleep(10 * time.Millisecond)
 
 	// Start view manager
-	splashView := NewSplashView()
-	arcade.ViewManager.Start(splashView)
+	splashView := NewSplashView(mgr)
+	mgr.Start(splashView)
 }

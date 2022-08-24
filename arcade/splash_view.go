@@ -12,6 +12,7 @@ import (
 
 type SplashView struct {
 	View
+	mgr *ViewManager
 
 	mu            sync.RWMutex
 	displayFooter bool
@@ -39,8 +40,9 @@ var splashHeader2 = []string{
 
 var splashFooter = "Press any key to start"
 
-func NewSplashView() *SplashView {
+func NewSplashView(mgr *ViewManager) *SplashView {
 	view := &SplashView{
+		mgr:           mgr,
 		displayFooter: true,
 		stopTickerCh:  make(chan bool),
 	}
@@ -55,7 +57,7 @@ func NewSplashView() *SplashView {
 				view.displayFooter = !view.displayFooter
 				view.mu.Unlock()
 
-				arcade.ViewManager.RequestRender()
+				view.mgr.RequestRender()
 			case <-view.stopTickerCh:
 				ticker.Stop()
 				return
@@ -73,8 +75,7 @@ func (v *SplashView) Init() {
 func (v *SplashView) ProcessEvent(evt interface{}) {
 	switch evt.(type) {
 	case *tcell.EventKey:
-		arcade.ViewManager.SetView(NewGamesListView())
-		// arcade.ViewManager.SetView(NewUsernameView())
+		v.mgr.SetView(NewGamesListView(v.mgr))
 	}
 }
 
