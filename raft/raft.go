@@ -103,6 +103,9 @@ type Raft struct {
 	matchIndex []int
 
 	currentLeader int
+
+	timestepPeriod int
+	timestep       int
 }
 
 func (rf *Raft) print(function, message string) {
@@ -322,6 +325,8 @@ type AppendEntriesArgs struct {
 
 	// Leader's commitIndex
 	LeaderCommit int
+
+	Timestep int
 }
 
 //
@@ -417,6 +422,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 		return reply
 	}
 
+	rf.timestep = args.Timestep
 	reply.Success = true
 
 	// 3
@@ -618,7 +624,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 
 	rf.print("Start", fmt.Sprintf("Starting with command %v", command))
 
-	entry := LogEntry{rf.currentTerm, rf.log.LastIndex() + 1, command}
+	entry := LogEntry{rf.currentTerm, rf.log.LastIndex() + 1, command, rf.timestep}
 	rf.print("Start", fmt.Sprintf("Appending entry with index %d", entry.Index))
 	rf.log.AppendEntry(entry)
 	rf.persist(nil)
@@ -674,6 +680,27 @@ func (rf *Raft) resetElectionTimeout() {
 
 	// Call electionTicker at electionTimeout plus one millisecond
 	time.AfterFunc(time.Until(rf.electionTimeout.Add(time.Millisecond)), rf.electionTicker)
+}
+
+func (rf *Raft) StartTime() {
+	rf.startTimestepCounter()
+}
+
+func (rf *Raft) startTimestepCounter() {
+	go func() {
+		for {
+			rf.Lock()
+			rf.timestep += 1
+			rf.Unlock()
+			time.Sleep(time.Duration(rf.timestepPeriod) * time.Millisecond)
+		}
+	}()
+}
+
+func (rf *Raft) GetTimestep() int {
+	rf.RLock()
+	defer rf.RUnlock()
+	return rf.timestep
 }
 
 func (rf *Raft) runElection() {
@@ -892,6 +919,7 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 		PrevLogTerm:  prevLogTerm,
 		Entries:      entries,
 		LeaderCommit: rf.commitIndex,
+		Timestep:     rf.timestep,
 	}
 
 	go func() {
@@ -1080,7 +1108,7 @@ func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
 //
-func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Network) *Raft {
+func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Network, timestepPeriod int) *Raft {
 	rand.Seed(time.Now().UnixNano())
 
 	rf := &Raft{}
@@ -1098,6 +1126,10 @@ func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Netwo
 	rf.nextIndex = make([]int, len(peers))
 	rf.matchIndex = make([]int, len(peers))
 	rf.currentLeader = -1
+
+	rf.timestepPeriod = timestepPeriod
+	rf.timestep = 0
+
 	// start ticker goroutine to start elections
 	rf.resetElectionTimeout()
 

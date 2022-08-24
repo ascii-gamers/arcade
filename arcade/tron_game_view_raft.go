@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"sort"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -266,6 +265,7 @@ var countdownNum = 3
 3. When applyMsg is received, directly modify the base game state
 
 */
+
 func (tg *TronGameView) Init() {
 
 	// JANK
@@ -290,7 +290,7 @@ func (tg *TronGameView) Init() {
 
 	// JANK
 	// fmt.Println("CLIENTS: ", clients)
-	tg.RaftServer = raft.Make(clients, me, tg.ApplyChan, arcade.Server.Network)
+	tg.RaftServer = raft.Make(clients, me, tg.ApplyChan, arcade.Server.Network, tg.TimestepPeriod)
 
 	width, height := arcade.ViewManager.screen.displaySize()
 
@@ -300,7 +300,7 @@ func (tg *TronGameView) Init() {
 	for i, playerID := range tg.PlayerIDs {
 		x := startingPos[i][0]
 		y := startingPos[i][1]
-		clientStates[playerID] = TronClientState{tg.Timestep, true, TRON_COLORS[i], x, y, startingDir[i], i}
+		clientStates[playerID] = TronClientState{tg.getTimestep(), true, TRON_COLORS[i], x, y, startingDir[i], i}
 		lastReceivedInp[playerID] = 0
 	}
 
@@ -319,8 +319,9 @@ func (tg *TronGameView) Init() {
 		}
 
 		gameRenderState = TronGameScreen
+		tg.RaftServer.StartTime()
 		for !tg.WorkingGameState.Ended {
-			tg.Timestep += 1
+			// tg.Timestep += 1
 			tg.updateSelf()
 			arcade.ViewManager.RequestRender()
 			time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
@@ -551,27 +552,34 @@ func (tg *TronGameView) updateSelf() {
 	defer mu.Unlock()
 	if needToProcessInput {
 
-		cmd := TronCommand{uuid.NewString(), TronMoveCmd, tg.Timestep, tg.Me, tg.LatestInputDir}
+		currentTimestep := tg.getTimestep()
+		cmd := TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.LatestInputDir}
 
 		tg.RaftServer.Start(cmd)
 		tg.MoveQueue = append(tg.MoveQueue, cmd)
 		needToProcessInput = false
 
-		myState := tg.getMyState()
-		myState.Direction = cmd.Direction
-		tg.WorkingGameState.ClientStates[tg.Me] = myState
+		// myState := tg.getMyState()
+		// myState.Direction = cmd.Direction
+		// tg.WorkingGameState.ClientStates[tg.Me] = myState
 	}
 
 }
 
 func (tg *TronGameView) updateWorkingGameState() {
+	mu.Lock()
+	defer mu.Unlock()
+
 	raftLog, _ := tg.RaftServer.GetLog()
 	entries := raftLog.GetEntries()
 
-	convertedEntries := []TronCommand{}
+	var commands BasicQueue[TronCommand]
 	for _, entry := range entries {
 		if cmd, ok := readLogEntryAsTronCmd(entry.Command); ok {
-			convertedEntries = append(convertedEntries, cmd)
+			cmd.Timestep = entry.Timestep
+			commands.push(cmd)
+
+			tg.truncateMoveQueueIfNecessary(cmd)
 		}
 	}
 
@@ -581,54 +589,67 @@ func (tg *TronGameView) updateWorkingGameState() {
 	copier.CopyWithOption(&workingGameState, &tg.CommitedGameState, copier.Option{DeepCopy: true})
 
 	// process badly ordered cmd logs
-	latestTimestep := -1
-	lastDelayedTimeByPlayer := make(map[string]int)
-	var processedLogs BasicQueue[TronCommand]
+	// latestTimestep := -1
+	// lastDelayedTimeByPlayer := make(map[string]int)
+	// var processedLogs BasicQueue[TronCommand]
 
-	for _, entry := range entries {
+	// for _, entry := range entries {
 
-		cmd, ok := readLogEntryAsTronCmd(entry.Command)
-		if !ok {
-			log.Println("[RAFT]:", "FAILED TO PARSE ENTRY", entry.Command)
-			continue
-		}
+	// 	cmd, ok := readLogEntryAsTronCmd(entry.Command)
+	// 	if !ok {
+	// 		log.Println("[RAFT]:", "FAILED TO PARSE ENTRY", entry.Command)
+	// 		continue
+	// 	}
 
-		if cmd.Timestep > latestTimestep {
-			latestTimestep = cmd.Timestep
-			lastDelayedTimeByPlayer = make(map[string]int)
-		}
+	// 	if cmd.Timestep > latestTimestep {
+	// 		latestTimestep = cmd.Timestep
+	// 		lastDelayedTimeByPlayer = make(map[string]int)
+	// 	}
 
-		if cmd.Timestep < latestTimestep {
-			ogTimestep := cmd.Timestep
-			if lastTime, ok := lastDelayedTimeByPlayer[cmd.PlayerID]; ok {
-				cmd.Timestep = int(math.Max(float64(latestTimestep), float64(latestTimestep+cmd.Timestep-lastTime)))
-			} else {
-				cmd.Timestep = latestTimestep
-			}
-			lastDelayedTimeByPlayer[cmd.PlayerID] = ogTimestep
-		}
-		processedLogs.push(cmd)
+	// 	if cmd.Timestep < latestTimestep {
+	// 		ogTimestep := cmd.Timestep
+	// 		if lastTime, ok := lastDelayedTimeByPlayer[cmd.PlayerID]; ok {
+	// 			cmd.Timestep = int(math.Max(float64(latestTimestep), float64(latestTimestep+cmd.Timestep-lastTime)))
+	// 		} else {
+	// 			cmd.Timestep = latestTimestep
+	// 		}
+	// 		lastDelayedTimeByPlayer[cmd.PlayerID] = ogTimestep
+	// 	}
+	// 	processedLogs.push(cmd)
 
-		tg.truncateMoveQueueIfNecessary(cmd)
-	}
+	// 	tg.truncateMoveQueueIfNecessary(cmd)
+	// }
 
-	if latestTimestep > tg.Timestep {
-		tg.Timestep = latestTimestep
-	}
+	// if latestTimestep > tg.Timestep {
+	// 	tg.Timestep = latestTimestep
+	// }
 
 	// JANK: mixing in move queue in to processed logs instead of replaying on top, could cause jumps
-	processedLogs.push(tg.MoveQueue...)
+	// processedLogs.push(tg.MoveQueue...)
+	if len(tg.MoveQueue) > 0 {
+		if len(commands) > 0 && commands[len(commands)-1].Timestep > tg.MoveQueue[0].Timestep {
+			diff := commands[len(commands)-1].Timestep - tg.MoveQueue[0].Timestep
+			for _, move := range tg.MoveQueue {
+				move.Timestep += diff
+				commands.push(move)
+			}
+		} else {
+			commands.push(tg.MoveQueue...)
+		}
+	}
 
-	sort.Slice(processedLogs, func(i, j int) bool {
-		return processedLogs[i].Timestep < processedLogs[j].Timestep
-	})
+	// sort.Slice(processedLogs, func(i, j int) bool {
+	// 	return processedLogs[i].Timestep < processedLogs[j].Timestep
+	// })
 
-	currentTimestep := workingGameState.CommitedTimeStep + 1
+	currentTimestep := tg.getTimestep()
+	log.Println("CURENT TIMESTEP", currentTimestep)
+	workingTimestep := workingGameState.CommitedTimeStep + 1
 	// replay cmds on top of gamestate
-	for len(processedLogs) > 0 || currentTimestep <= tg.Timestep {
-		if len(processedLogs) > 0 && processedLogs[0].Timestep == currentTimestep {
+	for len(commands) > 0 || workingTimestep <= currentTimestep {
+		if len(commands) > 0 && commands[0].Timestep == workingTimestep {
 			// fmt.Print("HAS PROCESSED LOGS AHHH")
-			if cmd, ok := processedLogs.pop(); ok {
+			if cmd, ok := commands.pop(); ok {
 				clientState := workingGameState.ClientStates[cmd.PlayerID]
 
 				switch cmd.Type {
@@ -643,7 +664,7 @@ func (tg *TronGameView) updateWorkingGameState() {
 			// apply prev timestep state change
 			// fmt.Printf("B:%d\n ", workingGameState.ClientStates[tg.Me].Direction)
 			workingGameState = tg.clientPredict(workingGameState, 1)
-			currentTimestep += 1
+			workingTimestep += 1
 		}
 	}
 	// fmt.Print("after: ", workingGameState.ClientStates)
@@ -663,8 +684,6 @@ func (tg *TronGameView) applyCommandToGameState(gameState TronGameState, cmd Tro
 
 // blindly truncates move queue if id matches. Could potentially cut out earlier cmds in the moveQueue
 func (tg *TronGameView) truncateMoveQueueIfNecessary(cmd TronCommand) {
-	mu.Lock()
-	defer mu.Unlock()
 	for i, move := range tg.MoveQueue {
 		if move.Id == cmd.Id {
 			tg.MoveQueue = tg.MoveQueue[i+1:]
@@ -755,50 +774,6 @@ func (tg *TronGameView) sendEndGame(winner string) {
 	}
 }
 
-func (g *Game[GS, CS]) sendClientUpdate(update CS) {
-	// clientUpdate := &ClientUpdateMessage[CS]{Message: Message{Type: "client_update"}, Id: g.Me, Update: update}
-
-	// for clientId := range g.ClientStates {
-	// 	if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != g.Me {
-	// 		arcade.Server.Network.Send(client, clientUpdate)
-	// 	}
-	// }
-}
-
-// func (tg *TronGameView) sendGameUpdate() {
-// 	if tg.Me != tg.HostID {
-// 		return
-// 	}
-
-// 	arcade.Server.RLock()
-// 	defer arcade.Server.RUnlock()
-
-// 	// data := &GameUpdateMessage[TronGameState, TronClientState]{Message{Type: "game_update"}, gameState, lastReceivedInp, id, i}
-
-// 	for clientId := range tg.ClientStates {
-// 		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != tg.Me {
-// 			id := uuid.NewString()
-// 			for i := 0; i < FRAGMENTS; i++ {
-// 				gameState := tg.GameState
-// 				size := len(gameState.Collisions)
-// 				frag := gameState.Collisions[i*size/FRAGMENTS : int(math.Min(float64(size), float64((i+1)*size/FRAGMENTS)))]
-// 				gameState.Collisions = frag
-// 				data := &GameUpdateMessage[TronGameState, TronClientState]{message.Message{Type: "game_update"}, gameState, lastReceivedInp, id, i}
-// 				arcade.Server.Network.Send(client, data)
-// 			}
-// 		}
-// 	}
-// }
-
-// func (tg *TronGameView) recalculateCollisions() {
-// 	copy(localCollisions, tg.GameState.Collisions)
-// 	for _, player := range tg.ClientStates {
-// 		for i := 0; i < len(player.PathX); i++ {
-// 			localCollisions = tg.setCollision(localCollisions, player.PathX[i], player.PathY[i], player.PlayerNum)
-// 		}
-// 	}
-// }
-
 // GAME FUNCTIONS
 func getStartingPosAndDir() ([][2]int, []TronDirection) {
 	width, height := arcade.ViewManager.screen.displaySize()
@@ -846,6 +821,10 @@ func (tg *TronGameView) setCollision(collisions []byte, x int, y int, playerNum 
 		collisions[ind/2] |= byte(playerNum<<1+1) << ((ind % 2) * 4)
 	}
 	return collisions
+}
+
+func (tg *TronGameView) getTimestep() int {
+	return tg.RaftServer.GetTimestep()
 }
 
 // returns bool of collision and player num

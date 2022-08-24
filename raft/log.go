@@ -6,9 +6,10 @@ import (
 )
 
 type LogEntry struct {
-	Term    int
-	Index   int
-	Command interface{}
+	Term     int
+	Index    int
+	Command  interface{}
+	Timestep int
 }
 
 type Log struct {
