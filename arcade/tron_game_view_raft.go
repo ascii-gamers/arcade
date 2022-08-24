@@ -206,6 +206,7 @@ Send an id with each own player move, maintain client prediction up until that m
 
 type TronGameView struct {
 	View
+	mgr *ViewManager
 	Game[TronGameState, TronClientState]
 	CommitedGameState TronGameState
 	WorkingGameState  TronGameState
@@ -217,8 +218,9 @@ type TronGameView struct {
 const CLIENT_LAG_TIMESTEP = 0
 const FRAGMENTS = 2
 
-func NewTronGameView(lobby *Lobby) *TronGameView {
+func NewTronGameView(mgr *ViewManager, lobby *Lobby) *TronGameView {
 	return &TronGameView{
+		mgr: mgr,
 		Game: Game[TronGameState, TronClientState]{
 			// ID is the lobby ID, not the player
 			ID:             lobby.ID,
@@ -290,10 +292,10 @@ func (tg *TronGameView) Init() {
 	// fmt.Println("CLIENTS: ", clients)
 	tg.RaftServer = raft.Make(clients, me, tg.ApplyChan, arcade.Server.Network, tg.TimestepPeriod, c)
 
-	width, height := arcade.ViewManager.screen.displaySize()
+	width, height := tg.mgr.screen.displaySize()
 
 	clientStates := make(map[string]TronClientState)
-	startingPos, startingDir := getStartingPosAndDir()
+	startingPos, startingDir := tg.getStartingPosAndDir()
 
 	for i, playerID := range tg.PlayerIDs {
 		x := startingPos[i][0]
@@ -304,8 +306,8 @@ func (tg *TronGameView) Init() {
 
 	// fmt.Print(clientStates)
 
-	tg.CommitedGameState = TronGameState{width, height, false, "", initCollisions(), clientStates, 0}
-	tg.WorkingGameState = TronGameState{width, height, false, "", initCollisions(), clientStates, 0}
+	tg.CommitedGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, 0}
+	tg.WorkingGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, 0}
 
 	tg.start()
 	tg.startApplyChanHandler()
@@ -313,7 +315,7 @@ func (tg *TronGameView) Init() {
 	go func() {
 		for i := 1; i > 0; i-- {
 			countdownNum = i
-			arcade.ViewManager.RequestRender()
+			tg.mgr.RequestRender()
 			time.Sleep(time.Duration(int(time.Second)))
 		}
 
@@ -325,10 +327,10 @@ func (tg *TronGameView) Init() {
 			// tg.Timestep += 1
 			c.Wait()
 			tg.updateSelf()
-			arcade.ViewManager.RequestRender()
+			tg.mgr.RequestRender()
 			// time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
 			tg.updateWorkingGameState()
-			arcade.ViewManager.RequestRender()
+			tg.mgr.RequestRender()
 			// mu.Lock()
 			// if tg.Me == tg.HostID {
 			// 	if ended, winner := tg.shouldWin(); ended {
@@ -343,7 +345,7 @@ func (tg *TronGameView) Init() {
 		mu.Unlock()
 
 		gameRenderState = TronWinScreen
-		arcade.ViewManager.RequestRender()
+		tg.mgr.RequestRender()
 	}()
 
 	if tg.Me == tg.HostID && tg.HostSyncPeriod > 0 {
@@ -362,8 +364,6 @@ func (tg *TronGameView) startHostSync() {
 
 func (tg *TronGameView) ProcessEvent(ev interface{}) {
 	switch ev := ev.(type) {
-	case *ClientDisconnectEvent:
-		// process disconnected client
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyEnter {
 			// mu.Lock()
@@ -393,7 +393,7 @@ func (tg *TronGameView) ProcessEvent(ev interface{}) {
 				// 	return true
 				// })
 
-				arcade.ViewManager.SetView(NewGamesListView())
+				tg.mgr.SetView(NewGamesListView(tg.mgr))
 
 				// }
 			}
@@ -453,7 +453,7 @@ func (tg *TronGameView) ProcessMessage(from *net.Client, p interface{}) interfac
 func (tg *TronGameView) Render(s *Screen) {
 	s.ClearContent()
 
-	displayWidth, displayHeight := arcade.ViewManager.screen.displaySize()
+	displayWidth, displayHeight := tg.mgr.screen.displaySize()
 	boxStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorTeal)
 	s.DrawBox(1, 1, displayWidth-2, displayHeight-2, boxStyle, false)
 
@@ -761,7 +761,7 @@ func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int)
 func (tg *TronGameView) handleEndGame(data EndGameMessage) {
 	tg.WorkingGameState.Ended = true
 	tg.WorkingGameState.Winner = data.Winner
-	arcade.ViewManager.RequestRender()
+	tg.mgr.RequestRender()
 }
 
 // func (tg *TronGameView) commitGameState() {
@@ -800,8 +800,8 @@ func (tg *TronGameView) sendEndGame(winner string) {
 }
 
 // GAME FUNCTIONS
-func getStartingPosAndDir() ([][2]int, []TronDirection) {
-	width, height := arcade.ViewManager.screen.displaySize()
+func (tg *TronGameView) getStartingPosAndDir() ([][2]int, []TronDirection) {
+	width, height := tg.mgr.screen.displaySize()
 	width -= 1 // account for tron border
 	height -= 1
 	margin := int(math.Round(math.Min(float64(width)/8, float64(height)/8)))
@@ -840,7 +840,7 @@ func (tg *TronGameView) isOutOfBounds(x int, y int) bool {
 }
 
 func (tg *TronGameView) setCollision(collisions []byte, x int, y int, playerNum int) []byte {
-	width, _ := arcade.ViewManager.screen.displaySize()
+	width, _ := tg.mgr.screen.displaySize()
 	if !tg.isOutOfBounds(x, y) && playerNum < 8 {
 		ind := y*width + x
 		collisions[ind/2] |= byte(playerNum<<1+1) << ((ind % 2) * 4)
@@ -854,7 +854,7 @@ func (tg *TronGameView) getTimestep() int {
 
 // returns bool of collision and player num
 func (tg *TronGameView) getCollision(collisions []byte, x int, y int) (bool, int) {
-	width, _ := arcade.ViewManager.screen.displaySize()
+	width, _ := tg.mgr.screen.displaySize()
 	if !tg.isOutOfBounds(x, y) {
 		ind := y*width + x
 		offset := ((ind % 2) * 4)
@@ -891,8 +891,8 @@ func getDirChr(dir TronDirection) string {
 	return "?"
 }
 
-func toByteStr(collisions [][]bool) string {
-	width, height := arcade.ViewManager.screen.displaySize()
+func (tg *TronGameView) toByteStr(collisions [][]bool) string {
+	width, height := tg.mgr.screen.displaySize()
 	totalSize := width * height
 
 	bytes := make([]byte, int(math.Ceil(float64(totalSize)/8)))
@@ -907,8 +907,8 @@ func toByteStr(collisions [][]bool) string {
 	return string(bytes)
 }
 
-func fromBytestr(byteStr string) [][]bool {
-	width, height := arcade.ViewManager.screen.displaySize()
+func (tg *TronGameView) fromBytestr(byteStr string) [][]bool {
+	width, height := tg.mgr.screen.displaySize()
 	// totalSize := width * height
 
 	collisions := make([][]bool, width)
@@ -930,8 +930,8 @@ func fromBytestr(byteStr string) [][]bool {
 	return collisions
 }
 
-func initCollisions() []byte {
-	width, height := arcade.ViewManager.screen.displaySize()
+func (tg *TronGameView) initCollisions() []byte {
+	width, height := tg.mgr.screen.displaySize()
 	return make([]byte, int(math.Ceil(float64(width*height)/2)))
 }
 
