@@ -60,9 +60,10 @@ const (
 // other uses.
 //
 type ApplyMsg struct {
-	CommandValid bool
-	Command      interface{}
-	CommandIndex int
+	CommandValid    bool
+	Command         interface{}
+	CommandIndex    int
+	CommandTimestep int
 
 	// For 2D:
 	SnapshotValid bool
@@ -106,6 +107,7 @@ type Raft struct {
 
 	timestepPeriod int
 	timestep       int
+	timestepCond   *sync.Cond
 }
 
 func (rf *Raft) print(function, message string) {
@@ -121,10 +123,10 @@ func (rf *Raft) GetState() (int, bool) {
 	return rf.currentTerm, rf.state == Leader
 }
 
-func (rf *Raft) GetLog() (Log, int) {
+func (rf *Raft) GetLog() (Log, int, int) {
 	rf.RLock()
 	defer rf.RUnlock()
-	return *rf.log, rf.commitIndex
+	return *rf.log, rf.lastApplied, rf.commitIndex
 }
 
 //
@@ -274,7 +276,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 	// }()
 
 	if args.Term < rf.currentTerm {
-		// // //log.Println("[RAFT]: RequestVote", "Reject, args.Term < currentTerm")
+		log.Println("[RAFT]: RequestVote", "Reject, args.Term < currentTerm")
 		return &reply
 	} else if args.Term > rf.currentTerm {
 		rf.startNewTerm(args.Term, NullPeer, NullPeer)
@@ -282,12 +284,12 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 	}
 
 	if rf.votedFor != NullPeer && rf.votedFor != args.CandidateID {
-		// // //log.Println("[RAFT]: RequestVote", "Reject, already voted for "+strconv.Itoa(rf.votedFor))
+		log.Println("[RAFT]: RequestVote", "Reject, already voted for "+strconv.Itoa(rf.votedFor))
 		return &reply
 	}
 
 	if rf.log.LastTerm() > args.LastLogTerm || (rf.log.LastTerm() == args.LastLogTerm && rf.log.LastIndex() > args.LastLogIndex) {
-		// // //log.Println("[RAFT]: RequestVote", "Reject, log not up to date")
+		log.Println("[RAFT]: RequestVote", "Reject, log not up to date")
 		return &reply
 	}
 
@@ -296,7 +298,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 	rf.votedFor = args.CandidateID
 	rf.persist(nil)
 
-	// // //log.Println("[RAFT]: RequestVote", "Voted for "+strconv.Itoa(args.CandidateID))
+	log.Println("[RAFT]: RequestVote", "Voted for "+strconv.Itoa(args.CandidateID))
 
 	reply.VoteGranted = true
 
@@ -675,7 +677,7 @@ func (rf *Raft) startNewTerm(term int, peer int, leader int) {
 func (rf *Raft) resetElectionTimeout() {
 	// Set electionTimeout at random duration within range from now
 	randomDuration := electionTimeoutMin + rand.Float64()*(electionTimeoutMax-electionTimeoutMin)
-	// // // //log.Println("[RAFT]:", "random duration", randomDuration)
+	//log.Println("[RAFT]:", "random duration", randomDuration)
 	rf.electionTimeout = time.Now().Add(time.Duration(randomDuration) * time.Millisecond)
 
 	// Call electionTicker at electionTimeout plus one millisecond
@@ -692,6 +694,7 @@ func (rf *Raft) startTimestepCounter() {
 			rf.Lock()
 			rf.timestep += 1
 			rf.Unlock()
+			rf.timestepCond.Broadcast()
 			time.Sleep(time.Duration(rf.timestepPeriod) * time.Millisecond)
 		}
 	}()
@@ -711,7 +714,7 @@ func (rf *Raft) runElection() {
 	rf.state = Candidate
 	rf.persist(nil)
 
-	// // //log.Println("[RAFT]:", "runElection", "New term: "+strconv.Itoa(rf.currentTerm))
+	log.Println("[RAFT]:", "runElection", "New term: "+strconv.Itoa(rf.currentTerm))
 
 	args := &RequestVoteArgs{
 		Message:      message.Message{Type: "RequestVote"},
@@ -734,11 +737,11 @@ func (rf *Raft) runElection() {
 
 		go func(votes chan *RequestVoteReply, peer *net.Client) {
 			if reply, err := rf.network.SendAndReceive(peer, args); err == nil {
-				// // //log.Println("[RAFT]:", "RECEIVED vote", reply)
+				log.Println("[RAFT]:", "RECEIVED vote", reply)
 				reply := reply.(RequestVoteReply)
 				votes <- &reply
 			} else {
-				// // //log.Println("[RAFT]:", "vote error", err)
+				log.Println("[RAFT]:", "vote error", err)
 			}
 		}(votes, peer)
 	}
@@ -756,15 +759,15 @@ func (rf *Raft) runElection() {
 			rf.Lock()
 			defer rf.Unlock()
 
-			// // //log.Println("[RAFT]:", "runElection", fmt.Sprintf("Received vote: %t, %d", reply.VoteGranted, reply.ClientId))
+			log.Println("[RAFT]:", "runElection", fmt.Sprintf("Received vote: %t, %d", reply.VoteGranted, reply.ClientId))
 
 			if rf.state != Candidate || rf.currentTerm != args.Term {
-				// // //log.Println("[RAFT]:", "runElection, return", "bruh wut")
+				log.Println("[RAFT]:", "runElection, return", "bruh wut")
 				return
 			}
 
 			if reply.Term > rf.currentTerm {
-				// // //log.Println("[RAFT]:", "runElection, return", "overriden")
+				log.Println("[RAFT]:", "runElection, return", "overriden")
 				rf.startNewTerm(reply.Term, NullPeer, reply.ClientId)
 				rf.persist(nil)
 				return
@@ -777,7 +780,7 @@ func (rf *Raft) runElection() {
 			voteCount++
 
 			if voteCount <= len(rf.peers)/2 {
-				// // //log.Println("[RAFT]:", "runElection, return", "not enough")
+				log.Println("[RAFT]:", "runElection, return", "not enough")
 				return
 			}
 
@@ -786,7 +789,7 @@ func (rf *Raft) runElection() {
 				return
 			}
 
-			// // //log.Println("[RAFT]:", "runElection", "Won election!")
+			log.Println("[RAFT]:", "runElection", "Won election!")
 
 			rf.state = Leader
 			rf.nextIndex = make([]int, len(rf.peers))
@@ -1006,7 +1009,7 @@ func (rf *Raft) updateCommitIndex() {
 			continue
 		}
 
-		rf.print("updateCommitIndex", fmt.Sprintf("Updating commit index to %d", i))
+		log.Println("updateCommitIndex", fmt.Sprintf("Updating commit index to %d", i))
 		rf.commitIndex = i
 		go rf.commit()
 
@@ -1058,9 +1061,10 @@ func (rf *Raft) commit() {
 		rf.Unlock()
 
 		rf.applyCh <- ApplyMsg{
-			CommandValid: true,
-			Command:      entry.Command,
-			CommandIndex: index,
+			CommandValid:    true,
+			Command:         entry.Command,
+			CommandIndex:    index,
+			CommandTimestep: entry.Timestep,
 		}
 	}
 }
@@ -1108,7 +1112,7 @@ func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
 //
-func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Network, timestepPeriod int) *Raft {
+func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Network, timestepPeriod int, timestepCond *sync.Cond) *Raft {
 	rand.Seed(time.Now().UnixNano())
 
 	rf := &Raft{}
@@ -1129,6 +1133,7 @@ func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Netwo
 
 	rf.timestepPeriod = timestepPeriod
 	rf.timestep = 0
+	rf.timestepCond = timestepCond
 
 	// start ticker goroutine to start elections
 	rf.resetElectionTimeout()
