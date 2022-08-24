@@ -92,6 +92,26 @@ func (c *Client) start(conn net.Conn) {
 	go c.writePump()
 }
 
+func (c *Client) disconnect() {
+	c.Lock()
+	if c.State != Connected {
+		c.Unlock()
+		return
+	}
+
+	c.State = Disconnected
+
+	close(c.sendCh)
+	close(c.recvCh)
+
+	if c.conn != nil {
+		c.conn.Close()
+	}
+	c.Unlock()
+
+	c.Delegate.ClientDisconnected(c.ID)
+}
+
 // readPump pumps messages from the UDP connection to processMessage.
 func (c *Client) readPump() {
 	buf := make([]byte, maxBufferSize)
@@ -100,7 +120,7 @@ func (c *Client) readPump() {
 		n, err := c.conn.Read(buf)
 
 		if err != nil {
-			c.Delegate.ClientDisconnected(c.ID)
+			c.disconnect()
 			return
 		}
 
@@ -127,14 +147,14 @@ func (c *Client) writePump() {
 		data, ok := <-c.sendCh
 
 		if !ok {
-			c.Delegate.ClientDisconnected(c.ID)
+			c.disconnect()
 			return
 		}
 
 		_, err := c.conn.Write(data)
 
 		if err != nil {
-			c.Delegate.ClientDisconnected(c.ID)
+			c.disconnect()
 			return
 		}
 	}

@@ -1,12 +1,7 @@
 package net
 
-import "log"
-
 func (n *Network) processMessage(client, msg interface{}) interface{} {
-	log.Println("listener 3")
 	c := client.(*Client)
-
-	defer log.Println("listener 3 done")
 
 	switch msg := msg.(type) {
 	case PingMessage:
@@ -16,11 +11,9 @@ func (n *Network) processMessage(client, msg interface{}) interface{} {
 		}
 		c.Neighbor = true
 
-		log.Println("locking")
 		n.Lock()
 		n.clients[c.ID] = c
 		n.Unlock()
-		log.Println("locking done")
 
 		return NewPongMessage(n.distributor)
 	case RoutingMessage:

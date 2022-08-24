@@ -5,7 +5,6 @@ import (
 	"arcade/arcade/net"
 	"encoding"
 	"fmt"
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -98,12 +97,10 @@ func (v *GamesListView) Init() {
 
 func (v *GamesListView) SendHelloMessages() {
 	// Scan LAN for lobbies
-	log.Println("discovering")
 	go multicast.Discover(arcade.Server.Addr, arcade.Server.ID)
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
-		log.Println("client", client.ID, "found", client.State)
 		if client.State != net.Connected || client.Distributor {
 			return true
 		}
@@ -122,7 +119,6 @@ func (v *GamesListView) QueryClient(client *net.Client) {
 	end := time.Now()
 
 	p, ok := res.(LobbyInfoMessage)
-	log.Println("sent hello, received", ok, "in", end.Sub(start).Seconds())
 
 	if !ok || err != nil {
 		return

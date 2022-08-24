@@ -5,7 +5,6 @@ import (
 	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 	"time"
@@ -83,7 +82,7 @@ func (s *Server) startHeartbeats() {
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
-				s.mgr.ProcessEvent(NewClientDisconnectedEvent(clientID))
+				s.Network.Disconnect(clientID)
 				delete(s.connectedClients, clientID)
 				continue
 			}
@@ -160,10 +159,6 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	// Process message and return response
 	switch msg := msg.(type) {
 	case DisconnectMessage:
-		s.mgr.ProcessEvent(&ClientDisconnectedEvent{
-			ClientID: c.ID,
-		})
-
 		s.Network.Disconnect(c.ID)
 	default:
 		if baseMsg.RecipientID != s.ID {
@@ -243,7 +238,6 @@ func (s *Server) Start() error {
 			panic(err)
 		}
 
-		log.Println("accept!")
 		s.Network.Connect(conn.RemoteAddr().String(), "", conn)
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"arcade/arcade/message"
 	"arcade/arcade/net"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"sync"
@@ -28,7 +27,6 @@ func NewViewManager() *ViewManager {
 }
 
 func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
-	log.Println("listener 2")
 	mgr.RLock()
 	v := mgr.view
 	mgr.RUnlock()

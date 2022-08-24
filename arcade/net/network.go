@@ -4,7 +4,6 @@ import (
 	"arcade/arcade/message"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"reflect"
@@ -55,48 +54,43 @@ func (n *Network) Addr() string {
 }
 
 func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
-	n.RLock()
-	for _, client := range n.clients {
-		if client.Addr == addr {
-			n.RUnlock()
-			return nil, errors.New("already connected to " + addr)
+	c, ok := n.GetClient(id)
+
+	if !ok || c.State == Disconnected {
+		c = &Client{
+			Delegate: n,
+			Addr:     addr,
+			ID:       id,
+			Neighbor: true,
+			recvCh:   make(chan []byte, maxBufferSize),
+			sendCh:   make(chan []byte, maxBufferSize),
 		}
-	}
-	n.RUnlock()
 
-	c := &Client{
-		Delegate: n,
-		Addr:     addr,
-		ID:       id,
-		Neighbor: true,
-		recvCh:   make(chan []byte, maxBufferSize),
-		sendCh:   make(chan []byte, maxBufferSize),
-	}
+		go func() {
+			for {
+				data, ok := <-c.recvCh
 
-	go func() {
-		for {
-			data, ok := <-c.recvCh
+				if !ok {
+					break
+				}
 
-			if !ok {
-				break
+				for _, reply := range message.Notify(c, data) {
+					n.Send(c, reply)
+				}
 			}
+		}()
 
-			for _, reply := range message.Notify(c, data) {
-				n.Send(c, reply)
+		if conn == nil {
+			var err error
+			conn, err = kcp.Dial(c.Addr)
+
+			if err != nil {
+				return nil, err
 			}
 		}
-	}()
 
-	if conn == nil {
-		var err error
-		conn, err = kcp.Dial(c.Addr)
-
-		if err != nil {
-			return nil, err
-		}
+		c.start(conn)
 	}
-
-	c.start(conn)
 
 	// Send ping and wait for reply
 	start := time.Now()
@@ -104,7 +98,6 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	end := time.Now()
 
 	p, ok := res.(PongMessage)
-	log.Println("client connect", ok, err)
 
 	if !ok || err != nil {
 		c.Lock()
@@ -152,15 +145,7 @@ func (n *Network) Disconnect(id string) {
 		return
 	}
 
-	c.Lock()
-	defer c.Unlock()
-
-	close(c.sendCh)
-	close(c.recvCh)
-
-	if c.conn != nil {
-		c.conn.Close()
-	}
+	c.disconnect()
 }
 
 func (n *Network) GetClient(id string) (*Client, bool) {
@@ -184,8 +169,6 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 }
 
 func (n *Network) Send(client *Client, msg interface{}) bool {
-	log.Println("sending", msg)
-
 	// Set sender and recipient IDs
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
@@ -247,8 +230,6 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, 
 }
 
 func (n *Network) SignalReceived(messageID string, resp interface{}) {
-	log.Println("signal received", messageID)
-
 	n.pendingMessagesMux.RLock()
 	defer n.pendingMessagesMux.RUnlock()
 

@@ -5,7 +5,6 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
-	"log"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -80,17 +79,12 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 					arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
 
-					v.Lobby = &Lobby{}
-
 					arcade.Server.EndAllHeartbeats()
 					v.mgr.SetView(NewGamesListView(v.mgr))
 				} else {
 					// first extract lobbyID for messages
 					lobbyID := v.Lobby.ID
 					v.Lobby.mu.RUnlock()
-
-					// get rid of lobby
-					v.Lobby = &Lobby{}
 
 					arcade.Server.EndAllHeartbeats()
 					// send updates to everyone
@@ -129,8 +123,6 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case HelloMessage:
-		log.Println("received hello")
-		// return nil
 		return NewLobbyInfoMessage(v.Lobby)
 	case JoinMessage:
 		if v.Lobby.HostID == arcade.Server.ID {
