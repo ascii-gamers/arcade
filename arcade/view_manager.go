@@ -16,8 +16,7 @@ type ViewManager struct {
 
 	screen *Screen
 
-	view View
-
+	view      View
 	showDebug bool
 }
 
@@ -28,18 +27,28 @@ func NewViewManager() *ViewManager {
 }
 
 func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
-	res := mgr.view.ProcessMessage(from.(*net.Client), p)
-	return res
+	mgr.RLock()
+	v := mgr.view
+	mgr.RUnlock()
+
+	return v.ProcessMessage(from.(*net.Client), p)
 }
 
 func (mgr *ViewManager) ProcessEvent(ev interface{}) {
-	if arcade.Distributor || mgr.view == nil {
+	mgr.RLock()
+	v := mgr.view
+	mgr.RUnlock()
+
+	if arcade.Distributor || v == nil {
 		return
 	}
-	mgr.view.ProcessEvent(ev)
+
+	v.ProcessEvent(ev)
 }
 
 func (mgr *ViewManager) SetView(v View) {
+	mgr.Lock()
+
 	// Unload existing view
 	if mgr.view != nil {
 		mgr.view.Unload()
@@ -51,6 +60,8 @@ func (mgr *ViewManager) SetView(v View) {
 	// Save view
 	mgr.view = v
 	mgr.view.Init()
+
+	mgr.Unlock()
 
 	// Render
 	mgr.RequestRender()
@@ -99,7 +110,10 @@ func (mgr *ViewManager) Start(v View) {
 		case *tcell.EventKey:
 			switch ev.Key() {
 			case tcell.KeyEscape, tcell.KeyCtrlC:
+				mgr.RLock()
 				mgr.view.Unload()
+				mgr.RUnlock()
+
 				quit()
 			case tcell.KeyCtrlD:
 				mgr.ToggleDebugPanel()
@@ -143,7 +157,9 @@ func (mgr *ViewManager) RequestRender() {
 		warning := "Please make your terminal window larger!"
 		mgr.screen.DrawText((displayWidth-len(warning))/2, displayHeight/2-1, tcell.StyleDefault, warning)
 	} else {
+		mgr.RLock()
 		mgr.view.Render(mgr.screen)
+		mgr.RUnlock()
 	}
 
 	if showDebug {
@@ -196,17 +212,20 @@ func (mgr *ViewManager) RequestRender() {
 
 func (mgr *ViewManager) RequestDebugRender() {
 	mgr.RLock()
-	defer mgr.RUnlock()
 
 	if !mgr.showDebug {
+		mgr.RUnlock()
 		return
 	}
 
+	mgr.RUnlock()
 	mgr.RequestRender()
 }
 
 func (mgr *ViewManager) GetHeartbeatMetadata() []byte {
+	mgr.RLock()
 	metadata := mgr.view.GetHeartbeatMetadata()
+	mgr.RUnlock()
 
 	if metadata == nil {
 		return nil

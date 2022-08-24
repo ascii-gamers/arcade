@@ -40,6 +40,7 @@ func (c *ConnectedClientInfo) GetMeanRTT() time.Duration {
 
 type Server struct {
 	sync.RWMutex
+	mgr *ViewManager
 
 	Network *net.Network
 
@@ -53,11 +54,12 @@ type Server struct {
 }
 
 // NewServer creates the server with a given address.
-func NewServer(addr string, port int) *Server {
+func NewServer(addr string, port int, mgr *ViewManager) *Server {
 	id := uuid.NewString()
 	net := net.NewNetwork(id, port)
 
 	s := &Server{
+		mgr:              mgr,
 		Addr:             addr,
 		Network:          net,
 		ID:               id,
@@ -79,12 +81,12 @@ func (s *Server) startHeartbeats() {
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
-				arcade.ViewManager.ProcessEvent(NewClientDisconnectEvent(clientID))
+				s.mgr.ProcessEvent(NewClientDisconnectEvent(clientID))
 				delete(s.connectedClients, clientID)
 				continue
 			}
 
-			metadata := arcade.ViewManager.GetHeartbeatMetadata()
+			metadata := s.mgr.GetHeartbeatMetadata()
 
 			client.Lock()
 			s.Network.Send(client, NewHeartbeatMessage(client.Seq, metadata))
@@ -151,7 +153,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	// Process message and return response
 	switch msg := msg.(type) {
 	case DisconnectMessage:
-		arcade.ViewManager.ProcessEvent(&ClientDisconnectEvent{
+		s.mgr.ProcessEvent(&ClientDisconnectEvent{
 			ClientID: c.ID,
 		})
 
@@ -189,7 +191,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 				s.Unlock()
 
 				// Send heartbeat metadata to view
-				arcade.ViewManager.ProcessEvent(NewHeartbeatEvent(msg.Metadata))
+				s.mgr.ProcessEvent(NewHeartbeatEvent(msg.Metadata))
 
 				// Reply to heartbeat
 				return NewHeartbeatReplyMessage(msg.Seq)
@@ -202,10 +204,10 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 					}
 					s.Unlock()
 
-					arcade.ViewManager.RequestDebugRender()
+					s.mgr.RequestDebugRender()
 				}
 			default:
-				return ProcessMessage(c, msg)
+				return ProcessMessage(c, msg, s.mgr)
 			}
 		}
 	}

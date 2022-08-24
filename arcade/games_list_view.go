@@ -14,6 +14,7 @@ import (
 
 type GamesListView struct {
 	View
+	mgr *ViewManager
 
 	mu sync.RWMutex
 
@@ -58,41 +59,40 @@ const (
 var glv_code_input_string = ""
 var glv_code = ""
 
-func NewGamesListView() *GamesListView {
-	view := &GamesListView{
+func NewGamesListView(mgr *ViewManager) *GamesListView {
+	return &GamesListView{
+		mgr:               mgr,
 		stopTickerCh:      make(chan bool),
 		lobbies:           make(map[string]*Lobby),
 		helloMessageTimes: make(map[string]time.Time),
 	}
+}
 
+func (v *GamesListView) Init() {
 	ticker := time.NewTicker(time.Second)
 
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				// send out lobbyinfo
-				view.mu.Lock()
-				view.lastTimeRefreshed = (view.lastTimeRefreshed + 1) % 4
-				lastTimeRefreshed := view.lastTimeRefreshed
-				view.mu.Unlock()
-				if lastTimeRefreshed == 0 {
-					view.SendHelloMessages()
-				}
-				arcade.ViewManager.RequestRender()
+				v.mu.Lock()
+				v.lastTimeRefreshed = (v.lastTimeRefreshed + 1) % 4
 
-			case <-view.stopTickerCh:
+				if v.lastTimeRefreshed == 0 {
+					// Send out hello messages when the timer hits zero
+					go v.SendHelloMessages()
+				}
+
+				v.mu.Unlock()
+				v.mgr.RequestRender()
+			case <-v.stopTickerCh:
 				ticker.Stop()
 				return
 			}
 		}
 	}()
 
-	return view
-}
-
-func (v *GamesListView) Init() {
-	v.SendHelloMessages()
+	go v.SendHelloMessages()
 }
 
 func (v *GamesListView) SendHelloMessages() {
@@ -171,7 +171,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				switch evt.Rune() {
 				case 'c':
 					glv_join_box = ""
-					arcade.ViewManager.SetView(NewLobbyCreateView())
+					v.mgr.SetView(NewLobbyCreateView(v.mgr))
 				case 't':
 					// tg := CreateGame("bruh", false, "Tron", 8, "1", "1")
 					// tg.AddPlayer(&Player{Client: *NewClient("addr1"), Username: "bob", Status:  "chillin",Host: true})
@@ -218,13 +218,13 @@ func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interfac
 		v.lobbies[p.Lobby.ID] = p.Lobby
 		v.mu.Unlock()
 
-		arcade.ViewManager.RequestRender()
+		v.mgr.RequestRender()
 	case JoinReplyMessage:
 		if p.Error == OK {
 			err_msg = ""
 			glv_join_box = ""
 			glv_code_input_string = ""
-			arcade.ViewManager.SetView(NewLobbyView(p.Lobby))
+			v.mgr.SetView(NewLobbyView(v.mgr, p.Lobby))
 
 			arcade.Server.BeginHeartbeats(p.Lobby.HostID)
 		} else if p.Error == ErrWrongCode {
@@ -279,12 +279,14 @@ func (v *GamesListView) Render(s *Screen) {
 
 	v.mu.Lock()
 	countdownMsg := fmt.Sprintf("Refreshing in %d", 4-v.lastTimeRefreshed)
+	lastTimeRefreshed := v.lastTimeRefreshed
+	v.mu.Unlock()
 	// Draw countdown
 
-	if v.lastTimeRefreshed == 0 {
+	if lastTimeRefreshed == 0 {
 		countdownMsg = "     Refreshing...     "
+		time.Sleep(time.Second)
 	}
-	v.mu.Unlock()
 
 	s.DrawText((width-len(countdownMsg))/2, height-3, sty, countdownMsg)
 

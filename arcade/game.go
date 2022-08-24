@@ -74,10 +74,10 @@ type Game[GS any, CS any] struct {
 
 var letters = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func NewGame(lobby *Lobby) {
+func NewGame(mgr *ViewManager, lobby *Lobby) {
 	switch lobby.GameType {
 	case Tron:
-		arcade.ViewManager.SetView(NewTronGameView(lobby))
+		mgr.SetView(NewTronGameView(mgr, lobby))
 	}
 }
 
