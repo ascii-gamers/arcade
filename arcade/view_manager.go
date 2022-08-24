@@ -4,6 +4,7 @@ import (
 	"arcade/arcade/message"
 	"arcade/arcade/net"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"sync"
@@ -27,6 +28,7 @@ func NewViewManager() *ViewManager {
 }
 
 func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
+	log.Println("listener 2")
 	mgr.RLock()
 	v := mgr.view
 	mgr.RUnlock()
@@ -238,4 +240,16 @@ func (mgr *ViewManager) GetHeartbeatMetadata() []byte {
 	}
 
 	return data
+}
+
+//
+// NetworkDelegate functions
+//
+
+func (mgr *ViewManager) ClientConnected(id string) {
+	mgr.ProcessEvent(&ClientConnectedEvent{id})
+}
+
+func (mgr *ViewManager) ClientDisconnected(id string) {
+	mgr.ProcessEvent(&ClientDisconnectedEvent{id})
 }

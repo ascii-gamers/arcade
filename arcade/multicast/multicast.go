@@ -1,6 +1,7 @@
-package arcade
+package multicast
 
 import (
+	"encoding/json"
 	"net"
 	"sync"
 )
@@ -12,7 +13,7 @@ const maxDatagramSize = 8192
 var multicastConn *net.UDPConn
 var multicastConnMu sync.Mutex
 
-func discoverMulticast() {
+func Discover(addr, id string) {
 	multicastConnMu.Lock()
 	defer multicastConnMu.Unlock()
 
@@ -30,12 +31,17 @@ func discoverMulticast() {
 		}
 	}
 
-	multicastConn.Write([]byte(arcade.Server.Network.Addr()))
+	msg := MulticastDiscoveryMessage{
+		Addr: addr,
+		ID:   id,
+	}
+
+	data, _ := json.Marshal(msg)
+	multicastConn.Write(data)
 }
 
-// listenMulticast binds to a UDP multicast address and responds with a
-// discovery packet.
-func listenMulticast() {
+// Listen binds to a UDP multicast address and responds with a discovery packet.
+func Listen(selfID string, delegate MulticastDiscoveryDelegate) {
 	// Parse the string address
 	addr, err := net.ResolveUDPAddr(multicastDiscoveryNetwork, multicastDiscoveryAddress)
 
@@ -61,12 +67,13 @@ func listenMulticast() {
 			panic(err)
 		}
 
-		addr := string(buffer[:numBytes])
+		var msg MulticastDiscoveryMessage
+		json.Unmarshal(buffer[:numBytes], &msg)
 
-		if addr == arcade.Server.Network.Addr() {
+		if msg.ID == selfID {
 			continue
 		}
 
-		arcade.Server.Network.Connect(addr, nil)
+		delegate.ClientDiscovered(msg.Addr, msg.ID)
 	}
 }

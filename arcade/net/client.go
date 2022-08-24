@@ -4,7 +4,6 @@ import (
 	"encoding"
 	"net"
 	"sync"
-	"time"
 )
 
 // Actually can't be increased past this number -- kcp-go enforces a packet
@@ -31,6 +30,8 @@ const (
 
 type Client struct {
 	sync.RWMutex
+
+	Delegate ClientDelegate
 
 	// The address to which to send messages in order to reach this client. If
 	// this client is reached through a distributor, this address will be the
@@ -60,10 +61,6 @@ type Client struct {
 	recvCh chan []byte
 
 	State ConnectionState
-
-	connectedCh chan bool
-
-	pingTimes map[string]time.Time
 }
 
 // NewClient creates a client with the given address.
@@ -103,7 +100,8 @@ func (c *Client) readPump() {
 		n, err := c.conn.Read(buf)
 
 		if err != nil {
-			panic(err)
+			c.Delegate.ClientDisconnected(c.ID)
+			return
 		}
 
 		data := make([]byte, n)
@@ -126,10 +124,18 @@ func (c *Client) readPump() {
 // writePump pumps messages from the sendCh to the client's UDP connection.
 func (c *Client) writePump() {
 	for {
-		_, err := c.conn.Write(<-c.sendCh)
+		data, ok := <-c.sendCh
+
+		if !ok {
+			c.Delegate.ClientDisconnected(c.ID)
+			return
+		}
+
+		_, err := c.conn.Write(data)
 
 		if err != nil {
-			panic(err)
+			c.Delegate.ClientDisconnected(c.ID)
+			return
 		}
 	}
 }

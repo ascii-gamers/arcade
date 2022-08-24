@@ -4,6 +4,7 @@ import (
 	"arcade/arcade/message"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"reflect"
@@ -16,6 +17,8 @@ import (
 
 type Network struct {
 	sync.RWMutex
+
+	Delegate NetworkDelegate
 
 	clients     map[string]*Client
 	distributor bool
@@ -51,23 +54,23 @@ func (n *Network) Addr() string {
 	return fmt.Sprintf("%s:%d", ip, n.port)
 }
 
-func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
-	n.Lock()
-	defer n.Unlock()
-
-	// TODO: Handle this
+func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
+	n.RLock()
 	for _, client := range n.clients {
 		if client.Addr == addr {
+			n.RUnlock()
 			return nil, errors.New("already connected to " + addr)
 		}
 	}
+	n.RUnlock()
 
 	c := &Client{
-		Addr:      addr,
-		Neighbor:  true,
-		recvCh:    make(chan []byte, maxBufferSize),
-		sendCh:    make(chan []byte, maxBufferSize),
-		pingTimes: make(map[string]time.Time),
+		Delegate: n,
+		Addr:     addr,
+		ID:       id,
+		Neighbor: true,
+		recvCh:   make(chan []byte, maxBufferSize),
+		sendCh:   make(chan []byte, maxBufferSize),
 	}
 
 	go func() {
@@ -95,30 +98,46 @@ func (n *Network) Connect(addr string, conn net.Conn) (*Client, error) {
 
 	c.start(conn)
 
-	c.connectedCh = make(chan bool)
+	// Send ping and wait for reply
+	start := time.Now()
+	res, err := n.SendAndReceive(c, NewPingMessage())
+	end := time.Now()
 
-	msg := NewPingMessage()
-	msg.Message.MessageID = uuid.NewString()
+	p, ok := res.(PongMessage)
+	log.Println("client connect", ok, err)
+
+	if !ok || err != nil {
+		c.Lock()
+		c.State = TimedOut
+		c.Unlock()
+
+		return nil, errors.New("timed out")
+	}
+
+	clientID := p.SenderID
 
 	c.Lock()
-	c.pingTimes[msg.Message.MessageID] = time.Now()
-	c.Unlock()
+	c.ID = clientID
+	c.ClientRoutingInfo = ClientRoutingInfo{
+		Distance:    float64(end.Sub(start)),
+		Distributor: n.distributor,
+	}
+	c.Neighbor = true
 
-	n.Send(c, msg)
+	if c.State == Disconnected {
+		c.State = Connected
+		distributor := c.Distributor
+		c.Unlock()
 
-	// Timeout if we don't receive a response
-	time.AfterFunc(timeoutInterval, func() {
-		c.Lock()
-		defer c.Unlock()
+		n.Lock()
+		n.clients[clientID] = c
+		n.Unlock()
 
-		if c.State != Connected {
-			c.State = TimedOut
-			c.connectedCh <- false
+		if !distributor {
+			n.Delegate.ClientConnected(clientID)
 		}
-	})
-
-	if !<-c.connectedCh {
-		return nil, errors.New("client timed out")
+	} else {
+		c.Unlock()
 	}
 
 	go n.PropagateRoutes()
@@ -138,7 +157,6 @@ func (n *Network) Disconnect(id string) {
 
 	close(c.sendCh)
 	close(c.recvCh)
-	close(c.connectedCh)
 
 	if c.conn != nil {
 		c.conn.Close()
@@ -155,9 +173,10 @@ func (n *Network) GetClient(id string) (*Client, bool) {
 
 func (n *Network) ClientsRange(f func(*Client) bool) {
 	n.RLock()
-	defer n.RUnlock()
+	clients := n.clients
+	n.RUnlock()
 
-	for _, client := range n.clients {
+	for _, client := range clients {
 		if !f(client) {
 			break
 		}
@@ -165,6 +184,8 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 }
 
 func (n *Network) Send(client *Client, msg interface{}) bool {
+	log.Println("sending", msg)
+
 	// Set sender and recipient IDs
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
@@ -215,7 +236,7 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, 
 	recvMsg, ok := <-recvCh
 
 	if !ok {
-		return nil, fmt.Errorf("Timed out")
+		return nil, fmt.Errorf("timed out")
 	}
 
 	n.pendingMessagesMux.Lock()
@@ -226,6 +247,8 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, 
 }
 
 func (n *Network) SignalReceived(messageID string, resp interface{}) {
+	log.Println("signal received", messageID)
+
 	n.pendingMessagesMux.RLock()
 	defer n.pendingMessagesMux.RUnlock()
 
@@ -336,4 +359,12 @@ func (n *Network) SetDropRate(rate float64) {
 	defer n.Unlock()
 
 	n.dropRate = rate
+}
+
+//
+// ClientDelegate methods
+//
+
+func (n *Network) ClientDisconnected(clientID string) {
+	n.Delegate.ClientDisconnected(clientID)
 }

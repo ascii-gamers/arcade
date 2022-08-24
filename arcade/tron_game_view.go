@@ -215,7 +215,7 @@ func (tg *TronGameView) startHostSync() {
 
 func (tg *TronGameView) ProcessEvent(ev interface{}) {
 	switch ev := ev.(type) {
-	case *ClientDisconnectEvent:
+	case *ClientDisconnectedEvent:
 		// process disconnected client
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyEnter {

@@ -44,6 +44,7 @@ func Start() {
 	}
 
 	defer f.Close()
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.SetOutput(f)
 
 	// Register messages
@@ -69,20 +70,21 @@ func Start() {
 	// Start host server
 	mgr := NewViewManager()
 	arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port, mgr)
+	arcade.Server.Network.Delegate = mgr
 
 	if arcade.Distributor {
 		arcade.Server.Addr = fmt.Sprintf("0.0.0.0:%d", arcade.Port)
-		arcade.Server.start()
+		arcade.Server.Start()
 		os.Exit(0)
 	}
 
-	go arcade.Server.start()
+	go arcade.Server.Start()
 
 	// TODO: Make better solution for this later -- wait for server to start
 	time.Sleep(10 * time.Millisecond)
 
 	// Connect to distributor
-	go arcade.Server.Network.Connect(*distributorAddr, nil)
+	go arcade.Server.Network.Connect(*distributorAddr, "", nil)
 
 	// TODO: Make better solution for this later -- wait to connect to distributor
 	time.Sleep(10 * time.Millisecond)

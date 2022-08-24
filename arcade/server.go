@@ -2,8 +2,10 @@ package arcade
 
 import (
 	"arcade/arcade/message"
+	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"fmt"
+	"log"
 	"reflect"
 	"sync"
 	"time"
@@ -81,7 +83,7 @@ func (s *Server) startHeartbeats() {
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
-				s.mgr.ProcessEvent(NewClientDisconnectEvent(clientID))
+				s.mgr.ProcessEvent(NewClientDisconnectedEvent(clientID))
 				delete(s.connectedClients, clientID)
 				continue
 			}
@@ -138,6 +140,11 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 	baseMsg := reflect.ValueOf(msg).FieldByName("Message").Interface().(message.Message)
 
+	// Ping messages may not have a recipient ID set
+	if baseMsg.RecipientID == "" {
+		baseMsg.RecipientID = s.ID
+	}
+
 	// Signal message received if necessary
 	s.Network.SignalReceived(baseMsg.MessageID, msg)
 
@@ -153,7 +160,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	// Process message and return response
 	switch msg := msg.(type) {
 	case DisconnectMessage:
-		s.mgr.ProcessEvent(&ClientDisconnectEvent{
+		s.mgr.ProcessEvent(&ClientDisconnectedEvent{
 			ClientID: c.ID,
 		})
 
@@ -173,7 +180,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 				s.Network.Send(recipient, msg)
 				return nil
 			} else {
-				return NewErrorMessage("Invalid recipient")
+				return NewErrorMessage("invalid recipient")
 			}
 		} else {
 			if arcade.Distributor {
@@ -215,8 +222,8 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	return nil
 }
 
-// startServer starts listening for connections on a given address.
-func (s *Server) start() error {
+// Start starts listening for connections on a given address.
+func (s *Server) Start() error {
 	listener, err := kcp.Listen(s.Addr)
 
 	if err != nil {
@@ -226,7 +233,7 @@ func (s *Server) start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	go listenMulticast()
+	go multicast.Listen(s.ID, s)
 
 	for {
 		// Wait for new client connections
@@ -236,6 +243,18 @@ func (s *Server) start() error {
 			panic(err)
 		}
 
-		s.Network.Connect(conn.RemoteAddr().String(), conn)
+		log.Println("accept!")
+		s.Network.Connect(conn.RemoteAddr().String(), "", conn)
 	}
+}
+
+//
+// MulticastDelegate methods
+//
+
+func (s *Server) ClientDiscovered(addr, id string) {
+	s.RLock()
+	defer s.RUnlock()
+
+	s.Network.Connect(addr, id, nil)
 }
