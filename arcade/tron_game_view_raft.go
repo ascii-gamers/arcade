@@ -211,6 +211,7 @@ type TronGameView struct {
 	CommitedGameState TronGameState
 	WorkingGameState  TronGameState
 	MoveQueue         []TronCommand
+	NextDir           TronDirection
 	LatestInputDir    TronDirection
 	ApplyChan         chan raft.ApplyMsg
 }
@@ -302,7 +303,13 @@ func (tg *TronGameView) Init() {
 		y := startingPos[i][1]
 		clientStates[playerID] = TronClientState{tg.getTimestep(), true, TRON_COLORS[i], x, y, startingDir[i], i}
 		lastReceivedInp[playerID] = 0
+
+		if playerID == tg.Me {
+			tg.LatestInputDir = startingDir[i]
+		}
 	}
+
+	tg.NextDir = -1
 
 	// fmt.Print(clientStates)
 
@@ -404,36 +411,48 @@ func (tg *TronGameView) ProcessEvent(ev interface{}) {
 }
 
 func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
-	if needToProcessInput {
-		return
-	}
-	key := ev.Key()
 
+	key := ev.Key()
 	clientState := tg.getMyState()
+	var newDir TronDirection
+
 	switch key {
+	case tcell.KeyCtrlG:
+		showCommits = !showCommits
+		return
 	case tcell.KeyUp:
 		if clientState.Direction != TronDown {
-			tg.LatestInputDir = TronUp
-			needToProcessInput = true
+			newDir = TronUp
+		} else {
+			return
 		}
 	case tcell.KeyRight:
 		if clientState.Direction != TronLeft {
-			tg.LatestInputDir = TronRight
-			needToProcessInput = true
+			newDir = TronRight
+		} else {
+			return
 		}
 	case tcell.KeyDown:
 		if clientState.Direction != TronUp {
-			tg.LatestInputDir = TronDown
-			needToProcessInput = true
+			newDir = TronDown
+		} else {
+			return
 		}
 	case tcell.KeyLeft:
 		if clientState.Direction != TronRight {
-			tg.LatestInputDir = TronLeft
-			needToProcessInput = true
+			newDir = TronLeft
+		} else {
+			return
 		}
-	case tcell.KeyCtrlG:
-		showCommits = !showCommits
+	}
 
+	if needToProcessInput {
+		log.Println("setting Nextdir", newDir)
+		tg.NextDir = newDir
+	} else {
+		tg.NextDir = -1
+		tg.LatestInputDir = newDir
+		needToProcessInput = true
 	}
 
 }
@@ -580,27 +599,34 @@ func (tg *TronGameView) startApplyChanHandler() {
 func (tg *TronGameView) updateSelf() {
 	// mu.Lock()
 	// defer mu.Unlock()
+	currentTimestep := tg.getTimestep()
+	var cmd TronCommand
+	log.Println(needToProcessInput, tg.NextDir)
+
 	if needToProcessInput {
-
-		currentTimestep := tg.getTimestep()
-		cmd := TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.LatestInputDir}
-
-		tg.RaftServer.Start(cmd)
-		tg.MoveQueue = append(tg.MoveQueue, cmd)
-		needToProcessInput = false
-
-		// myState := tg.getMyState()
-		// myState.Direction = cmd.Direction
-		// tg.WorkingGameState.ClientStates[tg.Me] = myState
+		cmd = TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.LatestInputDir}
+	} else if tg.NextDir != -1 {
+		cmd = TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.NextDir}
+		log.Println("use Nextdir")
+		tg.NextDir = -1
+	} else {
+		return
 	}
 
+	tg.RaftServer.Start(cmd)
+	tg.MoveQueue = append(tg.MoveQueue, cmd)
+
+	// myState := tg.getMyState()
+	// myState.Direction = cmd.Direction
+	// tg.WorkingGameState.ClientStates[tg.Me] = myState
+	needToProcessInput = false
 }
 
 func (tg *TronGameView) updateWorkingGameState() {
 	// mu.Lock()
 	// defer mu.Unlock()
 
-	raftLog, lastApplied, commitIndex := tg.RaftServer.GetLog()
+	raftLog, lastApplied, _ := tg.RaftServer.GetLog()
 
 	allEntries := raftLog.GetEntries()
 	entries := allEntries[int(math.Min(float64(lastApplied), float64(len(allEntries)))):]
@@ -615,7 +641,7 @@ func (tg *TronGameView) updateWorkingGameState() {
 		}
 	}
 
-	log.Println("working state", lastApplied, commitIndex, len(entries), len(tg.MoveQueue))
+	// log.Println("working state", lastApplied, commitIndex, len(entries), len(tg.MoveQueue))
 
 	// log.Println("cmds:", commands, "moveq", tg.MoveQueue)
 
@@ -650,7 +676,6 @@ func (tg *TronGameView) updateWorkingGameState() {
 		if len(commands) > 0 && commands[0].Timestep <= workingTimestep {
 			if cmd, ok := commands.pop(); ok && cmd.Timestep == workingTimestep {
 				clientState := workingGameState.ClientStates[cmd.PlayerID]
-				log.Println("command: ", cmd)
 				switch cmd.Type {
 				case TronMoveCmd:
 					clientState.Direction = cmd.Direction
@@ -687,7 +712,7 @@ func (tg *TronGameView) applyCommandToGameState(gameState TronGameState, cmd Tro
 func (tg *TronGameView) truncateMoveQueueIfNecessary(cmd TronCommand) {
 	for i, move := range tg.MoveQueue {
 		if move.Id == cmd.Id {
-			log.Println("TRUNCATED", cmd)
+			// log.Println("TRUNCATED", cmd)
 			tg.MoveQueue = tg.MoveQueue[i+1:]
 			return
 		}
