@@ -617,7 +617,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 			log.Println("[RAFT]", "sending forwardedstart")
 			rf.Unlock()
 			if reply, err := rf.network.SendAndReceive(leader, args); err == nil {
-				reply := reply.(ForwardedStartReply)
+				reply := reply.(*ForwardedStartReply)
 				return reply.Index, reply.Term, false
 			}
 		}
@@ -741,8 +741,8 @@ func (rf *Raft) runElection() {
 		go func(votes chan *RequestVoteReply, peer *net.Client) {
 			if reply, err := rf.network.SendAndReceive(peer, args); err == nil {
 				log.Println("[RAFT]:", "RECEIVED vote", reply)
-				reply := reply.(RequestVoteReply)
-				votes <- &reply
+				reply := reply.(*RequestVoteReply)
+				votes <- reply
 			} else {
 				log.Println("[RAFT]:", "vote error", err)
 			}
@@ -936,7 +936,7 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 			return
 		}
 
-		if reply, ok := reply.(AppendEntriesReply); ok {
+		if reply, ok := reply.(*AppendEntriesReply); ok {
 			rf.Lock()
 			defer rf.Unlock()
 
