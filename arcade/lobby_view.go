@@ -5,7 +5,6 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
-	"log"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -124,7 +123,6 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
 	case *HelloMessage:
-		log.Println("sender", from.ID, "saying hello")
 		return NewLobbyInfoMessage(v.Lobby)
 	case *JoinMessage:
 		if v.Lobby.HostID == arcade.Server.ID {

@@ -117,6 +117,8 @@ func (mgr *ViewManager) Start(v View) {
 				mgr.RUnlock()
 
 				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
+
+				quit()
 			case tcell.KeyCtrlD:
 				mgr.ToggleDebugPanel()
 

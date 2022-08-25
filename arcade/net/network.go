@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"reflect"
@@ -63,7 +64,7 @@ func (n *Network) Addr() string {
 func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	c, ok := n.GetClient(id)
 
-	if !ok || c.State == Disconnected {
+	if !ok || c.State == Disconnected || c.NextHop != "" {
 		c = &Client{
 			Delegate: n,
 			Addr:     addr,
@@ -318,7 +319,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 
 		// Bellman-Ford equation: Update least-cost paths to all other clients
 		if c, ok := routingTable[clientID]; ok && c.Distance < client.Distance {
-			fmt.Println("new path to", clientID, "cost=", c.Distance)
+			log.Println("New path to", clientID, "cost=", c.Distance)
 
 			client.Lock()
 			client.Distance = c.Distance
