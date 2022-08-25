@@ -31,6 +31,7 @@ type Network struct {
 	pendingMessages    map[string]chan interface{}
 }
 
+const maxTimeoutRetries = 1
 const timeoutInterval = time.Second
 const sendAndReceiveTimeout = time.Second
 
@@ -64,13 +65,13 @@ func (n *Network) Addr() string {
 func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	c, ok := n.GetClient(id)
 
-	if !ok || c.State == Disconnected || c.NextHop != "" {
+	if !ok || c.State == Disconnected || c.State == TimedOut || c.NextHop != "" {
 		c = &Client{
 			Delegate: n,
 			Addr:     addr,
 			ID:       id,
 			Neighbor: true,
-			State:    Connected,
+			State:    Connecting,
 			recvCh:   make(chan []byte, maxBufferSize),
 			sendCh:   make(chan []byte, maxBufferSize),
 		}
@@ -126,6 +127,12 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	if !ok || err != nil {
 		c.Lock()
 		c.State = TimedOut
+		if c.TimeoutRetries < maxTimeoutRetries {
+			c.TimeoutRetries++
+			c.Unlock()
+
+			return n.Connect(addr, id, conn)
+		}
 		c.Unlock()
 
 		return nil, errors.New("timed out")
@@ -142,6 +149,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	}
 	c.Neighbor = true
 	c.State = Connected
+	c.TimeoutRetries = 0
 	c.Unlock()
 
 	n.Lock()

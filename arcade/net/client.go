@@ -59,7 +59,8 @@ type Client struct {
 	sendCh chan []byte
 	recvCh chan []byte
 
-	State ConnectionState
+	State          ConnectionState
+	TimeoutRetries int
 }
 
 // start begins reading and writing messages with this client.
