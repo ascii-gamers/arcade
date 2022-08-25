@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"arcade/arcade/message"
+	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"fmt"
 	"reflect"
@@ -105,8 +106,10 @@ func (s *Server) startHeartbeats() {
 				}
 
 				s.Lock()
-				s.connectedClients[clientID].RTTs = append(s.connectedClients[clientID].RTTs, end.Sub(start))
-				s.connectedClients[clientID].LastHeartbeat = time.Now()
+				if _, ok := s.connectedClients[clientID]; ok {
+					s.connectedClients[clientID].RTTs = append(s.connectedClients[clientID].RTTs, end.Sub(start))
+					s.connectedClients[clientID].LastHeartbeat = time.Now()
+				}
 				s.Unlock()
 			}(clientID)
 		}
@@ -232,7 +235,7 @@ func (s *Server) Start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	// go multicast.Listen(s.ID, s)
+	go multicast.Listen(s.ID, s)
 
 	for {
 		// Wait for new client connections
