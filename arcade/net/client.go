@@ -138,15 +138,15 @@ func (c *Client) writePump() {
 }
 
 // send sends a message to the client.
-func (c *Client) Send(msg interface{}) {
-	// Randomly drop packets if debugging
-	// TODO: Fix
-	// dropRate := arcade.Server.Network.GetDropRate()
-
-	// if dropRate > 0 && rand.Float64() < dropRate {
-	// 	return
-	// }
+func (c *Client) Send(msg interface{}) bool {
+	c.RLock()
+	if c.State != Connected {
+		c.RUnlock()
+		return false
+	}
+	c.RUnlock()
 
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data
+	return true
 }

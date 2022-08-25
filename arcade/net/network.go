@@ -70,6 +70,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 			Addr:     addr,
 			ID:       id,
 			Neighbor: true,
+			State:    Connected,
 			recvCh:   make(chan []byte, maxBufferSize),
 			sendCh:   make(chan []byte, maxBufferSize),
 		}
@@ -140,20 +141,14 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 		Distributor: p.Distributor,
 	}
 	c.Neighbor = true
+	c.Unlock()
 
-	if c.State == Disconnected {
-		c.State = Connected
-		c.Unlock()
+	n.Lock()
+	n.clients[clientID] = c
+	n.Unlock()
 
-		n.Lock()
-		n.clients[clientID] = c
-		n.Unlock()
-
-		if !p.Distributor && n.Delegate != nil {
-			n.Delegate.ClientConnected(clientID)
-		}
-	} else {
-		c.Unlock()
+	if !p.Distributor && n.Delegate != nil {
+		n.Delegate.ClientConnected(clientID)
 	}
 
 	go n.PropagateRoutes()
