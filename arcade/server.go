@@ -18,9 +18,8 @@ const heartbeatInterval = 250 * time.Millisecond
 const rttAverageNum = 10
 
 type ConnectedClientInfo struct {
-	LastHeartbeat      time.Time
-	HeartbeatSendTimes map[int]time.Time
-	RTTs               []time.Duration
+	LastHeartbeat time.Time
+	RTTs          []time.Duration
 }
 
 func (c *ConnectedClientInfo) GetMeanRTT() time.Duration {
@@ -55,9 +54,9 @@ type Server struct {
 }
 
 // NewServer creates the server with a given address.
-func NewServer(addr string, port int, mgr *ViewManager) *Server {
+func NewServer(addr string, port int, distributor bool, mgr *ViewManager) *Server {
 	id := uuid.NewString()
-	net := net.NewNetwork(id, port)
+	net := net.NewNetwork(id, port, distributor)
 
 	s := &Server{
 		mgr:              mgr,
@@ -68,7 +67,12 @@ func NewServer(addr string, port int, mgr *ViewManager) *Server {
 		pingMessageTimes: make(map[string]time.Time),
 	}
 
-	message.AddListener(s.handleMessage)
+	message.AddListener(message.Listener{
+		Distributor: true,
+		ServerID:    id,
+		Handle:      s.handleMessage,
+	})
+
 	go s.startHeartbeats()
 
 	return s
@@ -76,27 +80,39 @@ func NewServer(addr string, port int, mgr *ViewManager) *Server {
 
 func (s *Server) startHeartbeats() {
 	for {
-		s.Lock()
-
 		for clientID, info := range s.connectedClients {
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
 				s.Network.Disconnect(clientID)
+
+				s.Lock()
 				delete(s.connectedClients, clientID)
+				s.Unlock()
 				continue
 			}
 
 			metadata := s.mgr.GetHeartbeatMetadata()
 
-			client.Lock()
-			s.Network.Send(client, NewHeartbeatMessage(client.Seq, metadata))
-			s.connectedClients[clientID].HeartbeatSendTimes[client.Seq] = time.Now()
-			client.Seq++
-			client.Unlock()
-		}
+			go func(clientID string) {
+				start := time.Now()
+				res, err := s.Network.SendAndReceive(client, NewHeartbeatMessage(0, metadata))
+				end := time.Now()
 
-		s.Unlock()
+				_, ok := res.(*HeartbeatReplyMessage)
+
+				if !ok || err != nil {
+					return
+				}
+
+				s.Lock()
+				if _, ok := s.connectedClients[clientID]; ok {
+					s.connectedClients[clientID].RTTs = append(s.connectedClients[clientID].RTTs, end.Sub(start))
+					s.connectedClients[clientID].LastHeartbeat = time.Now()
+				}
+				s.Unlock()
+			}(clientID)
+		}
 
 		<-time.After(heartbeatInterval)
 	}
@@ -107,9 +123,8 @@ func (s *Server) BeginHeartbeats(clientID string) {
 	defer s.Unlock()
 
 	s.connectedClients[clientID] = &ConnectedClientInfo{
-		LastHeartbeat:      time.Now(),
-		HeartbeatSendTimes: make(map[int]time.Time),
-		RTTs:               make([]time.Duration, 0),
+		LastHeartbeat: time.Now(),
+		RTTs:          make([]time.Duration, 0),
 	}
 }
 
@@ -137,7 +152,7 @@ func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	c := client.(*net.Client)
 
-	baseMsg := reflect.ValueOf(msg).FieldByName("Message").Interface().(message.Message)
+	baseMsg := reflect.ValueOf(msg).Elem().FieldByName("Message").Interface().(message.Message)
 
 	// Ping messages may not have a recipient ID set
 	if baseMsg.RecipientID == "" {
@@ -158,8 +173,10 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 	// Process message and return response
 	switch msg := msg.(type) {
-	case DisconnectMessage:
+	case *DisconnectMessage:
 		s.Network.Disconnect(c.ID)
+	case *net.PingMessage, *net.PongMessage, *net.RoutingMessage:
+		break
 	default:
 		if baseMsg.RecipientID != s.ID {
 			if arcade.Distributor {
@@ -172,7 +189,8 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 			s.RUnlock()
 
 			if ok {
-				s.Network.Send(recipient, msg)
+				recipient.Send(msg)
+				// s.Network.Send(recipient, msg)
 				return nil
 			} else {
 				return NewErrorMessage("invalid recipient")
@@ -184,7 +202,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 			}
 
 			switch msg := msg.(type) {
-			case HeartbeatMessage:
+			case *HeartbeatMessage:
 				s.Lock()
 				if _, ok := s.connectedClients[msg.SenderID]; ok {
 					s.connectedClients[msg.SenderID].LastHeartbeat = time.Now()
@@ -197,19 +215,8 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 				// Reply to heartbeat
 				return NewHeartbeatReplyMessage(msg.Seq)
-			case HeartbeatReplyMessage:
-				if msg.RecipientID == s.ID {
-					s.Lock()
-					if _, ok := s.connectedClients[msg.SenderID]; ok {
-						s.connectedClients[msg.SenderID].LastHeartbeat = time.Now()
-						s.connectedClients[msg.SenderID].RTTs = append(s.connectedClients[msg.SenderID].RTTs, time.Since(s.connectedClients[msg.SenderID].HeartbeatSendTimes[msg.Seq]))
-					}
-					s.Unlock()
-
-					s.mgr.RequestDebugRender()
-				}
 			default:
-				return ProcessMessage(c, msg, s.mgr)
+				return s.mgr.ProcessMessage(c, msg)
 			}
 		}
 	}

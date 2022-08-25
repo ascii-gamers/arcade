@@ -463,8 +463,8 @@ func (tg *TronGameView) ProcessMessage(from *net.Client, p interface{}) interfac
 	// 	tg.handleGameUpdate(p)
 	// case ClientUpdateMessage[TronClientState]:
 	// 	tg.handleClientUpdate(p)
-	case EndGameMessage:
-		tg.handleEndGame(p)
+	case *EndGameMessage:
+		tg.handleEndGame(*p)
 	}
 	return nil
 }

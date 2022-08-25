@@ -1087,17 +1087,17 @@ func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
 	// log.Println("IN PROCESSMESSAGE: ", data)
 	// c := from.(*net.Client)
 	switch data := data.(type) {
-	case RequestVoteArgs:
-		return rf.RequestVote(&data)
-	case AppendEntriesArgs:
+	case *RequestVoteArgs:
+		return rf.RequestVote(data)
+	case *AppendEntriesArgs:
 		defer func() {
 			// log.Println("[RAFT]", "resulting log len", len(rf.log.entries))
 		}()
-		return rf.AppendEntries(&data)
-	case InstallSnapshotArgs:
-		return rf.InstallSnapshot(&data)
-	case ForwardedStartArgs:
-		return rf.ForwardedStart(&data)
+		return rf.AppendEntries(data)
+	case *InstallSnapshotArgs:
+		return rf.InstallSnapshot(data)
+	case *ForwardedStartArgs:
+		return rf.ForwardedStart(data)
 
 	}
 
@@ -1146,7 +1146,7 @@ func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Netwo
 	rf.commitIndex = rf.log.GetLastIncludedIndex()
 	rf.lastApplied = rf.log.GetLastIncludedIndex()
 
-	message.AddListener(rf.processMessage)
+	message.AddListener(message.Listener{Handle: rf.processMessage})
 
 	return rf
 }

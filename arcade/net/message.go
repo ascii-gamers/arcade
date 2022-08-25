@@ -4,10 +4,11 @@ func (n *Network) processMessage(client, msg interface{}) interface{} {
 	c := client.(*Client)
 
 	switch msg := msg.(type) {
-	case PingMessage:
+	case *PingMessage:
 		c.ID = msg.Message.SenderID
 		c.ClientRoutingInfo = ClientRoutingInfo{
-			Distance: 1,
+			Distributor: msg.Distributor,
+			Distance:    1,
 		}
 		c.Neighbor = true
 
@@ -16,7 +17,7 @@ func (n *Network) processMessage(client, msg interface{}) interface{} {
 		n.Unlock()
 
 		return NewPongMessage(n.distributor)
-	case RoutingMessage:
+	case *RoutingMessage:
 		n.UpdateRoutes(c, msg.Distances)
 	}
 

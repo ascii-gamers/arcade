@@ -1,12 +1,12 @@
 package arcade
 
 import (
-	"arcade/arcade/message"
 	"arcade/arcade/net"
 	"fmt"
 	"math"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -21,9 +21,7 @@ type ViewManager struct {
 }
 
 func NewViewManager() *ViewManager {
-	mgr := &ViewManager{}
-	message.AddListener(mgr.ProcessMessage)
-	return mgr
+	return &ViewManager{}
 }
 
 func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
@@ -31,6 +29,7 @@ func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interfac
 	v := mgr.view
 	mgr.RUnlock()
 
+	defer mgr.RequestRender()
 	return v.ProcessMessage(from.(*net.Client), p)
 }
 
@@ -110,9 +109,14 @@ func (mgr *ViewManager) Start(v View) {
 		case *tcell.EventKey:
 			switch ev.Key() {
 			case tcell.KeyEscape, tcell.KeyCtrlC:
+				// Quit even if we hit deadlock on a dead client
+				time.AfterFunc(250*time.Millisecond, quit)
+
 				mgr.RLock()
 				mgr.view.Unload()
 				mgr.RUnlock()
+
+				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 
 				quit()
 			case tcell.KeyCtrlD:
@@ -204,6 +208,7 @@ func (mgr *ViewManager) RequestRender() {
 
 		if ip, err := net.GetLocalIP(); err == nil {
 			mgr.screen.DrawText(-x, h+y-1, debugSty, fmt.Sprintf("Local IP: %s:%d", ip, arcade.Port))
+			mgr.screen.DrawText(-x, h+y-2, debugSty, fmt.Sprintf("ID: %s", arcade.Server.ID))
 		}
 	}
 
