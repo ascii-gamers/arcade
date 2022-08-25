@@ -2,7 +2,6 @@ package arcade
 
 import (
 	"arcade/arcade/message"
-	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"fmt"
 	"reflect"
@@ -18,9 +17,8 @@ const heartbeatInterval = 250 * time.Millisecond
 const rttAverageNum = 10
 
 type ConnectedClientInfo struct {
-	LastHeartbeat      time.Time
-	HeartbeatSendTimes map[int]time.Time
-	RTTs               []time.Duration
+	LastHeartbeat time.Time
+	RTTs          []time.Duration
 }
 
 func (c *ConnectedClientInfo) GetMeanRTT() time.Duration {
@@ -81,27 +79,37 @@ func NewServer(addr string, port int, distributor bool, mgr *ViewManager) *Serve
 
 func (s *Server) startHeartbeats() {
 	for {
-		s.Lock()
-
 		for clientID, info := range s.connectedClients {
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
 				s.Network.Disconnect(clientID)
+
+				s.Lock()
 				delete(s.connectedClients, clientID)
+				s.Unlock()
 				continue
 			}
 
 			metadata := s.mgr.GetHeartbeatMetadata()
 
-			client.Lock()
-			s.Network.Send(client, NewHeartbeatMessage(client.Seq, metadata))
-			s.connectedClients[clientID].HeartbeatSendTimes[client.Seq] = time.Now()
-			client.Seq++
-			client.Unlock()
-		}
+			go func(clientID string) {
+				start := time.Now()
+				res, err := s.Network.SendAndReceive(client, NewHeartbeatMessage(0, metadata))
+				end := time.Now()
 
-		s.Unlock()
+				_, ok := res.(*HeartbeatReplyMessage)
+
+				if !ok || err != nil {
+					return
+				}
+
+				s.Lock()
+				s.connectedClients[clientID].RTTs = append(s.connectedClients[clientID].RTTs, end.Sub(start))
+				s.connectedClients[clientID].LastHeartbeat = time.Now()
+				s.Unlock()
+			}(clientID)
+		}
 
 		<-time.After(heartbeatInterval)
 	}
@@ -112,9 +120,8 @@ func (s *Server) BeginHeartbeats(clientID string) {
 	defer s.Unlock()
 
 	s.connectedClients[clientID] = &ConnectedClientInfo{
-		LastHeartbeat:      time.Now(),
-		HeartbeatSendTimes: make(map[int]time.Time),
-		RTTs:               make([]time.Duration, 0),
+		LastHeartbeat: time.Now(),
+		RTTs:          make([]time.Duration, 0),
 	}
 }
 
@@ -192,7 +199,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 			}
 
 			switch msg := msg.(type) {
-			case HeartbeatMessage:
+			case *HeartbeatMessage:
 				s.Lock()
 				if _, ok := s.connectedClients[msg.SenderID]; ok {
 					s.connectedClients[msg.SenderID].LastHeartbeat = time.Now()
@@ -205,17 +212,6 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 				// Reply to heartbeat
 				return NewHeartbeatReplyMessage(msg.Seq)
-			case HeartbeatReplyMessage:
-				if msg.RecipientID == s.ID {
-					s.Lock()
-					if _, ok := s.connectedClients[msg.SenderID]; ok {
-						s.connectedClients[msg.SenderID].LastHeartbeat = time.Now()
-						s.connectedClients[msg.SenderID].RTTs = append(s.connectedClients[msg.SenderID].RTTs, time.Since(s.connectedClients[msg.SenderID].HeartbeatSendTimes[msg.Seq]))
-					}
-					s.Unlock()
-
-					s.mgr.RequestDebugRender()
-				}
 			default:
 				return s.mgr.ProcessMessage(c, msg)
 			}
@@ -236,7 +232,7 @@ func (s *Server) Start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	go multicast.Listen(s.ID, s)
+	// go multicast.Listen(s.ID, s)
 
 	for {
 		// Wait for new client connections

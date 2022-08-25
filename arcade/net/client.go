@@ -53,8 +53,6 @@ type Client struct {
 	// ID of the client through which this client is reached.
 	NextHop string
 
-	Seq int
-
 	conn net.Conn
 
 	sendCh chan []byte
