@@ -70,7 +70,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 			Addr:     addr,
 			ID:       id,
 			Neighbor: true,
-			State:    Connecting,
+			State:    Connected,
 			recvCh:   make(chan []byte, maxBufferSize),
 			sendCh:   make(chan []byte, maxBufferSize),
 		}

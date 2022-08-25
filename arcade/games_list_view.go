@@ -97,7 +97,7 @@ func (v *GamesListView) Init() {
 
 func (v *GamesListView) SendHelloMessages() {
 	// Scan LAN for lobbies
-	go multicast.Discover(arcade.Server.Addr, arcade.Server.ID)
+	go multicast.Discover(arcade.Server.Addr, arcade.Server.ID, arcade.Port)
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
