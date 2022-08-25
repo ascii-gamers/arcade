@@ -70,7 +70,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 			Addr:     addr,
 			ID:       id,
 			Neighbor: true,
-			State:    Connected,
+			State:    Connecting,
 			recvCh:   make(chan []byte, maxBufferSize),
 			sendCh:   make(chan []byte, maxBufferSize),
 		}
@@ -141,6 +141,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 		Distributor: p.Distributor,
 	}
 	c.Neighbor = true
+	c.State = Connected
 	c.Unlock()
 
 	n.Lock()

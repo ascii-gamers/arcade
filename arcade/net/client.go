@@ -24,6 +24,7 @@ type ConnectionState int
 
 const (
 	Disconnected ConnectionState = iota
+	Connecting
 	Connected
 	TimedOut
 )
@@ -140,7 +141,7 @@ func (c *Client) writePump() {
 // send sends a message to the client.
 func (c *Client) Send(msg interface{}) bool {
 	c.RLock()
-	if c.State != Connected {
+	if c.State != Connecting && c.State != Connected {
 		c.RUnlock()
 		return false
 	}
