@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"arcade/arcade/message"
+	"arcade/arcade/multicast"
 	"arcade/arcade/net"
 	"fmt"
 	"reflect"
@@ -141,7 +142,7 @@ func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
 func (s *Server) handleMessage(client, msg interface{}) interface{} {
 	c := client.(*net.Client)
 
-	baseMsg := reflect.ValueOf(msg).FieldByName("Message").Interface().(message.Message)
+	baseMsg := reflect.ValueOf(msg).Elem().FieldByName("Message").Interface().(message.Message)
 
 	// Ping messages may not have a recipient ID set
 	if baseMsg.RecipientID == "" {
@@ -162,13 +163,9 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 	// Process message and return response
 	switch msg := msg.(type) {
-	case DisconnectMessage:
+	case *DisconnectMessage:
 		s.Network.Disconnect(c.ID)
-	case net.PingMessage:
-		break
-	case net.PongMessage:
-		break
-	case net.RoutingMessage:
+	case *net.PingMessage, *net.PongMessage, *net.RoutingMessage:
 		break
 	default:
 		if baseMsg.RecipientID != s.ID {
@@ -182,7 +179,8 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 			s.RUnlock()
 
 			if ok {
-				s.Network.Send(recipient, msg)
+				recipient.Send(msg)
+				// s.Network.Send(recipient, msg)
 				return nil
 			} else {
 				return NewErrorMessage("invalid recipient")
@@ -219,7 +217,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 					s.mgr.RequestDebugRender()
 				}
 			default:
-				return ProcessMessage(c, msg, s.mgr)
+				return s.mgr.ProcessMessage(c, msg)
 			}
 		}
 	}
@@ -238,7 +236,7 @@ func (s *Server) Start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	// go multicast.Listen(s.ID, s)
+	go multicast.Listen(s.ID, s)
 
 	for {
 		// Wait for new client connections

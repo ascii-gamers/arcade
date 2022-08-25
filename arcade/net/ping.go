@@ -8,11 +8,13 @@ import (
 
 type PingMessage struct {
 	message.Message
+	Distributor bool
 }
 
-func NewPingMessage() *PingMessage {
+func NewPingMessage(distributor bool) *PingMessage {
 	return &PingMessage{
-		Message: message.Message{Type: "ping"},
+		Message:     message.Message{Type: "ping"},
+		Distributor: distributor,
 	}
 }
 

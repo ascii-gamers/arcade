@@ -118,7 +118,7 @@ func (v *GamesListView) QueryClient(client *net.Client) {
 	res, err := arcade.Server.Network.SendAndReceive(client, NewHelloMessage())
 	end := time.Now()
 
-	p, ok := res.(LobbyInfoMessage)
+	p, ok := res.(*LobbyInfoMessage)
 
 	if !ok || err != nil {
 		return
@@ -227,7 +227,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 
 func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
-	case JoinReplyMessage:
+	case *JoinReplyMessage:
 		if p.Error == OK {
 			err_msg = ""
 			glv_join_box = ""
@@ -240,7 +240,7 @@ func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interfac
 		} else if p.Error == ErrCapacity {
 			err_msg = "Game is now full."
 		}
-	case LobbyEndMessage:
+	case *LobbyEndMessage:
 		v.mu.Lock()
 		delete(v.lobbies, p.LobbyID)
 		v.selectedRow--

@@ -63,27 +63,6 @@ type Client struct {
 	State ConnectionState
 }
 
-// NewClient creates a client with the given address.
-func NewNeighboringClient(addr string) *Client {
-	return &Client{
-		Addr:     addr,
-		ID:       addr,
-		Neighbor: true,
-		sendCh:   make(chan []byte, maxBufferSize),
-	}
-}
-
-func NewDistantClient(id, nextHop string, distance float64, distributor bool) *Client {
-	return &Client{
-		ID:      id,
-		NextHop: nextHop,
-		ClientRoutingInfo: ClientRoutingInfo{
-			Distance:    distance,
-			Distributor: distributor,
-		},
-	}
-}
-
 // start begins reading and writing messages with this client.
 func (c *Client) start(conn net.Conn) {
 	c.conn = conn
@@ -161,7 +140,7 @@ func (c *Client) writePump() {
 }
 
 // send sends a message to the client.
-func (c *Client) send(msg interface{}) {
+func (c *Client) Send(msg interface{}) {
 	// Randomly drop packets if debugging
 	// TODO: Fix
 	// dropRate := arcade.Server.Network.GetDropRate()

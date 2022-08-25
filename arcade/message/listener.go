@@ -24,7 +24,7 @@ func AddListener(listener Listener) {
 
 func Notify(c interface{}, data []byte) []interface{} {
 	msg, err := parse(data)
-	recipientID := reflect.ValueOf(msg).FieldByName("Message").FieldByName("RecipientID").String()
+	recipientID := reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").String()
 
 	if err != nil {
 		panic(err)
@@ -45,7 +45,7 @@ func Notify(c interface{}, data []byte) []interface{} {
 			continue
 		}
 
-		messageID := reflect.ValueOf(msg).FieldByName("Message").FieldByName("MessageID").String()
+		messageID := reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("MessageID").String()
 		reflect.ValueOf(reply).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
 
 		replies = append(replies, reply)

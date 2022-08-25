@@ -2,6 +2,7 @@ package net
 
 import (
 	"arcade/arcade/message"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -80,8 +81,23 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 					break
 				}
 
+				// Get sender ID
+				res := struct {
+					SenderID string
+				}{}
+
+				if err := json.Unmarshal(data, &res); err != nil {
+					break
+				}
+
+				sender, ok := n.GetClient(res.SenderID)
+
+				if !ok {
+					sender = c
+				}
+
 				for _, reply := range message.Notify(c, data) {
-					n.Send(c, reply)
+					n.Send(sender, reply)
 				}
 			}
 		}()
@@ -100,10 +116,10 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 
 	// Send ping and wait for reply
 	start := time.Now()
-	res, err := n.SendAndReceive(c, NewPingMessage())
+	res, err := n.SendAndReceive(c, NewPingMessage(n.distributor))
 	end := time.Now()
 
-	p, ok := res.(PongMessage)
+	p, ok := res.(*PongMessage)
 
 	if !ok || err != nil {
 		c.Lock()
@@ -180,7 +196,7 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
 	if client.NextHop == "" {
-		client.send(msg)
+		client.Send(msg)
 		return true
 	}
 
@@ -193,7 +209,7 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 		return false
 	}
 
-	servicer.send(msg)
+	servicer.Send(msg)
 	return true
 }
 
@@ -247,20 +263,21 @@ func (n *Network) SignalReceived(messageID string, resp interface{}) {
 
 func (n *Network) SendNeighbors(msg interface{}) {
 	n.RLock()
-	defer n.RUnlock()
+	clients := n.clients
+	n.RUnlock()
 
 	// Set sender ID
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 
-	for _, client := range n.clients {
-		if !client.Neighbor {
+	for _, client := range clients {
+		if !client.Neighbor || client.State != Connected {
 			continue
 		}
 
 		// Set recipient ID
 		reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
-		client.send(msg)
+		client.Send(msg)
 	}
 }
 
@@ -321,7 +338,16 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 			continue
 		}
 
-		n.clients[clientID] = NewDistantClient(clientID, from.ID, c.Distance+1, c.Distributor)
+		n.clients[clientID] = &Client{
+			ID:      clientID,
+			NextHop: from.ID,
+			ClientRoutingInfo: ClientRoutingInfo{
+				Distance:    c.Distance + 1,
+				Distributor: c.Distributor,
+			},
+			State: Connected,
+		}
+
 		changes++
 	}
 
@@ -353,5 +379,11 @@ func (n *Network) SetDropRate(rate float64) {
 //
 
 func (n *Network) ClientDisconnected(clientID string) {
-	n.Delegate.ClientDisconnected(clientID)
+	n.Lock()
+	delete(n.clients, clientID)
+	n.Unlock()
+
+	if n.Delegate != nil {
+		n.Delegate.ClientDisconnected(clientID)
+	}
 }

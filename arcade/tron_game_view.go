@@ -267,11 +267,11 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 
 func (tg *TronGameView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
-	case GameUpdateMessage[TronGameState, TronClientState]:
+	case *GameUpdateMessage[TronGameState, TronClientState]:
 		tg.handleGameUpdate(p)
-	case ClientUpdateMessage[TronClientState]:
+	case *ClientUpdateMessage[TronClientState]:
 		tg.handleClientUpdate(p)
-	case EndGameMessage:
+	case *EndGameMessage:
 		tg.handleEndGame(p)
 	}
 	return nil
@@ -468,7 +468,7 @@ func (tg *TronGameView) clientPredict(state TronClientState, targetTimestep int)
 	return state
 }
 
-func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, TronClientState]) {
+func (tg *TronGameView) handleGameUpdate(data *GameUpdateMessage[TronGameState, TronClientState]) {
 	mu.Lock()
 	defer mu.Unlock()
 	if data.ID != currGameUpdateId {
@@ -507,7 +507,7 @@ func (tg *TronGameView) handleGameUpdate(data GameUpdateMessage[TronGameState, T
 	tg.recalculateCollisions()
 }
 
-func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientState]) {
+func (tg *TronGameView) handleClientUpdate(data *ClientUpdateMessage[TronClientState]) {
 	mu.Lock()
 	defer mu.Unlock()
 	update := data.Update
@@ -542,7 +542,7 @@ func (tg *TronGameView) handleClientUpdate(data ClientUpdateMessage[TronClientSt
 	lastReceivedInp[data.Id] = update.Timestep
 }
 
-func (tg *TronGameView) handleEndGame(data EndGameMessage) {
+func (tg *TronGameView) handleEndGame(data *EndGameMessage) {
 	tg.GameState.Ended = true
 	tg.GameState.Winner = data.Winner
 	tg.mgr.RequestRender()

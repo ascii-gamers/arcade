@@ -5,6 +5,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"log"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -122,9 +123,10 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 
 func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} {
 	switch p := p.(type) {
-	case HelloMessage:
+	case *HelloMessage:
+		log.Println("sender", from.ID, "saying hello")
 		return NewLobbyInfoMessage(v.Lobby)
-	case JoinMessage:
+	case *JoinMessage:
 		if v.Lobby.HostID == arcade.Server.ID {
 			if v.Lobby.ID == p.LobbyID {
 				v.Lobby.mu.RLock()
@@ -148,14 +150,14 @@ func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} 
 			}
 		}
 
-	case LeaveMessage:
+	case *LeaveMessage:
 		if v.Lobby.ID == p.LobbyID && v.Lobby.HostID == arcade.Server.ID {
 			v.Lobby.RemovePlayer(p.PlayerID)
 		}
 
 		arcade.Server.EndHeartbeats(p.PlayerID)
 		v.mgr.RequestRender()
-	case LobbyEndMessage:
+	case *LobbyEndMessage:
 		// get rid of lobby
 		if v.Lobby.ID == p.LobbyID {
 			v.Lobby = &Lobby{}
@@ -163,12 +165,14 @@ func (v *LobbyView) ProcessMessage(from *net.Client, p interface{}) interface{} 
 			arcade.Server.EndAllHeartbeats()
 			v.mgr.SetView(NewGamesListView(v.mgr))
 		}
-	case StartGameMessage:
+	case *StartGameMessage:
 		if p.GameID == v.Lobby.ID {
 			NewGame(v.mgr, v.Lobby)
 		}
+
 		return nil
 	}
+
 	return nil
 }
 
@@ -251,8 +255,6 @@ func (v *LobbyView) Unload() {
 		host, _ := arcade.Server.Network.GetClient(v.Lobby.HostID)
 		arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
 	}
-
-	arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {

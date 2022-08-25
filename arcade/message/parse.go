@@ -42,7 +42,7 @@ func parse(data []byte) (interface{}, error) {
 			panic(err)
 		}
 
-		return reflect.ValueOf(p).Elem().Interface(), nil
+		return reflect.ValueOf(p).Interface(), nil
 	}
 
 	return nil, errors.New("unknown message type '" + res.Type + "'")
