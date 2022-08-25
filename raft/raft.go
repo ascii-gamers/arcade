@@ -269,7 +269,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 
 	rf.Lock()
 	defer rf.Unlock()
-	reply := RequestVoteReply{message.Message{Type: "RequestVoteReply"}, rf.currentTerm, false, rf.me}
+	reply := &RequestVoteReply{message.Message{Type: "RequestVoteReply"}, rf.currentTerm, false, rf.me}
 
 	// defer func() {
 
@@ -277,7 +277,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 
 	if args.Term < rf.currentTerm {
 		log.Println("[RAFT]: RequestVote", "Reject, args.Term < currentTerm")
-		return &reply
+		return reply
 	} else if args.Term > rf.currentTerm {
 		rf.startNewTerm(args.Term, NullPeer, NullPeer)
 		rf.persist(nil)
@@ -285,12 +285,12 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 
 	if rf.votedFor != NullPeer && rf.votedFor != args.CandidateID {
 		log.Println("[RAFT]: RequestVote", "Reject, already voted for "+strconv.Itoa(rf.votedFor))
-		return &reply
+		return reply
 	}
 
 	if rf.log.LastTerm() > args.LastLogTerm || (rf.log.LastTerm() == args.LastLogTerm && rf.log.LastIndex() > args.LastLogIndex) {
 		log.Println("[RAFT]: RequestVote", "Reject, log not up to date")
-		return &reply
+		return reply
 	}
 
 	rf.resetElectionTimeout()
@@ -302,7 +302,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 
 	reply.VoteGranted = true
 
-	return &reply
+	return reply
 }
 
 //
@@ -511,7 +511,7 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs) *InstallSnapshotReply
 	rf.Lock()
 	defer rf.Unlock()
 
-	reply := &InstallSnapshotReply{Message: message.Message{Type: "RequestVote"}}
+	reply := &InstallSnapshotReply{Message: message.Message{Type: "InstallSnashotReply"}}
 
 	reply.ClientId = rf.me
 
@@ -641,9 +641,11 @@ func (rf *Raft) ForwardedStart(args *ForwardedStartArgs) *ForwardedStartReply {
 	// log.Println("[RAFT]", "rec forwardedstart")
 	if rf.state == Leader {
 		ind, term, _ := rf.Start(args.Command)
-		return &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, ind, term}
+		reply := &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, ind, term}
+		return reply
 	}
-	return &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, -1, -1}
+	reply := &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, -1, -1}
+	return reply
 }
 
 //

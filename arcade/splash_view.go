@@ -3,6 +3,7 @@ package arcade
 import (
 	"arcade/arcade/net"
 	"encoding"
+	"log"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -84,6 +85,7 @@ func (v *SplashView) ProcessMessage(from *net.Client, p interface{}) interface{}
 }
 
 func (v *SplashView) Render(s *Screen) {
+	log.Println("AHHHHHHHHHh")
 	width, _ := s.displaySize()
 
 	// Green text on default background
