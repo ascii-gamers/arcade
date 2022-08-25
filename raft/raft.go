@@ -741,6 +741,7 @@ func (rf *Raft) runElection() {
 		}
 
 		go func(votes chan *RequestVoteReply, peer *net.Client) {
+			log.Println("[RAFT]:", "SENDING vote req", args, peer)
 			if reply, err := rf.network.SendAndReceive(peer, args); err == nil {
 				log.Println("[RAFT]:", "RECEIVED vote", reply)
 				reply := reply.(*RequestVoteReply)
@@ -1119,6 +1120,8 @@ func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
 //
 func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Network, timestepPeriod int, timestepCond *sync.Cond) *Raft {
 	rand.Seed(time.Now().UnixNano())
+
+	log.Println("[RAFT]", "PEERS: ", len(peers))
 
 	rf := &Raft{}
 	rf.peers = peers

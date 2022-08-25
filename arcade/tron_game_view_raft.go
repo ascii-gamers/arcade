@@ -283,14 +283,12 @@ func (tg *TronGameView) Init() {
 		if playerId == tg.Me {
 			myClient := net.Client{}
 			clients = append(clients, &myClient)
-		}
-		if client, ok := arcade.Server.Network.GetClient(playerId); ok {
+		} else if client, ok := arcade.Server.Network.GetClient(playerId); ok {
 			clients = append(clients, client)
 		}
 	}
 
 	// JANK
-	// fmt.Println("CLIENTS: ", clients)
 	tg.RaftServer = raft.Make(clients, me, tg.ApplyChan, arcade.Server.Network, tg.TimestepPeriod, c)
 
 	width, height := tg.mgr.screen.displaySize()
@@ -601,7 +599,6 @@ func (tg *TronGameView) updateSelf() {
 	// defer mu.Unlock()
 	currentTimestep := tg.getTimestep()
 	var cmd TronCommand
-	log.Println(needToProcessInput, tg.NextDir)
 
 	if needToProcessInput {
 		cmd = TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.LatestInputDir}
