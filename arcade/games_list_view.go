@@ -101,7 +101,7 @@ func (v *GamesListView) SendHelloMessages() {
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
-		if client.State != net.Connected || client.Distributor {
+		if (client.State != net.Connected && client.State != net.Connecting) || client.Distributor {
 			return true
 		}
 

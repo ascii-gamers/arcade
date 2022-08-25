@@ -24,6 +24,7 @@ type ConnectionState int
 
 const (
 	Disconnected ConnectionState = iota
+	Connecting
 	Connected
 	TimedOut
 )
@@ -58,7 +59,8 @@ type Client struct {
 	sendCh chan []byte
 	recvCh chan []byte
 
-	State ConnectionState
+	State          ConnectionState
+	TimeoutRetries int
 }
 
 // start begins reading and writing messages with this client.
@@ -71,7 +73,7 @@ func (c *Client) start(conn net.Conn) {
 
 func (c *Client) disconnect() {
 	c.Lock()
-	if c.State != Connected {
+	if c.State != Connected && c.State != Connecting {
 		c.Unlock()
 		return
 	}
@@ -138,16 +140,16 @@ func (c *Client) writePump() {
 }
 
 // send sends a message to the client.
-func (c *Client) Send(msg interface{}) {
-	// Randomly drop packets if debugging
-	// TODO: Fix
-	// dropRate := arcade.Server.Network.GetDropRate()
-
-	// if dropRate > 0 && rand.Float64() < dropRate {
-	// 	return
-	// }
+func (c *Client) Send(msg interface{}) bool {
+	c.RLock()
+	if c.State != Connecting && c.State != Connected {
+		c.RUnlock()
+		return false
+	}
+	c.RUnlock()
 
 	// log.Println("SENDING: ", msg)
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data
+	return true
 }
