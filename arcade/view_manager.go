@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -108,13 +109,14 @@ func (mgr *ViewManager) Start(v View) {
 		case *tcell.EventKey:
 			switch ev.Key() {
 			case tcell.KeyEscape, tcell.KeyCtrlC:
+				// Quit even if we hit deadlock on a dead client
+				time.AfterFunc(250*time.Millisecond, quit)
+
 				mgr.RLock()
 				mgr.view.Unload()
 				mgr.RUnlock()
 
 				arcade.Server.Network.SendNeighbors(NewDisconnectMessage())
-
-				quit()
 			case tcell.KeyCtrlD:
 				mgr.ToggleDebugPanel()
 
