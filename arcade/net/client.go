@@ -72,7 +72,7 @@ func (c *Client) start(conn net.Conn) {
 
 func (c *Client) disconnect() {
 	c.Lock()
-	if c.State != Connected {
+	if c.State != Connected && c.State != Connecting {
 		c.Unlock()
 		return
 	}

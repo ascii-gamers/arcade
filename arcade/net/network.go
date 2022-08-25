@@ -267,7 +267,7 @@ func (n *Network) SendNeighbors(msg interface{}) {
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 
 	for _, client := range clients {
-		if !client.Neighbor || client.State != Connected {
+		if !client.Neighbor || (client.State != Connected && client.State != Connecting) {
 			continue
 		}
 
