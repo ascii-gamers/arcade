@@ -230,7 +230,7 @@ func NewTronGameView(mgr *ViewManager, lobby *Lobby) *TronGameView {
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 2000,
-			TimestepPeriod: 100,
+			TimestepPeriod: 70,
 			Timestep:       0,
 		},
 	}
