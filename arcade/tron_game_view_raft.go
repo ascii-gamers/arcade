@@ -137,7 +137,7 @@ func (tc TronCommand) String() string {
 	case TronRight:
 		dir = "TronRight"
 	}
-	return fmt.Sprintf("[%d,%s, %s]", tc.Timestep, tc.PlayerID[:3], dir)
+	return fmt.Sprintf("%s[%d,%s, %s]", tc.Id[:5], tc.Timestep, tc.PlayerID[:3], dir)
 }
 
 // BASIC QUEUE IMPLEMENTATION
@@ -551,16 +551,26 @@ func (tg *TronGameView) startApplyChanHandler() {
 			if applyMsg.CommandValid {
 				if applyMsg.CommandTimestep < tg.CommitedGameState.CommitedTimeStep {
 					panic("encountered older timestep than commitedTimestep")
-				}
-				if cmd, ok := readLogEntryAsTronCmd(applyMsg.Command); ok {
-					newCommitedGameState := tg.applyCommandToGameState(tg.CommitedGameState, cmd)
+				} else if cmd, ok := readLogEntryAsTronCmd(applyMsg.Command); ok {
+					log.Println("Applying: ", cmd, applyMsg.CommandTimestep)
 
-					tg.CommitedGameState = tg.clientPredict(newCommitedGameState, applyMsg.CommandTimestep-tg.CommitedGameState.CommitedTimeStep)
+					jumpAhead := math.Max(float64(applyMsg.CommandTimestep-tg.CommitedGameState.CommitedTimeStep-1), 0)
+					log.Println("Jump ahead: ", jumpAhead)
+					newCommitedGameState := tg.clientPredict(tg.CommitedGameState, int(jumpAhead))
+
+					newCommitedGameState.CommitedTimeStep = applyMsg.CommandTimestep
+					newCommitedGameState = tg.applyCommandToGameState(newCommitedGameState, cmd)
+					newCommitedGameState = tg.clientPredict(newCommitedGameState, 1) // current timestep forward
+
+					tg.CommitedGameState = newCommitedGameState
+
+					tg.truncateMoveQueueIfNecessary(cmd)
 
 				}
 
 			}
 			mu.Unlock()
+			log.Println("Finished apply")
 		}
 
 	}()
@@ -592,10 +602,9 @@ func (tg *TronGameView) updateWorkingGameState() {
 
 	raftLog, lastApplied, commitIndex := tg.RaftServer.GetLog()
 
-	log.Println("[RAFT]", lastApplied, commitIndex)
 	allEntries := raftLog.GetEntries()
 	entries := allEntries[int(math.Min(float64(lastApplied), float64(len(allEntries)))):]
-	// log.Println("MQ: ", tg.MoveQueue)
+
 	var commands BasicQueue[TronCommand]
 	for _, entry := range entries {
 		if cmd, ok := readLogEntryAsTronCmd(entry.Command); ok {
@@ -606,52 +615,19 @@ func (tg *TronGameView) updateWorkingGameState() {
 		}
 	}
 
-	// log.Println("[RAFT]:", "entries on", tg.Me, convertedEntries)
+	log.Println("working state", lastApplied, commitIndex, len(entries), len(tg.MoveQueue))
+
+	// log.Println("cmds:", commands, "moveq", tg.MoveQueue)
 
 	workingGameState := TronGameState{}
 	copier.CopyWithOption(&workingGameState, &tg.CommitedGameState, copier.Option{DeepCopy: true})
-
-	// process badly ordered cmd logs
-	// latestTimestep := -1
-	// lastDelayedTimeByPlayer := make(map[string]int)
-	// var processedLogs BasicQueue[TronCommand]
-
-	// for _, entry := range entries {
-
-	// 	cmd, ok := readLogEntryAsTronCmd(entry.Command)
-	// 	if !ok {
-	// 		log.Println("[RAFT]:", "FAILED TO PARSE ENTRY", entry.Command)
-	// 		continue
-	// 	}
-
-	// 	if cmd.Timestep > latestTimestep {
-	// 		latestTimestep = cmd.Timestep
-	// 		lastDelayedTimeByPlayer = make(map[string]int)
-	// 	}
-
-	// 	if cmd.Timestep < latestTimestep {
-	// 		ogTimestep := cmd.Timestep
-	// 		if lastTime, ok := lastDelayedTimeByPlayer[cmd.PlayerID]; ok {
-	// 			cmd.Timestep = int(math.Max(float64(latestTimestep), float64(latestTimestep+cmd.Timestep-lastTime)))
-	// 		} else {
-	// 			cmd.Timestep = latestTimestep
-	// 		}
-	// 		lastDelayedTimeByPlayer[cmd.PlayerID] = ogTimestep
-	// 	}
-	// 	processedLogs.push(cmd)
-
-	// 	tg.truncateMoveQueueIfNecessary(cmd)
-	// }
-
-	// if latestTimestep > tg.Timestep {
-	// 	tg.Timestep = latestTimestep
-	// }
 
 	// JANK: mixing in move queue in to processed logs instead of replaying on top, could cause jumps
 	// processedLogs.push(tg.MoveQueue...)
 	if len(tg.MoveQueue) > 0 {
 		if len(commands) > 0 && commands[len(commands)-1].Timestep > tg.MoveQueue[0].Timestep {
 			diff := commands[len(commands)-1].Timestep - tg.MoveQueue[0].Timestep
+			log.Println("[RAFT]", "diff", diff)
 			for _, move := range tg.MoveQueue {
 				move.Timestep += diff
 				commands.push(move)
@@ -661,22 +637,20 @@ func (tg *TronGameView) updateWorkingGameState() {
 		}
 	}
 
-	log.Println("LOG: ", commands)
-
-	// sort.Slice(processedLogs, func(i, j int) bool {
-	// 	return processedLogs[i].Timestep < processedLogs[j].Timestep
-	// })
-
 	currentTimestep := tg.getTimestep()
 	// log.Println("CURENT TIMESTEP", currentTimestep)
 	workingTimestep := workingGameState.CommitedTimeStep + 1
+
+	// if len(commands) > 0 {
+	// 	log.Println("AHH", commands[0].Timestep, workingTimestep, currentTimestep)
+	// }
+
 	// replay cmds on top of gamestate
 	for len(commands) > 0 || workingTimestep <= currentTimestep {
-		if len(commands) > 0 && commands[0].Timestep == workingTimestep {
-			// fmt.Print("HAS PROCESSED LOGS AHHH")
-			if cmd, ok := commands.pop(); ok {
+		if len(commands) > 0 && commands[0].Timestep <= workingTimestep {
+			if cmd, ok := commands.pop(); ok && cmd.Timestep == workingTimestep {
 				clientState := workingGameState.ClientStates[cmd.PlayerID]
-
+				log.Println("command: ", cmd)
 				switch cmd.Type {
 				case TronMoveCmd:
 					clientState.Direction = cmd.Direction
@@ -688,12 +662,14 @@ func (tg *TronGameView) updateWorkingGameState() {
 		} else {
 			// apply prev timestep state change
 			// fmt.Printf("B:%d\n ", workingGameState.ClientStates[tg.Me].Direction)
+			// log.Println("advance pred", "workingTimestep: ", workingTimestep)
 			workingGameState = tg.clientPredict(workingGameState, 1)
 			workingTimestep += 1
 		}
 	}
 	// fmt.Print("after: ", workingGameState.ClientStates)
 	tg.WorkingGameState = workingGameState
+
 }
 
 // applies game state without increasing timestep
@@ -711,6 +687,7 @@ func (tg *TronGameView) applyCommandToGameState(gameState TronGameState, cmd Tro
 func (tg *TronGameView) truncateMoveQueueIfNecessary(cmd TronCommand) {
 	for i, move := range tg.MoveQueue {
 		if move.Id == cmd.Id {
+			log.Println("TRUNCATED", cmd)
 			tg.MoveQueue = tg.MoveQueue[i+1:]
 			return
 		}

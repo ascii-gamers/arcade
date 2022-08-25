@@ -401,7 +401,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 		// log.Println("[RAFT]", "AppendEntries", "Contains last included entry")
 	} else if args.PrevLogIndex != 0 {
 		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Log doesn't contain entry at index %d with term %d, lastIndex=%d, lastTerm=%d", args.PrevLogIndex, args.PrevLogTerm, rf.log.LastIndex(), rf.log.LastTerm()))
-		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("%v", rf.log.GetEntries()))
+		// log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("%v", rf.log.GetEntries()))
 		return reply
 	} else if args.PrevLogIndex < 0 {
 		panic("prevLogIndex should never be negative")
@@ -452,9 +452,9 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 
 	// 5
 	if args.LeaderCommit > rf.commitIndex {
-		oldCommitIndex := rf.commitIndex
+		// oldCommitIndex := rf.commitIndex
 		rf.commitIndex = min(args.LeaderCommit, rf.log.LastIndex())
-		log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Updated commit index from %d to %d", oldCommitIndex, rf.commitIndex))
+		// log.Println("[RAFT]", "AppendEntries", fmt.Sprintf("Updated commit index from %d to %d", oldCommitIndex, rf.commitIndex))
 		go rf.commit()
 	}
 
@@ -607,7 +607,6 @@ func (m ForwardedStartReply) MarshalBinary() ([]byte, error) {
 //
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	rf.Lock()
-	defer rf.Unlock()
 
 	if rf.state != Leader {
 		// log.Println("[RAFT]", "currentLeader", rf.currentLeader)
@@ -616,6 +615,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 			leader := rf.peers[rf.currentLeader]
 			// log.Println("[RAFT]", "currentLeader2", leader.ID)
 			log.Println("[RAFT]", "sending forwardedstart")
+			rf.Unlock()
 			if reply, err := rf.network.SendAndReceive(leader, args); err == nil {
 				reply := reply.(ForwardedStartReply)
 				return reply.Index, reply.Term, false
@@ -633,11 +633,12 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 
 	go rf.sendAllAppendEntriesBatched()
 
+	rf.Unlock()
 	return entry.Index, rf.currentTerm, true
 }
 
 func (rf *Raft) ForwardedStart(args *ForwardedStartArgs) *ForwardedStartReply {
-	log.Println("[RAFT]", "rec forwardedstart")
+	// log.Println("[RAFT]", "rec forwardedstart")
 	if rf.state == Leader {
 		ind, term, _ := rf.Start(args.Command)
 		return &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, ind, term}
@@ -691,10 +692,12 @@ func (rf *Raft) StartTime() {
 func (rf *Raft) startTimestepCounter() {
 	go func() {
 		for {
+			// start := time.Now()
 			rf.Lock()
 			rf.timestep += 1
 			rf.Unlock()
 			rf.timestepCond.Broadcast()
+			// log.Println("[RAFT]", "timestep lock", time.Since(start))
 			time.Sleep(time.Duration(rf.timestepPeriod) * time.Millisecond)
 		}
 	}()
@@ -1009,7 +1012,7 @@ func (rf *Raft) updateCommitIndex() {
 			continue
 		}
 
-		log.Println("updateCommitIndex", fmt.Sprintf("Updating commit index to %d", i))
+		// log.Println("updateCommitIndex", fmt.Sprintf("Updating commit index to %d", i))
 		rf.commitIndex = i
 		go rf.commit()
 
