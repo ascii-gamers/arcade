@@ -2,6 +2,7 @@ package multicast
 
 import (
 	"encoding/json"
+	"log"
 	"net"
 	"sync"
 )
@@ -31,8 +32,14 @@ func Discover(addr, id string) {
 		}
 	}
 
+	ip, err := GetLocalIP()
+
+	if err != nil {
+		panic(err)
+	}
+
 	msg := MulticastDiscoveryMessage{
-		Addr: addr,
+		Addr: ip,
 		ID:   id,
 	}
 
@@ -74,6 +81,7 @@ func Listen(selfID string, delegate MulticastDiscoveryDelegate) {
 			continue
 		}
 
+		log.Println("Multicast discovery", msg.Addr, msg.ID)
 		delegate.ClientDiscovered(msg.Addr, msg.ID)
 	}
 }
