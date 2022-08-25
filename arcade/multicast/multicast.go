@@ -2,6 +2,7 @@ package multicast
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -14,7 +15,7 @@ const maxDatagramSize = 8192
 var multicastConn *net.UDPConn
 var multicastConnMu sync.Mutex
 
-func Discover(addr, id string) {
+func Discover(addr, id string, port int) {
 	multicastConnMu.Lock()
 	defer multicastConnMu.Unlock()
 
@@ -39,7 +40,7 @@ func Discover(addr, id string) {
 	}
 
 	msg := MulticastDiscoveryMessage{
-		Addr: ip,
+		Addr: fmt.Sprintf("%s:%d", ip, port),
 		ID:   id,
 	}
 
