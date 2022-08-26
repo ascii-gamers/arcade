@@ -266,21 +266,24 @@ func (n *Network) SendNeighbors(msg interface{}) {
 
 	n.clients.Range(func(_, value any) bool {
 		client := value.(*Client)
+		client.RLock()
 
 		if !client.Neighbor || (client.State != Connected && client.State != Connecting) {
+			client.RUnlock()
 			return true
 		}
 
 		// Set recipient ID
 		reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
+		client.RUnlock()
 		client.Send(msg)
 		return true
 	})
 }
 
-func (n *Network) getDistanceVector() map[string]*ClientRoutingInfo {
-	distances := make(map[string]*ClientRoutingInfo)
+func (n *Network) getDistanceVector() map[string]ClientRoutingInfo {
+	distances := make(map[string]ClientRoutingInfo)
 
 	n.clients.Range(func(key, value any) bool {
 		clientID := key.(string)
@@ -290,7 +293,7 @@ func (n *Network) getDistanceVector() map[string]*ClientRoutingInfo {
 			return true
 		}
 
-		distances[clientID] = &client.ClientRoutingInfo
+		distances[clientID] = client.ClientRoutingInfo
 		return true
 	})
 
@@ -305,7 +308,7 @@ func (n *Network) PropagateRoutes() {
 	n.SendNeighbors(NewRoutingMessage(distances))
 }
 
-func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRoutingInfo) {
+func (n *Network) UpdateRoutes(from *Client, routingTable map[string]ClientRoutingInfo) {
 	n.Lock()
 	defer n.Unlock()
 

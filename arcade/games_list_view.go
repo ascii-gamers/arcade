@@ -100,9 +100,12 @@ func (v *GamesListView) SendHelloMessages() {
 
 	// Send hello messages to everyone we find
 	arcade.Server.Network.ClientsRange(func(client *net.Client) bool {
+		client.RLock()
 		if (client.State != net.Connected && client.State != net.Connecting) || client.Distributor {
+			client.RUnlock()
 			return true
 		}
+		client.RUnlock()
 
 		go v.QueryClient(client)
 		return true

@@ -45,6 +45,8 @@ func Discover(addr, id string, port int) {
 	}
 
 	data, _ := json.Marshal(msg)
+
+	log.Println("Writing to multicast...")
 	multicastConn.Write(data)
 }
 
@@ -64,27 +66,27 @@ func Listen(selfID string, delegate MulticastDiscoveryDelegate) {
 		panic(err)
 	}
 
+	// Start reading from connection
 	conn.SetReadBuffer(maxDatagramSize)
 	buf := make([]byte, maxDatagramSize)
 
 	// Loop forever reading from the socket
 	for {
-		numBytes, _, err := conn.ReadFromUDP(buf)
+		n, _, err := conn.ReadFromUDP(buf)
 
 		if err != nil {
 			panic(err)
 		}
 
 		var msg MulticastDiscoveryMessage
-		json.Unmarshal(buf[:numBytes], &msg)
-
-		log.Println("Multicast discovery", msg.Addr, msg.ID)
+		json.Unmarshal(buf[:n], &msg)
 
 		if msg.ID == selfID {
+			log.Println("Multicast discovery of self")
 			continue
 		}
 
-		// log.Println("Multicast discovery", msg.Addr, msg.ID)
+		log.Println("Multicast discovery", msg.Addr, msg.ID)
 		delegate.ClientDiscovered(msg.Addr, msg.ID)
 	}
 }

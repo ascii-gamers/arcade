@@ -9,10 +9,10 @@ import (
 type RoutingMessage struct {
 	message.Message
 
-	Distances map[string]*ClientRoutingInfo
+	Distances map[string]ClientRoutingInfo
 }
 
-func NewRoutingMessage(distances map[string]*ClientRoutingInfo) *RoutingMessage {
+func NewRoutingMessage(distances map[string]ClientRoutingInfo) *RoutingMessage {
 	return &RoutingMessage{
 		Message:   message.Message{Type: "routing"},
 		Distances: distances,
