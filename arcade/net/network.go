@@ -256,20 +256,17 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, 
 		return nil, fmt.Errorf("timed out")
 	}
 
-	n.pendingMessagesMux.Lock()
-	delete(n.pendingMessages, messageID)
-	n.pendingMessagesMux.Unlock()
-
 	return recvMsg, nil
 }
 
 func (n *Network) SignalReceived(messageID string, resp interface{}) {
-	n.pendingMessagesMux.RLock()
-	defer n.pendingMessagesMux.RUnlock()
+	n.pendingMessagesMux.Lock()
+	defer n.pendingMessagesMux.Unlock()
 
 	if ch, ok := n.pendingMessages[messageID]; ok {
 		ch <- resp
 		close(ch)
+		delete(n.pendingMessages, messageID)
 	}
 }
 
