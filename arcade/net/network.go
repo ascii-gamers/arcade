@@ -65,7 +65,7 @@ func (n *Network) Addr() string {
 func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	c, ok := n.GetClient(id)
 
-	if !ok || c.State == Disconnected || c.State == TimedOut || c.NextHop != "" {
+	if !ok {
 		c = &Client{
 			Delegate: n,
 			Addr:     addr,
