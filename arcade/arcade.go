@@ -38,7 +38,10 @@ func Start() {
 	flag.Parse()
 
 	// Create log file
-	f, err := os.OpenFile(fmt.Sprintf("log-%d", *port), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	logName := fmt.Sprintf("log-%d", *port)
+	os.Remove(logName)
+
+	f, err := os.OpenFile(logName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 
 	if err != nil {
 		panic(err)

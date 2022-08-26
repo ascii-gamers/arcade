@@ -200,11 +200,16 @@ func (mgr *ViewManager) RequestRender() {
 		connectedClients := arcade.Server.GetHeartbeatClients()
 
 		i := 0
-		for clientID, info := range connectedClients {
+		connectedClients.Range(func(key, value any) bool {
+			clientID := key.(string)
+			info := value.(*ConnectedClientInfo)
+
 			s := fmt.Sprintf("%s: %dms", clientID[:4], info.GetMeanRTT().Milliseconds())
 			mgr.screen.DrawText(w+x-len(s), -y+i, debugSty, s)
 			i++
-		}
+
+			return true
+		})
 
 		if ip, err := net.GetLocalIP(); err == nil {
 			mgr.screen.DrawText(-x, h+y-1, debugSty, fmt.Sprintf("Local IP: %s:%d", ip, arcade.Port))

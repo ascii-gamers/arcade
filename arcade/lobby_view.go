@@ -5,6 +5,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -14,6 +15,7 @@ type LobbyView struct {
 	View
 	mgr *ViewManager
 
+	sync.RWMutex
 	Lobby *Lobby
 }
 
@@ -63,7 +65,9 @@ func (v *LobbyView) ProcessEvent(evt interface{}) {
 			lobby := new(Lobby)
 			json.Unmarshal(evt.Metadata, lobby)
 			// fmt.Println("lobby updated w heartbeat")
+			v.Lock()
 			v.Lobby = lobby
+			v.Unlock()
 		}
 		// do something with lobby
 	case *tcell.EventKey:
@@ -256,5 +260,8 @@ func (v *LobbyView) Unload() {
 }
 
 func (v *LobbyView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
+	v.RLock()
+	defer v.RUnlock()
+
 	return v.Lobby
 }
