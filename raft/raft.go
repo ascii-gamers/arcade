@@ -1062,8 +1062,6 @@ func (rf *Raft) commit() {
 			panic(fmt.Sprintf("[id=%d] Entry doesn't exist: index=%d, lastApplied=%d, lastIndex=%d, lastIncludedIndex=%d", rf.me, index, rf.lastApplied, rf.log.LastIndex(), rf.log.GetLastIncludedIndex()))
 		}
 
-		rf.lastApplied = index
-		rf.print("commit", fmt.Sprintf("Applying, %d", index))
 		rf.Unlock()
 
 		rf.applyCh <- ApplyMsg{
@@ -1072,6 +1070,11 @@ func (rf *Raft) commit() {
 			CommandIndex:    index,
 			CommandTimestep: entry.Timestep,
 		}
+
+		rf.Lock()
+		rf.lastApplied = index
+		rf.print("commit", fmt.Sprintf("Applying, %d", index))
+		rf.Unlock()
 	}
 }
 
