@@ -24,6 +24,12 @@ type GamesListView struct {
 	stopTickerCh chan bool
 
 	lastTimeRefreshed int
+
+	glv_join_box          string
+	selectedLobbyKey      string
+	err_msg               string
+	glv_code_input_string string
+	glv_code              string
 }
 
 var header = []string{
@@ -34,10 +40,6 @@ var header = []string{
 var footer = []string{
 	"[C]reate new lobby      [J]oin selected lobby",
 }
-
-var glv_join_box = ""
-var selectedLobbyKey = ""
-var err_msg = ""
 
 const (
 	nameColX    = 4
@@ -55,9 +57,6 @@ const (
 	joinbox_X2 = 72
 	joinbox_Y2 = 15
 )
-
-var glv_code_input_string = ""
-var glv_code = ""
 
 func NewGamesListView(mgr *ViewManager) *GamesListView {
 	return &GamesListView{
@@ -145,9 +144,9 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 
 		v.mgr.RequestRender()
 	case *tcell.EventKey:
-		if len(err_msg) > 0 {
-			err_msg = ""
-			glv_join_box = ""
+		if len(v.err_msg) > 0 {
+			v.err_msg = ""
+			v.glv_join_box = ""
 			return
 		}
 		switch evt.Key() {
@@ -166,30 +165,30 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				v.selectedRow = 0
 			}
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
-			if glv_join_box != "" {
-				if len(glv_code_input_string) > 0 {
-					glv_code_input_string = glv_code_input_string[:len(glv_code_input_string)-1]
+			if v.glv_join_box != "" {
+				if len(v.glv_code_input_string) > 0 {
+					v.glv_code_input_string = v.glv_code_input_string[:len(v.glv_code_input_string)-1]
 				}
 			}
 		case tcell.KeyEnter:
-			if glv_join_box == "join_code" {
-				if len(glv_code_input_string) == 4 {
-					glv_code = glv_code_input_string
-					selectedLobby := v.lobbies[selectedLobbyKey]
+			if v.glv_join_box == "join_code" {
+				if len(v.glv_code_input_string) == 4 {
+					v.glv_code = v.glv_code_input_string
+					selectedLobby := v.lobbies[v.selectedLobbyKey]
 					host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
-					go arcade.Server.Network.Send(host, NewJoinMessage(glv_code, arcade.Server.ID, selectedLobby.ID))
+					go arcade.Server.Network.Send(host, NewJoinMessage(v.glv_code, arcade.Server.ID, selectedLobby.ID))
 				} else {
-					glv_join_box = "join_code"
-					err_msg = "Code must be four characters long."
+					v.glv_join_box = "join_code"
+					v.err_msg = "Code must be four characters long."
 				}
 
 			}
 		case tcell.KeyRune:
-			if glv_join_box == "" {
+			if v.glv_join_box == "" {
 				switch evt.Rune() {
 				case 'c':
-					glv_join_box = ""
+					v.glv_join_box = ""
 					v.mgr.SetView(NewLobbyCreateView(v.mgr))
 				case 'j':
 					if len(v.lobbies) != 0 {
@@ -202,10 +201,10 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 						}
 						sort.Strings(keys)
 
-						selectedLobbyKey = keys[v.selectedRow]
+						v.selectedLobbyKey = keys[v.selectedRow]
 						selectedLobby := v.lobbies[keys[v.selectedRow]]
 						if selectedLobby.Private {
-							glv_join_box = "join_code"
+							v.glv_join_box = "join_code"
 						} else {
 							host, _ := arcade.Server.Network.GetClient(selectedLobby.HostID)
 
@@ -217,8 +216,8 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 
 				}
 			} else {
-				if len(glv_code_input_string) < 4 {
-					glv_code_input_string += string(evt.Rune())
+				if len(v.glv_code_input_string) < 4 {
+					v.glv_code_input_string += string(evt.Rune())
 				}
 			}
 		}
@@ -229,16 +228,23 @@ func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interfac
 	switch p := p.(type) {
 	case *JoinReplyMessage:
 		if p.Error == OK {
-			err_msg = ""
-			glv_join_box = ""
-			glv_code_input_string = ""
+			v.mu.Lock()
+			v.err_msg = ""
+			v.glv_join_box = ""
+			v.glv_code_input_string = ""
+			v.mu.Unlock()
+
 			v.mgr.SetView(NewLobbyView(v.mgr, p.Lobby))
 
 			arcade.Server.BeginHeartbeats(p.Lobby.HostID)
 		} else if p.Error == ErrWrongCode {
-			err_msg = "Wrong join code."
+			v.mu.Lock()
+			v.err_msg = "Wrong join code."
+			v.mu.Unlock()
 		} else if p.Error == ErrCapacity {
-			err_msg = "Game is now full."
+			v.mu.Lock()
+			v.err_msg = "Game is now full."
+			v.mu.Unlock()
 		}
 	case *LobbyEndMessage:
 		v.mu.Lock()
@@ -256,12 +262,10 @@ func (v *GamesListView) ProcessMessage(from *net.Client, p interface{}) interfac
 }
 
 func (v *GamesListView) Render(s *Screen) {
-	// fmt.Println("HELP")
-	if glv_join_box == "" && len(glv_code_input_string) > 0 {
+	if v.glv_join_box == "" && len(v.glv_code_input_string) > 0 {
 		s.Clear()
-		glv_code_input_string = ""
+		v.glv_code_input_string = ""
 	}
-	// s.Clear()
 
 	width, height := s.displaySize()
 
@@ -351,9 +355,9 @@ func (v *GamesListView) Render(s *Screen) {
 		i++
 	}
 
-	if glv_join_box != "" {
+	if v.glv_join_box != "" {
 
-		selectedLobby := v.lobbies[selectedLobbyKey]
+		selectedLobby := v.lobbies[v.selectedLobbyKey]
 		// Draw box surrounding games list
 		s.DrawBox(joinbox_X1, joinbox_Y1, joinbox_X2, joinbox_Y2, sty, true)
 
@@ -362,11 +366,11 @@ func (v *GamesListView) Render(s *Screen) {
 		s.DrawText((width-len(joinheader))/2+len(joinheader)-len(selectedLobby.Name), joinbox_Y1+1, sty_bold, selectedLobby.Name)
 		codeHeader := "Enter code: "
 		s.DrawText((width-len(codeHeader)-5)/2, joinbox_Y1+2, sty, codeHeader)
-		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader), joinbox_Y1+2, sty_bold, glv_code_input_string)
-		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader)+len(glv_code_input_string), joinbox_Y1+2, sty_bold, "    ")
+		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader), joinbox_Y1+2, sty_bold, v.glv_code_input_string)
+		s.DrawText((width-len(codeHeader)-5)/2+len(codeHeader)+len(v.glv_code_input_string), joinbox_Y1+2, sty_bold, "    ")
 
-		if len(err_msg) > 0 {
-			shortString := err_msg + " Press any key to continue."
+		if len(v.err_msg) > 0 {
+			shortString := v.err_msg + " Press any key to continue."
 			s.DrawText((width-len(shortString))/2, joinbox_Y1+4, sty_bold, shortString)
 		}
 	}

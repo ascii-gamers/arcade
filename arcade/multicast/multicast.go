@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-const multicastDiscoveryNetwork = "udp4"
+const multicastDiscoveryNetwork = "udp"
 const multicastDiscoveryAddress = "224.6.8.24:4445"
 const maxDatagramSize = 8192
 
