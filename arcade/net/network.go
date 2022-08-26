@@ -190,13 +190,17 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 }
 
 func (n *Network) Send(client *Client, msg interface{}) bool {
+	client.RLock()
+	if client.State == Disconnected || client.State == TimedOut {
+		client.RUnlock()
+		return false
+	}
+
 	// Set sender and recipient IDs
 	// fmt.Println("AFTER1.5", msg, reflect.TypeOf(msg).Kind())
 
 	// log.Println("in Send: ", msg)
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
-
-	client.RLock()
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
 	if client.NextHop == "" {
@@ -235,7 +239,11 @@ func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, 
 	n.pendingMessagesMux.Unlock()
 
 	// Send message
-	n.Send(client, msg)
+	ok := n.Send(client, msg)
+
+	if !ok {
+		return nil, errors.New("send failed")
+	}
 
 	time.AfterFunc(sendAndReceiveTimeout, func() {
 		n.pendingMessagesMux.Lock()
