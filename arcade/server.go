@@ -47,10 +47,7 @@ type Server struct {
 	Addr string
 	ID   string
 
-	connectedClients map[string]*ConnectedClientInfo
-
-	// Message IDs to ping times
-	pingMessageTimes map[string]time.Time
+	connectedClients sync.Map
 }
 
 // NewServer creates the server with a given address.
@@ -63,8 +60,7 @@ func NewServer(addr string, port int, distributor bool, mgr *ViewManager) *Serve
 		Addr:             addr,
 		Network:          net,
 		ID:               id,
-		connectedClients: make(map[string]*ConnectedClientInfo),
-		pingMessageTimes: make(map[string]time.Time),
+		connectedClients: sync.Map{},
 	}
 
 	message.AddListener(message.Listener{
@@ -80,16 +76,17 @@ func NewServer(addr string, port int, distributor bool, mgr *ViewManager) *Serve
 
 func (s *Server) startHeartbeats() {
 	for {
-		for clientID, info := range s.connectedClients {
+		s.connectedClients.Range(func(key, value any) bool {
+			clientID := key.(string)
+			info := value.(*ConnectedClientInfo)
+
 			client, ok := s.Network.GetClient(clientID)
 
 			if !ok || time.Since(info.LastHeartbeat) >= timeoutInterval {
 				s.Network.Disconnect(clientID)
 
-				s.Lock()
-				delete(s.connectedClients, clientID)
-				s.Unlock()
-				continue
+				s.connectedClients.Delete(clientID)
+				return true
 			}
 
 			metadata := s.mgr.GetHeartbeatMetadata()
@@ -105,47 +102,40 @@ func (s *Server) startHeartbeats() {
 					return
 				}
 
-				s.Lock()
-				if _, ok := s.connectedClients[clientID]; ok {
-					s.connectedClients[clientID].RTTs = append(s.connectedClients[clientID].RTTs, end.Sub(start))
-					s.connectedClients[clientID].LastHeartbeat = time.Now()
+				if c, ok := s.connectedClients.Load(clientID); ok {
+					client := c.(*ConnectedClientInfo)
+					client.RTTs = append(client.RTTs, end.Sub(start))
+					client.LastHeartbeat = time.Now()
+					s.connectedClients.Store(clientID, client)
 				}
-				s.Unlock()
 			}(clientID)
-		}
+
+			return true
+		})
 
 		<-time.After(heartbeatInterval)
 	}
 }
 
 func (s *Server) BeginHeartbeats(clientID string) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.connectedClients[clientID] = &ConnectedClientInfo{
+	s.connectedClients.Store(clientID, &ConnectedClientInfo{
 		LastHeartbeat: time.Now(),
-		RTTs:          make([]time.Duration, 0),
-	}
+		RTTs:          []time.Duration{},
+	})
 }
 
 func (s *Server) EndHeartbeats(clientID string) {
-	s.Lock()
-	defer s.Unlock()
-
-	delete(s.connectedClients, clientID)
+	s.connectedClients.Delete(clientID)
 }
 
 func (s *Server) EndAllHeartbeats() {
-	s.Lock()
-	defer s.Unlock()
-
-	s.connectedClients = make(map[string]*ConnectedClientInfo)
+	s.connectedClients.Range(func(key, value any) bool {
+		s.connectedClients.Delete(key)
+		return true
+	})
 }
 
-func (s *Server) GetHeartbeatClients() map[string]*ConnectedClientInfo {
-	s.RLock()
-	defer s.RUnlock()
-
+func (s *Server) GetHeartbeatClients() sync.Map {
 	return s.connectedClients
 }
 
@@ -190,7 +180,6 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 			if ok {
 				recipient.Send(msg)
-				// s.Network.Send(recipient, msg)
 				return nil
 			} else {
 				return NewErrorMessage("invalid recipient")
@@ -203,12 +192,15 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 
 			switch msg := msg.(type) {
 			case *HeartbeatMessage:
-				s.Lock()
-				if _, ok := s.connectedClients[msg.SenderID]; ok {
-					s.connectedClients[msg.SenderID].LastHeartbeat = time.Now()
-					c.Distance = float64(s.connectedClients[msg.SenderID].GetMeanRTT().Milliseconds())
+				if cli, ok := s.connectedClients.Load(msg.SenderID); ok {
+					client := cli.(*ConnectedClientInfo)
+					client.LastHeartbeat = time.Now()
+					s.connectedClients.Store(msg.SenderID, client)
+
+					c.Lock()
+					c.Distance = float64(client.GetMeanRTT().Milliseconds())
+					c.Unlock()
 				}
-				s.Unlock()
 
 				// Send heartbeat metadata to view
 				s.mgr.ProcessEvent(NewHeartbeatEvent(msg.Metadata))

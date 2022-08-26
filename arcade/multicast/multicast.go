@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-const multicastDiscoveryNetwork = "udp"
+const multicastDiscoveryNetwork = "udp4"
 const multicastDiscoveryAddress = "224.6.8.24:4445"
 const maxDatagramSize = 8192
 
@@ -65,24 +65,26 @@ func Listen(selfID string, delegate MulticastDiscoveryDelegate) {
 	}
 
 	conn.SetReadBuffer(maxDatagramSize)
+	buf := make([]byte, maxDatagramSize)
 
 	// Loop forever reading from the socket
 	for {
-		buffer := make([]byte, maxDatagramSize)
-		numBytes, _, err := conn.ReadFromUDP(buffer)
+		numBytes, _, err := conn.ReadFromUDP(buf)
 
 		if err != nil {
 			panic(err)
 		}
 
 		var msg MulticastDiscoveryMessage
-		json.Unmarshal(buffer[:numBytes], &msg)
+		json.Unmarshal(buf[:numBytes], &msg)
+
+		log.Println("Multicast discovery", msg.Addr, msg.ID)
 
 		if msg.ID == selfID {
 			continue
 		}
 
-		log.Println("Multicast discovery", msg.Addr, msg.ID)
+		// log.Println("Multicast discovery", msg.Addr, msg.ID)
 		delegate.ClientDiscovered(msg.Addr, msg.ID)
 	}
 }

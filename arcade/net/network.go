@@ -21,7 +21,7 @@ type Network struct {
 
 	Delegate NetworkDelegate
 
-	clients     map[string]*Client
+	clients     sync.Map
 	distributor bool
 	dropRate    float64
 	me          string
@@ -41,7 +41,7 @@ func NewNetwork(me string, port int, distributor bool) *Network {
 	message.Register(RoutingMessage{Message: message.Message{Type: "routing"}})
 
 	n := &Network{
-		clients:         make(map[string]*Client),
+		clients:         sync.Map{},
 		me:              me,
 		port:            port,
 		distributor:     distributor,
@@ -152,9 +152,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	c.TimeoutRetries = 0
 	c.Unlock()
 
-	n.Lock()
-	n.clients[clientID] = c
-	n.Unlock()
+	n.clients.Store(clientID, c)
 
 	if !p.Distributor && n.Delegate != nil {
 		n.Delegate.ClientConnected(clientID)
@@ -176,23 +174,19 @@ func (n *Network) Disconnect(id string) {
 }
 
 func (n *Network) GetClient(id string) (*Client, bool) {
-	n.RLock()
-	defer n.RUnlock()
+	c, ok := n.clients.Load(id)
 
-	c, ok := n.clients[id]
-	return c, ok
+	if !ok {
+		return nil, false
+	}
+
+	return c.(*Client), true
 }
 
 func (n *Network) ClientsRange(f func(*Client) bool) {
-	n.RLock()
-	clients := n.clients
-	n.RUnlock()
-
-	for _, client := range clients {
-		if !f(client) {
-			break
-		}
-	}
+	n.clients.Range(func(key, value interface{}) bool {
+		return f(value.(*Client))
+	})
 }
 
 func (n *Network) Send(client *Client, msg interface{}) bool {
@@ -208,13 +202,13 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 	n.RLock()
 	defer n.RUnlock()
 
-	servicer, ok := n.clients[client.NextHop]
+	servicer, ok := n.clients.Load(client.NextHop)
 
 	if !ok {
 		return false
 	}
 
-	servicer.Send(msg)
+	servicer.(*Client).Send(msg)
 	return true
 }
 
@@ -267,35 +261,38 @@ func (n *Network) SignalReceived(messageID string, resp interface{}) {
 }
 
 func (n *Network) SendNeighbors(msg interface{}) {
-	n.RLock()
-	clients := n.clients
-	n.RUnlock()
-
 	// Set sender ID
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 
-	for _, client := range clients {
+	n.clients.Range(func(_, value any) bool {
+		client := value.(*Client)
+
 		if !client.Neighbor || (client.State != Connected && client.State != Connecting) {
-			continue
+			return true
 		}
 
 		// Set recipient ID
 		reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
 		client.Send(msg)
-	}
+		return true
+	})
 }
 
 func (n *Network) getDistanceVector() map[string]*ClientRoutingInfo {
 	distances := make(map[string]*ClientRoutingInfo)
 
-	for clientID, client := range n.clients {
+	n.clients.Range(func(key, value any) bool {
+		clientID := key.(string)
+		client := value.(*Client)
+
 		if !client.Neighbor {
-			continue
+			return true
 		}
 
 		distances[clientID] = &client.ClientRoutingInfo
-	}
+		return true
+	})
 
 	return distances
 }
@@ -314,11 +311,14 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 
 	changes := 0
 
-	for clientID, client := range n.clients {
+	n.clients.Range(func(key, value any) bool {
+		clientID := key.(string)
+		client := value.(*Client)
+
 		delete(routingTable, clientID)
 
 		if clientID == from.ID {
-			continue
+			return true
 		}
 
 		// Bellman-Ford equation: Update least-cost paths to all other clients
@@ -336,14 +336,16 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 			client.Unlock()
 			changes++
 		}
-	}
+
+		return true
+	})
 
 	for clientID, c := range routingTable {
 		if clientID == n.me {
 			continue
 		}
 
-		n.clients[clientID] = &Client{
+		n.clients.Store(clientID, &Client{
 			ID:      clientID,
 			NextHop: from.ID,
 			ClientRoutingInfo: ClientRoutingInfo{
@@ -351,7 +353,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]*ClientRout
 				Distributor: c.Distributor,
 			},
 			State: Connected,
-		}
+		})
 
 		changes++
 	}
@@ -384,9 +386,7 @@ func (n *Network) SetDropRate(rate float64) {
 //
 
 func (n *Network) ClientDisconnected(clientID string) {
-	n.Lock()
-	delete(n.clients, clientID)
-	n.Unlock()
+	n.clients.Delete(clientID)
 
 	if n.Delegate != nil {
 		n.Delegate.ClientDisconnected(clientID)
