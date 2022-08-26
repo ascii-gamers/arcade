@@ -22,7 +22,7 @@ type ConnectedClientInfo struct {
 	RTTs          []time.Duration
 }
 
-func (c *ConnectedClientInfo) GetMeanRTT() time.Duration {
+func (c ConnectedClientInfo) GetMeanRTT() time.Duration {
 	var sum time.Duration
 	count := 0
 
@@ -78,7 +78,7 @@ func (s *Server) startHeartbeats() {
 	for {
 		s.connectedClients.Range(func(key, value any) bool {
 			clientID := key.(string)
-			info := value.(*ConnectedClientInfo)
+			info := value.(ConnectedClientInfo)
 
 			client, ok := s.Network.GetClient(clientID)
 
@@ -103,7 +103,7 @@ func (s *Server) startHeartbeats() {
 				}
 
 				if c, ok := s.connectedClients.Load(clientID); ok {
-					client := c.(*ConnectedClientInfo)
+					client := c.(ConnectedClientInfo)
 					client.RTTs = append(client.RTTs, end.Sub(start))
 					client.LastHeartbeat = time.Now()
 					s.connectedClients.Store(clientID, client)
@@ -118,7 +118,7 @@ func (s *Server) startHeartbeats() {
 }
 
 func (s *Server) BeginHeartbeats(clientID string) {
-	s.connectedClients.Store(clientID, &ConnectedClientInfo{
+	s.connectedClients.Store(clientID, ConnectedClientInfo{
 		LastHeartbeat: time.Now(),
 		RTTs:          []time.Duration{},
 	})
@@ -193,7 +193,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 			switch msg := msg.(type) {
 			case *HeartbeatMessage:
 				if cli, ok := s.connectedClients.Load(msg.SenderID); ok {
-					client := cli.(*ConnectedClientInfo)
+					client := cli.(ConnectedClientInfo)
 					client.LastHeartbeat = time.Now()
 					s.connectedClients.Store(msg.SenderID, client)
 
