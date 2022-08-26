@@ -334,16 +334,25 @@ func (tg *TronGameView) Init() {
 			c.Wait()
 
 			timestep := tg.RaftServer.GetTimestep()
+
+			// update gamestate and render for previous timestep
+			tg.updateWorkingGameState(timestep - 1)
+			tg.mgr.RequestRender()
+
+			// DEBUG MODE
 			style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
 			_, isLeader := tg.RaftServer.GetState()
 			tg.mgr.screen.DrawText(-10, 0, style, fmt.Sprintf("%t, %d", isLeader, timestep))
-			tg.mgr.screen.DrawText(-10, 1, style, fmt.Sprintf("%d", tg.lastApplyMsgInd))
 
+			// send command for current timestep
 			tg.updateSelf()
+			tg.WorkingGameState = tg.clientPredict(tg.WorkingGameState, 1, []string{tg.Me})
+			tg.mgr.RequestRender()
+
 			// tg.mgr.RequestRender()
 			// time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
-			tg.updateWorkingGameState()
-			tg.mgr.RequestRender()
+			// tg.updateWorkingGameState(timestep)
+			// tg.mgr.RequestRender()
 			// mu.Lock()
 			// if tg.Me == tg.HostID {
 			// 	if ended, winner := tg.shouldWin(); ended {
@@ -574,6 +583,9 @@ func (tg *TronGameView) startApplyChanHandler() {
 			// log.Println("[RAFT]", "APPLY")
 			mu.Lock()
 			tg.lastApplyMsgInd = applyMsg.CommandIndex
+			style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
+			tg.mgr.screen.DrawText(-10, 1, style, fmt.Sprintf("%d", tg.lastApplyMsgInd))
+
 			if applyMsg.CommandValid {
 				if applyMsg.CommandTimestep < tg.CommitedGameState.CommitedTimeStep {
 					panic("encountered older timestep than commitedTimestep")
@@ -582,15 +594,17 @@ func (tg *TronGameView) startApplyChanHandler() {
 
 					jumpAhead := math.Max(float64(applyMsg.CommandTimestep-tg.CommitedGameState.CommitedTimeStep-1), 0)
 					log.Println("Jump ahead: ", jumpAhead)
-					newCommitedGameState := tg.clientPredict(tg.CommitedGameState, int(jumpAhead))
+					newCommitedGameState := tg.clientPredictAll(tg.CommitedGameState, int(jumpAhead))
 
 					newCommitedGameState.CommitedTimeStep = applyMsg.CommandTimestep
 					newCommitedGameState = tg.applyCommandToGameState(newCommitedGameState, cmd)
-					newCommitedGameState = tg.clientPredict(newCommitedGameState, 1) // current timestep forward
+					newCommitedGameState = tg.clientPredictAll(newCommitedGameState, 1) // current timestep forward
 
 					tg.CommitedGameState = newCommitedGameState
 
 					tg.truncateMoveQueueIfNecessary(cmd)
+					// tg.updateWorkingGameState()
+					// tg.mgr.RequestRender()
 
 				}
 
@@ -623,13 +637,15 @@ func (tg *TronGameView) updateSelf() {
 	tg.RaftServer.Start(cmd)
 	tg.MoveQueue = append(tg.MoveQueue, cmd)
 
-	// myState := tg.getMyState()
-	// myState.Direction = cmd.Direction
-	// tg.WorkingGameState.ClientStates[tg.Me] = myState
+	// optimistically apply move
+	myState := tg.getMyState()
+	myState.Direction = cmd.Direction
+	tg.WorkingGameState.ClientStates[tg.Me] = myState
+
 	needToProcessInput = false
 }
 
-func (tg *TronGameView) updateWorkingGameState() {
+func (tg *TronGameView) updateWorkingGameState(currentTimestep int) {
 	// mu.Lock()
 	// defer mu.Unlock()
 
@@ -671,7 +687,7 @@ func (tg *TronGameView) updateWorkingGameState() {
 		}
 	}
 
-	tg.mgr.screen.DrawEmpty(-22, 5, 22, 5+len(allEntries), tcell.StyleDefault.Background(tcell.ColorBlack))
+	tg.mgr.screen.DrawEmpty(-22, 5, 22, 5+len(allEntries)+3, tcell.StyleDefault.Background(tcell.ColorBlack))
 
 	style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 	lastI := 0
@@ -688,7 +704,7 @@ func (tg *TronGameView) updateWorkingGameState() {
 		tg.mgr.screen.DrawText(-22, 5+lastI+3+i, style, cmd.String())
 	}
 
-	currentTimestep := tg.getTimestep()
+	// currentTimestep := tg.getTimestep()
 	// log.Println("CURENT TIMESTEP", currentTimestep)
 	workingTimestep := workingGameState.CommitedTimeStep + 1
 
@@ -713,7 +729,7 @@ func (tg *TronGameView) updateWorkingGameState() {
 			// apply prev timestep state change
 			// fmt.Printf("B:%d\n ", workingGameState.ClientStates[tg.Me].Direction)
 			// log.Println("advance pred", "workingTimestep: ", workingTimestep)
-			workingGameState = tg.clientPredict(workingGameState, 1)
+			workingGameState = tg.clientPredictAll(workingGameState, 1)
 			workingTimestep += 1
 		}
 	}
@@ -744,9 +760,20 @@ func (tg *TronGameView) truncateMoveQueueIfNecessary(cmd TronCommand) {
 	}
 }
 
-func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int) TronGameState {
+func (tg *TronGameView) clientPredictAll(gameState TronGameState, numTimesteps int) TronGameState {
+	playerIds := make([]string, len(gameState.ClientStates))
+	i := 0
+	for k := range gameState.ClientStates {
+		playerIds[i] = k
+		i++
+	}
+	return tg.clientPredict(gameState, numTimesteps, playerIds)
+}
+
+func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int, playerIds []string) TronGameState {
 	for i := 0; i < numTimesteps; i++ {
-		for playerId, clientState := range gameState.ClientStates {
+		for _, playerId := range playerIds {
+			clientState := gameState.ClientStates[playerId]
 			if !clientState.Alive {
 				continue
 			}
