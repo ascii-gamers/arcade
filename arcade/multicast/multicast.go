@@ -5,74 +5,53 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
+	"time"
+
+	"golang.org/x/net/ipv4"
 )
 
-const multicastDiscoveryNetwork = "udp"
-const multicastDiscoveryAddress = "224.6.8.24:4445"
-const maxDatagramSize = 8192
-
 var multicastConn *net.UDPConn
-var multicastConnMu sync.Mutex
+var multicastGroup = &net.UDPAddr{IP: net.IPv4(224, 0, 0, 250)}
+var multicastAddr = &net.UDPAddr{IP: net.IPv4(224, 0, 0, 250), Port: 36824}
 
-func Discover(addr, id string, port int) {
-	multicastConnMu.Lock()
-	defer multicastConnMu.Unlock()
+func Listen(selfID string, delegate MulticastDiscoveryDelegate, startCh chan error) {
+	var err error
+	multicastConn, err = net.ListenUDP("udp4", multicastAddr)
 
-	if multicastConn == nil {
-		addr, err := net.ResolveUDPAddr(multicastDiscoveryNetwork, multicastDiscoveryAddress)
+	if err != nil {
+		startCh <- err
+		return
+	}
 
-		if err != nil {
-			panic(err)
+	pc := ipv4.NewPacketConn(multicastConn)
+
+	// TODO: Add en1
+	iface, err := net.InterfaceByName("en0")
+
+	if err != nil {
+		startCh <- err
+		return
+	}
+
+	if err := pc.JoinGroup(iface, multicastGroup); err != nil {
+		startCh <- err
+		return
+	}
+
+	if loop, err := pc.MulticastLoopback(); err == nil {
+		if !loop {
+			if err := pc.SetMulticastLoopback(true); err != nil {
+				startCh <- err
+				return
+			}
 		}
-
-		multicastConn, err = net.DialUDP(multicastDiscoveryNetwork, nil, addr)
-
-		if err != nil {
-			panic(err)
-		}
 	}
 
-	ip, err := GetLocalIP()
+	buf := make([]byte, 1024)
+	startCh <- nil
 
-	if err != nil {
-		panic(err)
-	}
-
-	msg := MulticastDiscoveryMessage{
-		Addr: fmt.Sprintf("%s:%d", ip, port),
-		ID:   id,
-	}
-
-	data, _ := json.Marshal(msg)
-
-	log.Println("Writing to multicast...")
-	multicastConn.Write(data)
-}
-
-// Listen binds to a UDP multicast address and responds with a discovery packet.
-func Listen(selfID string, delegate MulticastDiscoveryDelegate) {
-	// Parse the string address
-	addr, err := net.ResolveUDPAddr(multicastDiscoveryNetwork, multicastDiscoveryAddress)
-
-	if err != nil {
-		panic(err)
-	}
-
-	// Open up a connection
-	conn, err := net.ListenMulticastUDP(multicastDiscoveryNetwork, nil, addr)
-
-	if err != nil {
-		panic(err)
-	}
-
-	// Start reading from connection
-	conn.SetReadBuffer(maxDatagramSize)
-	buf := make([]byte, maxDatagramSize)
-
-	// Loop forever reading from the socket
 	for {
-		n, _, err := conn.ReadFromUDP(buf)
+		n, _, err := multicastConn.ReadFrom(buf)
 
 		if err != nil {
 			panic(err)
@@ -88,5 +67,29 @@ func Listen(selfID string, delegate MulticastDiscoveryDelegate) {
 
 		log.Println("Multicast discovery", msg.Addr, msg.ID)
 		delegate.ClientDiscovered(msg.Addr, msg.ID)
+
+		// Who knows why this fixes the problem
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func Discover(addr, id string, port int) {
+	ip, err := GetLocalIP()
+
+	if err != nil {
+		panic(err)
+	}
+
+	msg := MulticastDiscoveryMessage{
+		Addr: fmt.Sprintf("%s:%d", ip, port),
+		ID:   id,
+	}
+
+	data, _ := json.Marshal(msg)
+
+	log.Println("Writing to multicast...")
+
+	if _, err := multicastConn.WriteTo(data, multicastAddr); err != nil {
+		panic(err)
 	}
 }

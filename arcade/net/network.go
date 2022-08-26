@@ -192,12 +192,17 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 func (n *Network) Send(client *Client, msg interface{}) bool {
 	// Set sender and recipient IDs
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
+
+	client.RLock()
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 
 	if client.NextHop == "" {
+		client.RUnlock()
 		client.Send(msg)
 		return true
 	}
+
+	client.RUnlock()
 
 	n.RLock()
 	defer n.RUnlock()

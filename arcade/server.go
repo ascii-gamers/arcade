@@ -227,7 +227,12 @@ func (s *Server) Start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	go multicast.Listen(s.ID, s)
+	startCh := make(chan error)
+	go multicast.Listen(s.ID, s, startCh)
+
+	if err := <-startCh; err != nil {
+		panic(err)
+	}
 
 	for {
 		// Wait for new client connections
