@@ -117,6 +117,10 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 		c.start(conn)
 	}
 
+	return c, n.ConnectClient(c)
+}
+
+func (n *Network) ConnectClient(c *Client) error {
 	// Send ping and wait for reply
 	start := time.Now()
 	res, err := n.SendAndReceive(c, NewPingMessage(n.distributor))
@@ -131,11 +135,11 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 			c.TimeoutRetries++
 			c.Unlock()
 
-			return n.Connect(addr, id, conn)
+			return n.ConnectClient(c)
 		}
 		c.Unlock()
 
-		return nil, errors.New("timed out")
+		return errors.New("timed out")
 	}
 
 	clientID := p.SenderID
@@ -160,7 +164,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 
 	go n.PropagateRoutes()
 
-	return c, nil
+	return nil
 }
 
 func (n *Network) Disconnect(id string) {
