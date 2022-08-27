@@ -41,22 +41,22 @@ var footer = []string{
 	"[C]reate new lobby      [J]oin selected lobby",
 }
 
-const (
-	nameColX    = 4
-	gameColX    = 30
-	playersColX = 40
-	pingColX    = 70
+// const (
+// 	nameColX    = 4
+// 	gameColX    = 30
+// 	playersColX = 40
+// 	pingColX    = 70
 
-	tableX1 = 3
-	tableY1 = 7
-	tableX2 = 76
-	tableY2 = 18
+// 	tableX1 = 3
+// 	tableY1 = 7
+// 	tableX2 = 76
+// 	tableY2 = 18
 
-	joinbox_X1 = 7
-	joinbox_Y1 = 9
-	joinbox_X2 = 72
-	joinbox_Y2 = 15
-)
+// 	joinbox_X1 = 7
+// 	joinbox_Y1 = 9
+// 	joinbox_X2 = 72
+// 	joinbox_Y2 = 15
+// )
 
 func NewGamesListView(mgr *ViewManager) *GamesListView {
 	return &GamesListView{
@@ -272,6 +272,45 @@ func (v *GamesListView) Render(s *Screen) {
 
 	width, height := s.displaySize()
 
+	const (
+		tableWidth  = 72
+		tableHeight = 14
+	)
+
+	var (
+		tableX1 = (width-tableWidth)/2 - 1
+		tableY1 = 7
+		tableX2 = width - (width-tableWidth)/2
+		tableY2 = tableY1 + tableHeight
+
+		nameColX    = tableX1 + 1
+		gameColX    = tableX1 + 27
+		playersColX = tableX1 + 37
+		pingColX    = tableX1 + 67
+
+		joinbox_X1 = tableX1 + 4
+		joinbox_Y1 = tableY1 + 2
+		joinbox_X2 = tableX2 - 4
+		joinbox_Y2 = tableY2 - 3
+	)
+
+	// const (
+	// 	nameColX    = 4
+	// 	gameColX    = 30
+	// 	playersColX = 40
+	// 	pingColX    = 70
+
+	// 	tableX1 = 3
+	// 	tableY1 = 7
+	// 	tableX2 = 76
+	// 	tableY2 = 18
+
+	// 	joinbox_X1 = 7
+	// 	joinbox_Y1 = 9
+	// 	joinbox_X2 = 72
+	// 	joinbox_Y2 = 15
+	// )
+
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 
@@ -303,9 +342,9 @@ func (v *GamesListView) Render(s *Screen) {
 	s.DrawText(pingColX, 5, sty, "PING")
 
 	// Draw border below column headers
-	s.DrawLine(3, 6, tableX2, 6, sty, true)
-	s.DrawText(2, 6, sty, "╠")
-	s.DrawText(width-3, 6, sty, "╣")
+	s.DrawLine(tableX1, 6, tableX2, 6, sty, true)
+	s.DrawText(tableX1-1, 6, sty, "╠")
+	s.DrawText(tableX2+1, 6, sty, "╣")
 
 	// Clear screen of potentially old games
 	for m := tableY1; m <= tableY2; m++ {

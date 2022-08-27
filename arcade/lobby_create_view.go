@@ -16,8 +16,6 @@ type LobbyCreateView struct {
 	selectedRow int
 }
 
-const lcv_borderIndex = 28
-
 var lcv_game_input_default = ""
 
 var lcv_privateOpt = [2]string{"no", "yes"}
@@ -32,12 +30,12 @@ var lcv_game_user_input_indices = [4]int{-1, 0, 0, 0}
 var lcv_game_input_categories = [4]string{"NAME", "PRIVATE?", "GAME TYPE", "CAPACITY"}
 var lcv_editing = true
 
-const (
-	lcv_lobbyTableX1 = 16
-	lcv_lobbyTableY1 = 4
-	lcv_lobbyTableX2 = 63
-	lcv_lobbyTableY2 = 15
-)
+// const (
+// 	lcv_lobbyTableX1 = 16
+// 	lcv_lobbyTableY1 = 4
+// 	lcv_lobbyTableX2 = 63
+// 	lcv_lobbyTableY2 = 15
+// )
 
 var create_game_header = []string{
 	"| █▀▀ █▀█ █▀▀ ▄▀█ ▀█▀ █▀▀   █▀▀ ▄▀█ █▄█ █▀▀ |",
@@ -143,6 +141,19 @@ func (v *LobbyCreateView) ProcessMessage(from *net.Client, p interface{}) interf
 
 func (v *LobbyCreateView) Render(s *Screen) {
 	width, height := s.displaySize()
+
+	const (
+		tableWidth  = 48
+		tableHeight = 12
+	)
+
+	var (
+		lcv_lobbyTableX1 = (width-tableWidth)/2 - 1 // 16
+		lcv_lobbyTableY1 = 4
+		lcv_lobbyTableX2 = width - (width-tableWidth)/2   //63
+		lcv_lobbyTableY2 = lcv_lobbyTableY1 + tableHeight //15
+		lcv_borderIndex  = lcv_lobbyTableX1 + 12
+	)
 
 	if lcv_editing {
 		s.SetCursorStyle(tcell.CursorStyleBlinkingBlock)

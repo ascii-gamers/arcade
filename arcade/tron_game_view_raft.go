@@ -228,7 +228,7 @@ func NewTronGameView(mgr *ViewManager, lobby *Lobby) *TronGameView {
 			Me:             arcade.Server.ID,
 			HostID:         lobby.HostID,
 			HostSyncPeriod: 2000,
-			TimestepPeriod: 100,
+			TimestepPeriod: 80,
 			Timestep:       0,
 		},
 		lobby: lobby,
@@ -381,9 +381,9 @@ func (tg *TronGameView) ProcessEvent(ev interface{}) {
 			if tg.CommitedGameState.Ended {
 				// tg.RaftServer.Kill()
 				// arcade.Server.EndAllHeartbeats()
-				lobby := tg.lobby
+				// lobby := tg.lobby
 				mu.RUnlock()
-				tg.mgr.SetView(NewLobbyView(tg.mgr, lobby))
+				tg.mgr.SetView(NewGamesListView(tg.mgr)) //TODO: change this to the lobby view
 			}
 
 			return

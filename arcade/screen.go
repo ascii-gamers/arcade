@@ -14,8 +14,8 @@ type Screen struct {
 type CursorStyle int
 
 const (
-	displayWidth  = 80
-	displayHeight = 24
+	displayWidth  = 120
+	displayHeight = 36
 )
 
 func (s *Screen) displaySize() (int, int) {
