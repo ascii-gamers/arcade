@@ -74,6 +74,10 @@ func Listen(selfID string, delegate MulticastDiscoveryDelegate, startCh chan err
 }
 
 func Discover(addr, id string, port int) {
+	if multicastConn == nil {
+		return
+	}
+
 	ip, err := GetLocalIP()
 
 	if err != nil {

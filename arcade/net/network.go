@@ -64,67 +64,80 @@ func (n *Network) Addr() string {
 }
 
 func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
-	c, ok := n.GetClient(id)
+	var c *Client
 
-	if !ok {
-		c = &Client{
-			Delegate: n,
-			Addr:     addr,
-			ID:       id,
-			Neighbor: true,
-			State:    Connecting,
-			recvCh:   make(chan []byte, maxBufferSize),
-			sendCh:   make(chan []byte, maxBufferSize),
-		}
+	if id != "" {
+		// Find existing client by ID
+		c, _ = n.GetClient(id)
+	} else {
+		// Find existing client by IP address
+		// TODO: optimize
+		n.clients.Range(func(key, value any) bool {
+			client := value.(*Client)
 
-		go func() {
-			for {
-				data, ok := <-c.recvCh
-
-				// // Randomly drop packets if debugging
-				dropRate := n.GetDropRate()
-
-				if dropRate > 0 && rand.Float64() < dropRate {
-					continue
-				}
-
-				if !ok {
-					break
-				}
-
-				// Get sender ID
-				res := struct {
-					SenderID string
-				}{}
-
-				if err := json.Unmarshal(data, &res); err != nil {
-					break
-				}
-
-				sender, ok := n.GetClient(res.SenderID)
-
-				if !ok {
-					sender = c
-				}
-
-				for _, reply := range message.Notify(c, data) {
-					n.Send(sender, reply)
-				}
+			if client.Addr == addr {
+				c = client
+				return false
 			}
-		}()
 
-		if conn == nil {
-			var err error
-			conn, err = kcp.Dial(c.Addr)
-
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		c.start(conn)
+			return true
+		})
 	}
 
+	if c != nil {
+		c.RLock()
+		existingClientID := c.ID
+		existingClientNextHop := c.NextHop
+		existingClientState := c.State
+		c.RUnlock()
+
+		switch existingClientState {
+		case Connecting:
+			// Not too sure what to do here
+			return nil, errors.New("already connecting")
+		case Connected:
+			if existingClientNextHop != "" {
+				// If this client was previously discovered through another client, discard
+				c.disconnect()
+				n.clients.Delete(existingClientID)
+			} else if err := n.ConnectClient(c, false); err != nil {
+				// Try reconnecting
+				c.disconnect()
+				n.clients.Delete(existingClientID)
+			} else {
+				// We're good
+				return c, nil
+			}
+		case Disconnected, TimedOut:
+			c.disconnect()
+			n.clients.Delete(existingClientID)
+		}
+	}
+
+	c = &Client{
+		Delegate: n,
+		Addr:     addr,
+		ID:       id,
+		Neighbor: true,
+		State:    Connecting,
+	}
+
+	if conn == nil {
+		var err error
+		conn, err = kcp.Dial(c.Addr)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	c.start(conn)
+	go n.handleMessages(c)
+
+	return c, n.ConnectClient(c, true)
+}
+
+func (n *Network) ConnectClient(c *Client, retry bool) error {
 	// Send ping and wait for reply
 	start := time.Now()
 	res, err := n.SendAndReceive(c, NewPingMessage(n.distributor))
@@ -133,17 +146,20 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 	p, ok := res.(*PongMessage)
 
 	if !ok || err != nil {
+		c.disconnect()
+
 		c.Lock()
+		n.clients.Delete(c.ID)
 		c.State = TimedOut
-		if c.TimeoutRetries < maxTimeoutRetries {
+		if retry && c.TimeoutRetries < maxTimeoutRetries {
 			c.TimeoutRetries++
 			c.Unlock()
 
-			return n.Connect(addr, id, conn)
+			return n.ConnectClient(c, retry)
 		}
 		c.Unlock()
 
-		return nil, errors.New("timed out")
+		return errors.New("timed out")
 	}
 
 	clientID := p.SenderID
@@ -168,7 +184,7 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 
 	go n.PropagateRoutes()
 
-	return c, nil
+	return nil
 }
 
 func (n *Network) Disconnect(id string) {
@@ -350,7 +366,7 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]ClientRouti
 		}
 
 		// Bellman-Ford equation: Update least-cost paths to all other clients
-		if c, ok := routingTable[clientID]; ok && c.Distance < client.Distance {
+		if c, ok := routingTable[clientID]; ok && c.Distance < client.Distance && client.NextHop != "" {
 			log.Println("New path to", clientID, "cost=", c.Distance)
 
 			client.Lock()
@@ -374,8 +390,9 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]ClientRouti
 		}
 
 		n.clients.Store(clientID, &Client{
-			ID:      clientID,
-			NextHop: from.ID,
+			ID:       clientID,
+			Delegate: n,
+			NextHop:  from.ID,
 			ClientRoutingInfo: ClientRoutingInfo{
 				Distance:    c.Distance + 1,
 				Distributor: c.Distributor,
@@ -391,6 +408,46 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]ClientRouti
 	}
 
 	go n.PropagateRoutes()
+}
+
+func (n *Network) handleMessages(c *Client) {
+	for {
+		data, ok := <-c.recvCh
+
+		// // Randomly drop packets if debugging
+		dropRate := n.GetDropRate()
+
+		if dropRate > 0 && rand.Float64() < dropRate {
+			continue
+		}
+
+		if !ok {
+			break
+		}
+
+		if !ok {
+			break
+		}
+
+		// Get sender ID
+		res := struct {
+			SenderID string
+		}{}
+
+		if err := json.Unmarshal(data, &res); err != nil {
+			break
+		}
+
+		sender, ok := n.GetClient(res.SenderID)
+
+		if !ok {
+			sender = c
+		}
+
+		for _, reply := range message.Notify(c, data) {
+			n.Send(sender, reply)
+		}
+	}
 }
 
 func (n *Network) GetDropRate() float64 {

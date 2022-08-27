@@ -35,6 +35,8 @@ func Start() {
 
 	port := flag.Int("port", 6824, "Port to listen on")
 	flag.IntVar(port, "p", 6824, "Port to listen on")
+
+	nolan := flag.Bool("nolan", false, "Disable LAN scanning")
 	flag.Parse()
 
 	// Create log file
@@ -85,7 +87,7 @@ func Start() {
 
 	if arcade.Distributor {
 		arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port, *dist, nil)
-		arcade.Server.Start()
+		arcade.Server.Start(true)
 		os.Exit(0)
 	}
 
@@ -94,7 +96,7 @@ func Start() {
 	arcade.Server = NewServer(fmt.Sprintf("0.0.0.0:%d", *port), *port, *dist, mgr)
 	arcade.Server.Network.Delegate = mgr
 
-	go arcade.Server.Start()
+	go arcade.Server.Start(*nolan)
 
 	// TODO: Make better solution for this later -- wait for server to start
 	time.Sleep(10 * time.Millisecond)
