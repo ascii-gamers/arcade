@@ -18,7 +18,7 @@ func (n *Network) processMessage(client, msg interface{}) interface{} {
 
 		return NewPongMessage(n.distributor)
 	case *RoutingMessage:
-		// n.UpdateRoutes(c, msg.Distances)
+		n.UpdateRoutes(c, msg.Distances)
 	}
 
 	return nil
