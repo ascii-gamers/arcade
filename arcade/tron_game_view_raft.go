@@ -553,7 +553,7 @@ func (tg *TronGameView) startApplyChanHandler() {
 
 			if applyMsg.CommandValid {
 				if applyMsg.CommandTimestep < tg.CommitedGameState.CommitedTimeStep {
-					panic("encountered older timestep than commitedTimestep")
+					panic(fmt.Sprintf("encountered older timestep than commitedTimestep, %d, %d", applyMsg.CommandTimestep, tg.CommitedGameState.CommitedTimeStep))
 				} else if cmd, ok := readLogEntryAsTronCmd(applyMsg.Command); ok {
 					log.Println("Applying: ", cmd, applyMsg.CommandTimestep)
 
