@@ -217,7 +217,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 }
 
 // Start starts listening for connections on a given address.
-func (s *Server) Start() error {
+func (s *Server) Start(noLAN bool) error {
 	listener, err := kcp.Listen(s.Addr)
 
 	if err != nil {
@@ -227,11 +227,13 @@ func (s *Server) Start() error {
 	fmt.Printf("Listening at %s...\n", s.Addr)
 	fmt.Printf("ID: %s\n", s.ID)
 
-	startCh := make(chan error)
-	go multicast.Listen(s.ID, s, startCh)
+	if !noLAN {
+		startCh := make(chan error)
+		go multicast.Listen(s.ID, s, startCh)
 
-	if err := <-startCh; err != nil {
-		panic(err)
+		if err := <-startCh; err != nil {
+			panic(err)
+		}
 	}
 
 	for {
