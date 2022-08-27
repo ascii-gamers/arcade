@@ -68,6 +68,9 @@ type Client struct {
 func (c *Client) start(conn net.Conn) {
 	c.conn = conn
 
+	c.recvCh = make(chan []byte, maxBufferSize)
+	c.sendCh = make(chan []byte, maxBufferSize)
+
 	go c.readPump()
 	go c.writePump()
 }
@@ -81,11 +84,13 @@ func (c *Client) disconnect() {
 
 	c.State = Disconnected
 
-	close(c.sendCh)
-	close(c.recvCh)
+	if c.NextHop == "" {
+		close(c.sendCh)
+		close(c.recvCh)
 
-	if c.conn != nil {
-		c.conn.Close()
+		if c.conn != nil {
+			c.conn.Close()
+		}
 	}
 	c.Unlock()
 
