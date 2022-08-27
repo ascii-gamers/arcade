@@ -313,8 +313,8 @@ func (tg *TronGameView) Init() {
 
 	tg.NextDir = -1
 
-	tg.CommitedGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, 0}
-	tg.WorkingGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, 0}
+	tg.CommitedGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, -1}
+	tg.WorkingGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, -1}
 	mu.Unlock()
 	tg.startApplyChanHandler()
 
@@ -332,10 +332,16 @@ func (tg *TronGameView) Init() {
 		tg.RaftServer.StartTime()
 
 		tg.gameRenderState = TronGameScreen
+		lastTimestep := -1
 		for !tg.WorkingGameState.Ended {
 			c.Wait()
 
 			timestep := tg.RaftServer.GetTimestep()
+			if timestep == lastTimestep {
+				panic("SAME TIMESTEP")
+			} else {
+				lastTimestep = timestep
+			}
 
 			// update gamestate and render for previous timestep
 			tg.updateWorkingGameState(timestep - 1)
@@ -343,9 +349,14 @@ func (tg *TronGameView) Init() {
 			tg.mgr.RequestRender()
 
 			// DEBUG MODE
-			style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
-			_, isLeader := tg.RaftServer.GetState()
-			tg.mgr.screen.DrawText(-10, 0, style, fmt.Sprintf("%t, %d", isLeader, timestep))
+			tg.mgr.RLock()
+			if tg.mgr.showDebug {
+				w, _ := tg.mgr.screen.displaySize()
+				style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
+				_, isLeader := tg.RaftServer.GetState()
+				tg.mgr.screen.DrawText(w+1, 0, style, fmt.Sprintf("L:%t, T:%d", isLeader, timestep))
+			}
+			tg.mgr.RUnlock()
 
 			// send command for current timestep
 			tg.updateSelf()
@@ -494,11 +505,20 @@ func (tg *TronGameView) Render(s *Screen) {
 }
 
 func (tg *TronGameView) renderGame(s *Screen) {
+	tg.mgr.RLock()
+	showDebug := tg.mgr.showDebug
+	tg.mgr.RUnlock()
 	for row := 0; row < tg.WorkingGameState.Width; row++ {
 		for col := 0; col < tg.WorkingGameState.Height; col++ {
 			if ok, playerNum := tg.getCollision(tg.WorkingGameState.Collisions, row, col); ok && playerNum >= 0 {
 				style := tcell.StyleDefault.Background(tcell.ColorNames[TRON_COLORS[playerNum]])
-				s.DrawText(row, col, style, " ")
+
+				if showDebug {
+					s.DrawText(row, col, style, "*")
+				} else {
+					s.DrawText(row, col, style, " ")
+				}
+
 			}
 
 			if showCommits {
@@ -537,9 +557,8 @@ func (tg *TronGameView) startApplyChanHandler() {
 			applyMsg := <-tg.ApplyChan
 			// log.Println("[RAFT]", "APPLY")
 			mu.Lock()
-			tg.lastApplyMsgInd = applyMsg.CommandIndex
+			tg.lastApplyMsgInd = applyMsg.CommandIndex - 1 // raft indexes are 1 indexed
 			style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
-			tg.mgr.screen.DrawText(-10, 1, style, fmt.Sprintf("%d", tg.lastApplyMsgInd))
 
 			if applyMsg.CommandValid {
 				if applyMsg.CommandTimestep < tg.CommitedGameState.CommitedTimeStep {
@@ -558,12 +577,16 @@ func (tg *TronGameView) startApplyChanHandler() {
 					tg.CommitedGameState = newCommitedGameState
 
 					tg.truncateMoveQueueIfNecessary(cmd)
-					// tg.updateWorkingGameState()
-					// tg.mgr.RequestRender()
-
 				}
 
 			}
+
+			tg.mgr.RLock()
+			if tg.mgr.showDebug {
+				w, _ := tg.mgr.screen.displaySize()
+				tg.mgr.screen.DrawText(w+1, 1, style, fmt.Sprintf("A:%d C: %d", tg.lastApplyMsgInd, tg.CommitedGameState.CommitedTimeStep))
+			}
+			tg.mgr.RUnlock()
 			mu.Unlock()
 			log.Println("Finished apply")
 		}
@@ -595,8 +618,16 @@ func (tg *TronGameView) updateSelf() {
 		return
 	}
 
-	tg.RaftServer.Start(cmd)
+	tg.RaftServer.Start(cmd, currentTimestep)
 	tg.MoveQueue = append(tg.MoveQueue, cmd)
+
+	tg.mgr.RLock()
+	if tg.mgr.showDebug {
+		w, h := tg.mgr.screen.displaySize()
+		moveStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorBlue)
+		tg.mgr.screen.DrawText(w+1, h-1, moveStyle, cmd.String())
+	}
+	tg.mgr.RUnlock()
 
 	// optimistically apply move
 	myState.Direction = cmd.Direction
@@ -606,7 +637,11 @@ func (tg *TronGameView) updateSelf() {
 }
 
 func (tg *TronGameView) updateWorkingGameState(currentTimestep int) {
+
+	// FUCK YOU RAFT WHY ARE YOU 1 INDEXED
 	raftLog, lastApplied, _ := tg.RaftServer.GetLog()
+
+	lastApplied -= 1
 
 	allEntries := raftLog.GetEntries()
 	partitionIndex := int(math.Min(float64(lastApplied)+1, float64(len(allEntries))))
@@ -615,6 +650,7 @@ func (tg *TronGameView) updateWorkingGameState(currentTimestep int) {
 	var commands BasicQueue[TronCommand]
 	for _, entry := range entries {
 		if cmd, ok := readLogEntryAsTronCmd(entry.Command); ok {
+
 			cmd.Timestep = entry.Timestep
 			commands.push(cmd)
 
@@ -644,22 +680,32 @@ func (tg *TronGameView) updateWorkingGameState(currentTimestep int) {
 		}
 	}
 
-	tg.mgr.screen.DrawEmpty(-22, 5, 22, 5+len(allEntries)+3, tcell.StyleDefault.Background(tcell.ColorBlack))
+	// DEBUG MODE
+	tg.mgr.RLock()
+	if tg.mgr.showDebug {
+		w, _ := tg.mgr.screen.displaySize()
+		vOffset := 3
+		var maxLogs float64 = 15
 
-	style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
-	lastI := 0
-	for i, entry := range allEntries[:partitionIndex] {
-		if cmd, ok := readLogEntryAsTronCmd(entry.Command); ok {
-			cmd.Timestep = entry.Timestep
-			tg.mgr.screen.DrawText(-22, 5+i, style, cmd.String())
+		tg.mgr.screen.DrawEmpty(w+1, vOffset, w+22, vOffset+len(allEntries)+3, tcell.StyleDefault.Background(tcell.ColorBlack))
+
+		commitedStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
+		lastI := 0
+		startInd := int(math.Max(0, float64(partitionIndex)-maxLogs))
+		for i, entry := range allEntries[startInd:partitionIndex] {
+			if cmd, ok := readLogEntryAsTronCmd(entry.Command); ok {
+				cmd.Timestep = entry.Timestep
+				tg.mgr.screen.DrawText(w+1, vOffset+i, commitedStyle, cmd.String())
+			}
+			lastI = i
 		}
-		lastI = i
+		tg.mgr.screen.DrawText(w+1, vOffset+lastI+1, commitedStyle, fmt.Sprintf("appliedInd: %d", lastApplied))
+		uncommitedStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
+		for i, cmd := range commands {
+			tg.mgr.screen.DrawText(w+1, vOffset+lastI+3+i, uncommitedStyle, cmd.String())
+		}
 	}
-	tg.mgr.screen.DrawText(-22, 5+lastI+1, style, fmt.Sprintf("appliedInd: %d", lastApplied))
-	style = tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
-	for i, cmd := range commands {
-		tg.mgr.screen.DrawText(-22, 5+lastI+3+i, style, cmd.String())
-	}
+	tg.mgr.RUnlock()
 
 	// currentTimestep := tg.getTimestep()
 	// log.Println("CURENT TIMESTEP", currentTimestep)
@@ -681,9 +727,9 @@ func (tg *TronGameView) updateWorkingGameState(currentTimestep int) {
 		}
 	}
 
-	if shouldWin, winner := tg.shouldWin(workingGameState); shouldWin && winner == tg.Me {
+	if shouldWin, winner := tg.shouldWin(workingGameState); shouldWin {
 		winCmd := TronCommand{uuid.NewString(), TronEndGameCmd, currentTimestep, tg.Me, -1, winner}
-		tg.RaftServer.Start(winCmd)
+		tg.RaftServer.Start(winCmd, currentTimestep)
 	}
 	// fmt.Print("after: ", workingGameState.ClientStates)
 	tg.WorkingGameState = workingGameState

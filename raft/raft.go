@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -424,7 +425,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs) *AppendEntriesReply {
 		return reply
 	}
 
-	rf.timestep = args.Timestep
+	// rf.timestep = args.Timestep
 	reply.Success = true
 
 	// 3
@@ -574,6 +575,7 @@ type ForwardedStartArgs struct {
 	message.Message
 	ClientId int
 	Command  interface{}
+	Timestep int
 }
 
 type ForwardedStartReply struct {
@@ -605,13 +607,13 @@ func (m ForwardedStartReply) MarshalBinary() ([]byte, error) {
 // term. the third return value is true if this server believes it is
 // the leader.
 //
-func (rf *Raft) Start(command interface{}) (int, int, bool) {
+func (rf *Raft) Start(command interface{}, timestep int) (int, int, bool) {
 	rf.Lock()
 
 	if rf.state != Leader {
 		// log.Println("[RAFT]", "currentLeader", rf.currentLeader)
 		if rf.currentLeader >= 0 {
-			args := &ForwardedStartArgs{Message: message.Message{Type: "ForwardedStart"}, ClientId: rf.me, Command: command}
+			args := &ForwardedStartArgs{Message: message.Message{Type: "ForwardedStart"}, ClientId: rf.me, Command: command, Timestep: timestep}
 			leader := rf.peers[rf.currentLeader]
 			// log.Println("[RAFT]", "currentLeader2", leader.ID)
 			log.Println("[RAFT]", "sending forwardedstart")
@@ -626,7 +628,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 
 	rf.print("Start", fmt.Sprintf("Starting with command %v", command))
 
-	entry := LogEntry{rf.currentTerm, rf.log.LastIndex() + 1, command, rf.timestep}
+	entryTimestep := int(math.Max(float64(rf.timestep), float64(timestep)))
+	entry := LogEntry{rf.currentTerm, rf.log.LastIndex() + 1, command, entryTimestep}
 	rf.print("Start", fmt.Sprintf("Appending entry with index %d", entry.Index))
 	rf.log.AppendEntry(entry)
 	rf.persist(nil)
@@ -640,7 +643,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 func (rf *Raft) ForwardedStart(args *ForwardedStartArgs) *ForwardedStartReply {
 	// log.Println("[RAFT]", "rec forwardedstart")
 	if rf.state == Leader {
-		ind, term, _ := rf.Start(args.Command)
+		ind, term, _ := rf.Start(args.Command, args.Timestep)
 		reply := &ForwardedStartReply{message.Message{Type: "ForwardedStartReply"}, rf.me, ind, term}
 		return reply
 	}
