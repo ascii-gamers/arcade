@@ -21,7 +21,7 @@ type ViewManager struct {
 }
 
 func NewViewManager() *ViewManager {
-	return &ViewManager{showDebug: true}
+	return &ViewManager{showDebug: false}
 }
 
 func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
