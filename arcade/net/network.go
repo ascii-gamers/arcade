@@ -32,7 +32,6 @@ type Network struct {
 }
 
 const maxTimeoutRetries = 1
-const timeoutInterval = time.Second
 const sendAndReceiveTimeout = time.Second
 
 func NewNetwork(me string, port int, distributor bool) *Network {
@@ -145,23 +144,31 @@ func (n *Network) ConnectClient(c *Client, retry bool) error {
 	p, ok := res.(*PongMessage)
 
 	if !ok || err != nil {
-		c.disconnect()
-
 		c.Lock()
-		n.clients.Delete(c.ID)
-		c.State = TimedOut
 		if retry && c.TimeoutRetries < maxTimeoutRetries {
 			c.TimeoutRetries++
 			c.Unlock()
 
 			return n.ConnectClient(c, retry)
 		}
+		c.disconnect()
+		n.clients.Delete(c.ID)
+		c.State = TimedOut
 		c.Unlock()
 
 		return errors.New("timed out")
 	}
 
 	clientID := p.SenderID
+
+	if value, ok := n.clients.Load(clientID); ok {
+		existingClient := value.(*Client)
+
+		if existingClient != c {
+			existingClient.disconnect()
+			n.clients.Delete(clientID)
+		}
+	}
 
 	c.Lock()
 	c.ID = clientID
@@ -236,15 +243,11 @@ func (n *Network) SendRaw(client *Client, msg interface{}) bool {
 func (n *Network) Send(client *Client, msg interface{}) bool {
 	client.RLock()
 	if client.State == Disconnected || client.State == TimedOut {
-		log.Println("Send Failed: ", client.State)
 		client.RUnlock()
 		return false
 	}
 
 	// Set sender and recipient IDs
-	// fmt.Println("AFTER1.5", msg, reflect.TypeOf(msg).Kind())
-
-	// log.Println("in Send: ", msg)
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
 	client.RUnlock()
@@ -384,7 +387,6 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]ClientRouti
 			continue
 		}
 
-		log.Println("routing discovery", clientID)
 		n.clients.Store(clientID, &Client{
 			ID:       clientID,
 			Delegate: n,

@@ -5,6 +5,23 @@ func (n *Network) processMessage(client, msg interface{}) interface{} {
 
 	switch msg := msg.(type) {
 	case *PingMessage:
+		c.RLock()
+		clientID := c.ID
+		c.RUnlock()
+
+		if value, ok := n.clients.Load(clientID); ok {
+			existingClient := value.(*Client)
+
+			existingClient.RLock()
+			existingClientNextHop := existingClient.NextHop
+			existingClient.RUnlock()
+
+			if existingClient != c && existingClientNextHop != "" {
+				existingClient.disconnect()
+				n.clients.Delete(clientID)
+			}
+		}
+
 		c.Lock()
 		c.ID = msg.Message.SenderID
 		c.ClientRoutingInfo = ClientRoutingInfo{
