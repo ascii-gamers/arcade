@@ -146,17 +146,16 @@ func (n *Network) ConnectClient(c *Client, retry bool) error {
 	p, ok := res.(*PongMessage)
 
 	if !ok || err != nil {
-		c.disconnect()
-
 		c.Lock()
-		n.clients.Delete(c.ID)
-		c.State = TimedOut
 		if retry && c.TimeoutRetries < maxTimeoutRetries {
 			c.TimeoutRetries++
 			c.Unlock()
 
 			return n.ConnectClient(c, retry)
 		}
+		c.disconnect()
+		n.clients.Delete(c.ID)
+		c.State = TimedOut
 		c.Unlock()
 
 		return errors.New("timed out")
@@ -164,11 +163,19 @@ func (n *Network) ConnectClient(c *Client, retry bool) error {
 
 	clientID := p.SenderID
 
+	if value, ok := n.clients.Load(clientID); ok {
+		existingClient := value.(*Client)
+
+		if existingClient != c {
+			existingClient.disconnect()
+			n.clients.Delete(clientID)
+		}
+	}
+
 	c.Lock()
-	c.Distributor = p.Distributor
 	c.ID = clientID
 	c.ClientRoutingInfo = ClientRoutingInfo{
-		Distance:    float64(end.Sub(start)),
+		Distance:    float64(end.Sub(start).Milliseconds()),
 		Distributor: p.Distributor,
 	}
 	c.Neighbor = true
@@ -213,27 +220,13 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 	})
 }
 
-func (n *Network) Send(client *Client, msg interface{}) bool {
+func (n *Network) SendRaw(client *Client, msg interface{}) bool {
 	client.RLock()
-	if client.State == Disconnected || client.State == TimedOut {
-		// log.Println("Send Failed: ", client.State)
-		client.RUnlock()
-		return false
-	}
-
-	// Set sender and recipient IDs
-	// fmt.Println("AFTER1.5", msg, reflect.TypeOf(msg).Kind())
-
-	// log.Println("in Send: ", msg)
-	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
-	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
-
 	if client.NextHop == "" {
 		client.RUnlock()
 		client.Send(msg)
 		return true
 	}
-
 	client.RUnlock()
 
 	n.RLock()
@@ -248,6 +241,21 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 
 	servicer.(*Client).Send(msg)
 	return true
+}
+
+func (n *Network) Send(client *Client, msg interface{}) bool {
+	client.RLock()
+	if client.State == Disconnected || client.State == TimedOut {
+		client.RUnlock()
+		return false
+	}
+
+	// Set sender and recipient IDs
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("SenderID").Set(reflect.ValueOf(n.me))
+	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").Set(reflect.ValueOf(client.ID))
+	client.RUnlock()
+
+	return n.SendRaw(client, msg)
 }
 
 func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, error) {
@@ -329,11 +337,6 @@ func (n *Network) getDistanceVector() map[string]ClientRoutingInfo {
 	n.clients.Range(func(key, value any) bool {
 		clientID := key.(string)
 		client := value.(*Client)
-
-		if !client.Neighbor {
-			return true
-		}
-
 		distances[clientID] = client.ClientRoutingInfo
 		return true
 	})

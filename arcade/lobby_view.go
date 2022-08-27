@@ -254,8 +254,11 @@ func (v *LobbyView) Unload() {
 		})
 	} else {
 		// only send to host
-		host, _ := arcade.Server.Network.GetClient(v.Lobby.HostID)
-		arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
+		host, ok := arcade.Server.Network.GetClient(v.Lobby.HostID)
+
+		if ok {
+			arcade.Server.Network.Send(host, NewLeaveMessage(arcade.Server.ID, v.Lobby.ID))
+		}
 	}
 }
 
