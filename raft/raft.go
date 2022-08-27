@@ -34,6 +34,26 @@ import (
 	"arcade/labgob"
 )
 
+type BasicQueue[T any] []T
+
+func (bq *BasicQueue[T]) initialize(queue *[]T) {
+	*bq = *queue
+}
+
+func (bq *BasicQueue[T]) push(element ...T) {
+	*bq = append(*bq, element...)
+}
+
+func (bq *BasicQueue[T]) pop() (T, bool) {
+	if len(*bq) == 0 {
+		var nullT T
+		return nullT, false
+	}
+	element := (*bq)[0] // The first element is the one to be dedequeued.
+	*bq = (*bq)[1:]
+	return element, true
+}
+
 type RaftState int
 
 const (
@@ -109,6 +129,8 @@ type Raft struct {
 	timestepPeriod int
 	timestep       int
 	timestepCond   *sync.Cond
+
+	forwardedStartQueue BasicQueue[*ForwardedStartArgs]
 }
 
 func (rf *Raft) print(function, message string) {
@@ -617,12 +639,32 @@ func (rf *Raft) Start(command interface{}, timestep int) (int, int, bool) {
 			leader := rf.peers[rf.currentLeader]
 			// log.Println("[RAFT]", "currentLeader2", leader.ID)
 			log.Println("[RAFT]", "sending forwardedstart")
-			rf.Unlock()
-			if reply, err := rf.network.SendAndReceive(leader, args); err == nil {
-				reply := reply.(*ForwardedStartReply)
-				return reply.Index, reply.Term, false
+
+			rf.forwardedStartQueue.push(args)
+			if len(rf.forwardedStartQueue) == 1 { // if only member of queue is current args
+				rf.Unlock()
+				go func() {
+					rf.Lock()
+					// JANK: throws away return here
+					for len(rf.forwardedStartQueue) > 0 {
+						log.Println("[RAFT]", "ForwardedStartqueue len ", len(rf.forwardedStartQueue))
+						args := rf.forwardedStartQueue[0]
+						rf.Unlock()
+						_, err := rf.network.SendAndReceive(leader, args)
+						for err != nil {
+							log.Println("[RAFT]", "ForwardedStart error", err, timestep)
+							_, err = rf.network.SendAndReceive(leader, args)
+
+						}
+						rf.Lock()
+						rf.forwardedStartQueue.pop()
+					}
+					rf.Unlock()
+				}()
+				return -1, -1, false
 			}
 		}
+		rf.Unlock()
 		return -1, -1, false
 	}
 
@@ -935,10 +977,11 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 	}
 
 	go func() {
-		// log.Println("[RAFT]", "AppendEntries", len(args.Entries))
+		log.Println("[RAFT]", "AppendEntries", len(args.Entries))
 		reply, err := rf.network.SendAndReceive(peer, args)
 
 		if err != nil || len(entries) == 0 {
+			log.Println("[RAFT]", "AppendEntries error", err)
 			return
 		}
 

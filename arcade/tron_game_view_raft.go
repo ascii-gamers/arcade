@@ -338,7 +338,7 @@ func (tg *TronGameView) Init() {
 
 			timestep := tg.RaftServer.GetTimestep()
 			if timestep == lastTimestep {
-				panic("SAME TIMESTEP")
+				panic(fmt.Sprintf("SAME TIMESTEP, %d", timestep))
 			} else {
 				lastTimestep = timestep
 			}
@@ -433,6 +433,7 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 	defer mu.Unlock()
 
 	if needToProcessInput {
+		// TODO: check for tron direction here as well and don't send cmd if same dir
 		log.Println("setting Nextdir", newDir)
 		tg.NextDir = newDir
 	} else {

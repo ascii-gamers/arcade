@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"net"
 	"reflect"
 	"sync"
@@ -33,7 +34,7 @@ type Network struct {
 
 const maxTimeoutRetries = 1
 const timeoutInterval = time.Second
-const sendAndReceiveTimeout = time.Second
+const sendAndReceiveTimeout = 500 * time.Millisecond
 
 func NewNetwork(me string, port int, distributor bool) *Network {
 	message.Register(PingMessage{Message: message.Message{Type: "ping"}})
@@ -79,6 +80,13 @@ func (n *Network) Connect(addr, id string, conn net.Conn) (*Client, error) {
 		go func() {
 			for {
 				data, ok := <-c.recvCh
+
+				// // Randomly drop packets if debugging
+				dropRate := n.GetDropRate()
+
+				if dropRate > 0 && rand.Float64() < dropRate {
+					continue
+				}
 
 				if !ok {
 					break
