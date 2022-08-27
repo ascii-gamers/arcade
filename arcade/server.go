@@ -179,7 +179,7 @@ func (s *Server) handleMessage(client, msg interface{}) interface{} {
 			s.RUnlock()
 
 			if ok {
-				recipient.Send(msg)
+				s.Network.SendRaw(recipient, msg)
 				return nil
 			} else {
 				return NewErrorMessage("invalid recipient")
