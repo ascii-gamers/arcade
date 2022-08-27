@@ -4,7 +4,6 @@ import (
 	"arcade/arcade/message"
 	"arcade/raft"
 	"encoding/json"
-	"sync"
 )
 
 const (
@@ -60,7 +59,7 @@ type Game[GS any, CS any] struct {
 	ID        string
 	Name      string
 	PlayerIDs []string
-	mu        sync.Mutex
+	// mu        sync.Mutex
 
 	Me string
 	// GameState GS

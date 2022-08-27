@@ -1122,6 +1122,7 @@ func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
 // for any long-running work.
 //
 func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Network, timestepPeriod int, timestepCond *sync.Cond) *Raft {
+	log.Printf("[RAFT] %p", &timestepCond.L)
 	rand.Seed(time.Now().UnixNano())
 
 	log.Println("[RAFT]", "PEERS: ", len(peers))

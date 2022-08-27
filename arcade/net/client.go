@@ -2,7 +2,6 @@ package net
 
 import (
 	"encoding"
-	"log"
 	"net"
 	"sync"
 )
@@ -125,7 +124,7 @@ func (c *Client) readPump() {
 func (c *Client) writePump() {
 	for {
 		data, ok := <-c.sendCh
-		log.Println("Sending message:", string(data))
+		// log.Println("Sending message:", string(data))
 
 		if !ok {
 			c.disconnect()

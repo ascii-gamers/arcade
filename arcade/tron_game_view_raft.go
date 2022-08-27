@@ -10,7 +10,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"arcade/arcade/message"
 	"arcade/arcade/net"
 	"arcade/raft"
 
@@ -82,7 +81,7 @@ type Position struct {
 	Y int
 }
 
-var mu sync.Mutex
+var mu sync.RWMutex
 
 var c = sync.NewCond(&mu)
 
@@ -106,15 +105,11 @@ type TronGameState struct {
 	CommitedTimeStep int
 }
 
-// use this to coalesce optimistic game state
-// in the future, generalize this
-// var localCollisions []byte
-
 type TronCommandType int64
 
 const (
 	TronMoveCmd TronCommandType = iota
-	TronDeadCmd
+	TronEndGameCmd
 )
 
 type TronCommand struct {
@@ -123,9 +118,13 @@ type TronCommand struct {
 	Timestep  int
 	PlayerID  string
 	Direction TronDirection
+	Winner    string
 }
 
 func (tc TronCommand) String() string {
+	if tc.Type == TronEndGameCmd {
+		return fmt.Sprintf("%s[%s, W:%s]", tc.Id[:int(math.Min(3, float64(len(tc.Id))))], tc.PlayerID[:int(math.Min(3, float64(len(tc.PlayerID))))], tc.Winner[:int(math.Min(3, float64(len(tc.Winner))))])
+	}
 	var dir string
 	switch tc.Direction {
 	case TronDown:
@@ -137,7 +136,7 @@ func (tc TronCommand) String() string {
 	case TronRight:
 		dir = "TronRight"
 	}
-	return fmt.Sprintf("%s[%d,%s, %s]", tc.Id[:int(math.Min(3, float64(len(tc.Id))))], tc.Timestep, tc.PlayerID[:int(math.Min(3, float64(len(tc.Id))))], dir)
+	return fmt.Sprintf("%s[%d,%s, %s]", tc.Id[:int(math.Min(3, float64(len(tc.Id))))], tc.Timestep, tc.PlayerID[:int(math.Min(3, float64(len(tc.PlayerID))))], dir)
 }
 
 // BASIC QUEUE IMPLEMENTATION
@@ -215,6 +214,7 @@ type TronGameView struct {
 	LatestInputDir    TronDirection
 	ApplyChan         chan raft.ApplyMsg
 	lastApplyMsgInd   int
+	gameRenderState   TronGameRenderState
 }
 
 const CLIENT_LAG_TIMESTEP = 0
@@ -242,13 +242,15 @@ var needToProcessInput = false
 
 var showCommits = false
 
+type TronGameRenderState int64
+
 const (
-	TronInitScreen = iota
+	TronInitScreen TronGameRenderState = iota
 	TronGameScreen
 	TronWinScreen
 )
 
-var gameRenderState = TronInitScreen
+// var gameRenderState = TronInitScreen
 var countdownNum = 3
 
 /*
@@ -269,7 +271,8 @@ var countdownNum = 3
 */
 
 func (tg *TronGameView) Init() {
-
+	log.Println(fmt.Sprintf("%p", &c.L))
+	mu.Lock()
 	// JANK
 	var me int
 	for i := range tg.PlayerIDs {
@@ -310,33 +313,33 @@ func (tg *TronGameView) Init() {
 
 	tg.NextDir = -1
 
-	// fmt.Print(clientStates)
-
 	tg.CommitedGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, 0}
 	tg.WorkingGameState = TronGameState{width, height, false, "", tg.initCollisions(), clientStates, 0}
-
-	tg.start()
+	mu.Unlock()
 	tg.startApplyChanHandler()
 
 	go func() {
+
 		for i := 1; i > 0; i-- {
 			countdownNum = i
+			mu.RLock()
 			tg.mgr.RequestRender()
+			mu.RUnlock()
 			time.Sleep(time.Duration(int(time.Second)))
 		}
 
-		gameRenderState = TronGameScreen
-		tg.RaftServer.StartTime()
-		// lastTimestep := tg.RaftServer.GetTimestep() - 1
 		mu.Lock()
+		tg.RaftServer.StartTime()
+
+		tg.gameRenderState = TronGameScreen
 		for !tg.WorkingGameState.Ended {
-			// tg.Timestep += 1
 			c.Wait()
 
 			timestep := tg.RaftServer.GetTimestep()
 
 			// update gamestate and render for previous timestep
 			tg.updateWorkingGameState(timestep - 1)
+
 			tg.mgr.RequestRender()
 
 			// DEBUG MODE
@@ -349,75 +352,27 @@ func (tg *TronGameView) Init() {
 			tg.WorkingGameState = tg.clientPredict(tg.WorkingGameState, 1, []string{tg.Me})
 			tg.mgr.RequestRender()
 
-			// tg.mgr.RequestRender()
-			// time.Sleep(time.Duration(tg.TimestepPeriod * int(time.Millisecond)))
-			// tg.updateWorkingGameState(timestep)
-			// tg.mgr.RequestRender()
-			// mu.Lock()
-			// if tg.Me == tg.HostID {
-			// 	if ended, winner := tg.shouldWin(); ended {
-			// 		tg.GameState.Ended = ended
-			// 		tg.GameState.Winner = winner
-			// 		tg.sendGameUpdate()
-			// 		tg.sendEndGame(winner)
-			// 	}
-			// }
-
 		}
+		tg.gameRenderState = TronWinScreen
 		mu.Unlock()
 
-		gameRenderState = TronWinScreen
 		tg.mgr.RequestRender()
 	}()
 
-	if tg.Me == tg.HostID && tg.HostSyncPeriod > 0 {
-		go tg.startHostSync()
-	}
-
-}
-
-func (tg *TronGameView) startHostSync() {
-	// for tg.Started {
-	// 	time.Sleep(time.Duration(tg.HostSyncPeriod * int(time.Millisecond)))
-	// 	tg.commitGameState()
-	// 	tg.sendGameUpdate()
-	// }
 }
 
 func (tg *TronGameView) ProcessEvent(ev interface{}) {
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyEnter {
-			// mu.Lock()
-			gamestate := tg.WorkingGameState.Ended
-			// mu.Unlock()
-			if gamestate {
-				// arcade.Lobby.mu.RLock()
-				// hostID := arcade.Lobby.HostID
-				// lobbyID := arcade.Lobby.ID
-				// arcade.Lobby.mu.RUnlock()
+			mu.RLock()
 
-				// if arcade.Server.ID == hostID {
-				// arcade.lobbyMux.Lock()
-				// arcade.Lobby = &Lobby{}
-				// arcade.lobbyMux.Unlock()
+			if tg.WorkingGameState.Ended {
 
+				tg.RaftServer.Kill()
 				arcade.Server.EndAllHeartbeats()
-				// send updates to everyone
-
-				// arcade.Server.Network.ClientsRange(func(client *Client) bool {
-				// 	if client.Distributor {
-				// 		return true
-				// 	}
-
-				// 	arcade.Server.Network.Send(client, NewLobbyEndMessage(lobbyID))
-
-				// 	return true
-				// })
-
 				tg.mgr.SetView(NewGamesListView(tg.mgr))
-
-				// }
+				mu.RUnlock()
 			}
 			return
 		}
@@ -428,7 +383,9 @@ func (tg *TronGameView) ProcessEvent(ev interface{}) {
 func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 
 	key := ev.Key()
+	mu.RLock()
 	clientState := tg.getMyState()
+	mu.RUnlock()
 	var newDir TronDirection
 
 	switch key {
@@ -461,6 +418,9 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 		}
 	}
 
+	mu.Lock()
+	defer mu.Unlock()
+
 	if needToProcessInput {
 		log.Println("setting Nextdir", newDir)
 		tg.NextDir = newDir
@@ -473,25 +433,20 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 }
 
 func (tg *TronGameView) ProcessMessage(from *net.Client, p interface{}) interface{} {
-	switch p := p.(type) {
-	// case GameUpdateMessage[TronGameState, TronClientState]:
-	// 	tg.handleGameUpdate(p)
-	// case ClientUpdateMessage[TronClientState]:
-	// 	tg.handleClientUpdate(p)
-	case *EndGameMessage:
-		tg.handleEndGame(*p)
-	}
 	return nil
 }
 
 func (tg *TronGameView) Render(s *Screen) {
+	// mu.Lock()
+	// defer mu.Unlock()
+
 	s.ClearContent()
 
 	displayWidth, displayHeight := tg.mgr.screen.displaySize()
 	boxStyle := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorTeal)
 	s.DrawBox(1, 1, displayWidth-2, displayHeight-2, boxStyle, false)
 
-	switch gameRenderState {
+	switch tg.gameRenderState {
 	case TronInitScreen:
 		myState := tg.getMyState()
 		style := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorNames[myState.Color])
@@ -621,13 +576,19 @@ func (tg *TronGameView) updateSelf() {
 	// mu.Lock()
 	// defer mu.Unlock()
 
+	myState := tg.getMyState()
+
+	if !myState.Alive {
+		return
+	}
+
 	currentTimestep := tg.getTimestep()
 	var cmd TronCommand
 
 	if needToProcessInput {
-		cmd = TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.LatestInputDir}
+		cmd = TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.LatestInputDir, ""}
 	} else if tg.NextDir != -1 {
-		cmd = TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.NextDir}
+		cmd = TronCommand{uuid.NewString(), TronMoveCmd, currentTimestep, tg.Me, tg.NextDir, ""}
 		log.Println("use Nextdir")
 		tg.NextDir = -1
 	} else {
@@ -638,7 +599,6 @@ func (tg *TronGameView) updateSelf() {
 	tg.MoveQueue = append(tg.MoveQueue, cmd)
 
 	// optimistically apply move
-	myState := tg.getMyState()
 	myState.Direction = cmd.Direction
 	tg.WorkingGameState.ClientStates[tg.Me] = myState
 
@@ -646,9 +606,6 @@ func (tg *TronGameView) updateSelf() {
 }
 
 func (tg *TronGameView) updateWorkingGameState(currentTimestep int) {
-	// mu.Lock()
-	// defer mu.Unlock()
-
 	raftLog, lastApplied, _ := tg.RaftServer.GetLog()
 
 	allEntries := raftLog.GetEntries()
@@ -716,22 +673,17 @@ func (tg *TronGameView) updateWorkingGameState(currentTimestep int) {
 	for len(commands) > 0 || workingTimestep <= currentTimestep {
 		if len(commands) > 0 && commands[0].Timestep <= workingTimestep {
 			if cmd, ok := commands.pop(); ok && cmd.Timestep == workingTimestep {
-				clientState := workingGameState.ClientStates[cmd.PlayerID]
-				switch cmd.Type {
-				case TronMoveCmd:
-					clientState.Direction = cmd.Direction
-				}
-
-				workingGameState.ClientStates[cmd.PlayerID] = clientState
-				// fmt.Printf("A: %d %d\n", cmd.Direction, workingGameState.ClientStates[tg.Me].Direction)
+				workingGameState = tg.applyCommandToGameState(workingGameState, cmd)
 			}
 		} else {
-			// apply prev timestep state change
-			// fmt.Printf("B:%d\n ", workingGameState.ClientStates[tg.Me].Direction)
-			// log.Println("advance pred", "workingTimestep: ", workingTimestep)
 			workingGameState = tg.clientPredictAll(workingGameState, 1)
 			workingTimestep += 1
 		}
+	}
+
+	if shouldWin, winner := tg.shouldWin(workingGameState); shouldWin && winner == tg.Me {
+		winCmd := TronCommand{uuid.NewString(), TronEndGameCmd, currentTimestep, tg.Me, -1, winner}
+		tg.RaftServer.Start(winCmd)
 	}
 	// fmt.Print("after: ", workingGameState.ClientStates)
 	tg.WorkingGameState = workingGameState
@@ -744,6 +696,9 @@ func (tg *TronGameView) applyCommandToGameState(gameState TronGameState, cmd Tro
 	switch cmd.Type {
 	case TronMoveCmd:
 		clientState.Direction = cmd.Direction
+	case TronEndGameCmd:
+		gameState.Ended = true
+		gameState.Winner = cmd.Winner
 	}
 	gameState.ClientStates[cmd.PlayerID] = clientState
 	return gameState
@@ -753,7 +708,6 @@ func (tg *TronGameView) applyCommandToGameState(gameState TronGameState, cmd Tro
 func (tg *TronGameView) truncateMoveQueueIfNecessary(cmd TronCommand) {
 	for i, move := range tg.MoveQueue {
 		if move.Id == cmd.Id {
-			// log.Println("TRUNCATED", cmd)
 			tg.MoveQueue = tg.MoveQueue[i+1:]
 			return
 		}
@@ -771,6 +725,10 @@ func (tg *TronGameView) clientPredictAll(gameState TronGameState, numTimesteps i
 }
 
 func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int, playerIds []string) TronGameState {
+	if gameState.Ended {
+		return gameState
+	}
+
 	for i := 0; i < numTimesteps; i++ {
 		for _, playerId := range playerIds {
 			clientState := gameState.ClientStates[playerId]
@@ -812,47 +770,6 @@ func (tg *TronGameView) clientPredict(gameState TronGameState, numTimesteps int,
 	return gameState
 }
 
-func (tg *TronGameView) handleEndGame(data EndGameMessage) {
-	tg.WorkingGameState.Ended = true
-	tg.WorkingGameState.Winner = data.Winner
-	tg.mgr.RequestRender()
-}
-
-// func (tg *TronGameView) commitGameState() {
-// 	mu.Lock()
-// 	defer mu.Unlock()
-// 	collisions := tg.GameState.Collisions
-// 	for id, player := range tg.ClientStates {
-// 		for i := 0; i < lastReceivedInp[id]-player.CommitTimestep; i++ {
-// 			collisions = tg.setCollision(collisions, player.PathX[i], player.PathY[i], player.PlayerNum)
-// 		}
-
-// 		diff := lastReceivedInp[id] - player.CommitTimestep
-// 		player.CommitTimestep = lastReceivedInp[id]
-// 		player.PathX = player.PathX[int(math.Min(float64(diff), float64(len(player.PathX)))):]
-// 		player.PathY = player.PathY[int(math.Min(float64(diff), float64(len(player.PathY)))):]
-
-// 		tg.ClientStates[id] = player
-// 	}
-// 	tg.GameState.Collisions = collisions
-// 	tg.recalculateCollisions()
-// }
-
-func (tg *TronGameView) sendEndGame(winner string) {
-	endGame := &EndGameMessage{Message: message.Message{Type: "end_game"}, Winner: winner}
-
-	for clientId := range tg.WorkingGameState.ClientStates {
-		if client, ok := arcade.Server.Network.GetClient(clientId); ok && clientId != tg.Me {
-			go func() {
-				var err error = nil
-				for err == nil {
-					_, err = arcade.Server.Network.SendAndReceive(client, endGame)
-				}
-			}()
-		}
-	}
-}
-
 // GAME FUNCTIONS
 func (tg *TronGameView) getStartingPosAndDir() ([][2]int, []TronDirection) {
 	width, height := tg.mgr.screen.displaySize()
@@ -872,13 +789,13 @@ func (tg *TronGameView) die(player TronClientState) TronClientState {
 	return player
 }
 
-func (tg *TronGameView) shouldWin() (bool, string) {
+func (tg *TronGameView) shouldWin(gameState TronGameState) (bool, string) {
 	winner := ""
-	if len(tg.WorkingGameState.ClientStates) == 1 {
+	if len(gameState.ClientStates) == 1 {
 		winner = "can't win without friends :^)"
 	}
 
-	for id, client := range tg.WorkingGameState.ClientStates {
+	for id, client := range gameState.ClientStates {
 		if client.Alive {
 			if winner != "" {
 				return false, ""

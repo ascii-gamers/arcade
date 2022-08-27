@@ -202,7 +202,7 @@ func (mgr *ViewManager) RequestRender() {
 		i := 0
 		connectedClients.Range(func(key, value any) bool {
 			clientID := key.(string)
-			info := value.(*ConnectedClientInfo)
+			info := value.(ConnectedClientInfo)
 
 			s := fmt.Sprintf("%s: %dms", clientID[:4], info.GetMeanRTT().Milliseconds())
 			mgr.screen.DrawText(w+x-len(s), -y+i, debugSty, s)
