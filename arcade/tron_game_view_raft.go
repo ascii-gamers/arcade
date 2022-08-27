@@ -404,29 +404,13 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 		showCommits = !showCommits
 		return
 	case tcell.KeyUp:
-		if clientState.Direction != TronDown {
-			newDir = TronUp
-		} else {
-			return
-		}
+		newDir = TronUp
 	case tcell.KeyRight:
-		if clientState.Direction != TronLeft {
-			newDir = TronRight
-		} else {
-			return
-		}
+		newDir = TronRight
 	case tcell.KeyDown:
-		if clientState.Direction != TronUp {
-			newDir = TronDown
-		} else {
-			return
-		}
+		newDir = TronDown
 	case tcell.KeyLeft:
-		if clientState.Direction != TronRight {
-			newDir = TronLeft
-		} else {
-			return
-		}
+		newDir = TronLeft
 	}
 
 	mu.Lock()
@@ -434,12 +418,17 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 
 	if needToProcessInput {
 		// TODO: check for tron direction here as well and don't send cmd if same dir
-		log.Println("setting Nextdir", newDir)
-		tg.NextDir = newDir
+		if canMoveInDir(tg.LatestInputDir, newDir) {
+			log.Println("setting Nextdir", newDir)
+			tg.NextDir = newDir
+		}
 	} else {
-		tg.NextDir = -1
-		tg.LatestInputDir = newDir
-		needToProcessInput = true
+		if canMoveInDir(clientState.Direction, newDir) {
+			tg.NextDir = -1
+			tg.LatestInputDir = newDir
+			needToProcessInput = true
+		}
+
 	}
 
 }
@@ -885,6 +874,16 @@ func (tg *TronGameView) getCollision(collisions []byte, x int, y int) (bool, int
 		}
 	}
 	return true, -1
+}
+
+func canMoveInDir(currentDir TronDirection, proposedDir TronDirection) bool {
+	if currentDir == TronDown || currentDir == TronUp {
+		return proposedDir == TronLeft || proposedDir == TronRight
+	}
+	if currentDir == TronLeft || currentDir == TronRight {
+		return proposedDir == TronDown || proposedDir == TronUp
+	}
+	return false
 }
 
 func (tg *TronGameView) getMyState() TronClientState {
