@@ -216,7 +216,7 @@ func (n *Network) ClientsRange(f func(*Client) bool) {
 func (n *Network) Send(client *Client, msg interface{}) bool {
 	client.RLock()
 	if client.State == Disconnected || client.State == TimedOut {
-		log.Println("Send Failed: ", client.State)
+		// log.Println("Send Failed: ", client.State)
 		client.RUnlock()
 		return false
 	}

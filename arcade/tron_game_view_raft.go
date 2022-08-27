@@ -143,10 +143,6 @@ func (tc TronCommand) String() string {
 
 type BasicQueue[T any] []T
 
-func (bq *BasicQueue[T]) initialize(queue *[]T) {
-	*bq = *queue
-}
-
 func (bq *BasicQueue[T]) push(element ...T) {
 	*bq = append(*bq, element...)
 }
@@ -215,6 +211,7 @@ type TronGameView struct {
 	ApplyChan         chan raft.ApplyMsg
 	lastApplyMsgInd   int
 	gameRenderState   TronGameRenderState
+	lobby             *Lobby
 }
 
 const CLIENT_LAG_TIMESTEP = 0
@@ -234,6 +231,7 @@ func NewTronGameView(mgr *ViewManager, lobby *Lobby) *TronGameView {
 			TimestepPeriod: 100,
 			Timestep:       0,
 		},
+		lobby: lobby,
 	}
 }
 
@@ -271,7 +269,7 @@ var countdownNum = 3
 */
 
 func (tg *TronGameView) Init() {
-	log.Println(fmt.Sprintf("%p", &c.L))
+
 	mu.Lock()
 	// JANK
 	var me int
@@ -294,6 +292,8 @@ func (tg *TronGameView) Init() {
 
 	// JANK
 	tg.RaftServer = raft.Make(clients, me, tg.ApplyChan, arcade.Server.Network, tg.TimestepPeriod, c)
+
+	log.Println("RAFT SERVER:", &tg.RaftServer)
 
 	width, height := tg.mgr.screen.displaySize()
 
@@ -320,7 +320,7 @@ func (tg *TronGameView) Init() {
 
 	go func() {
 
-		for i := 1; i > 0; i-- {
+		for i := 3; i > 0; i-- {
 			countdownNum = i
 			mu.RLock()
 			tg.mgr.RequestRender()
@@ -333,7 +333,7 @@ func (tg *TronGameView) Init() {
 
 		tg.gameRenderState = TronGameScreen
 		lastTimestep := -1
-		for !tg.WorkingGameState.Ended {
+		for !tg.CommitedGameState.Ended {
 			c.Wait()
 
 			timestep := tg.RaftServer.GetTimestep()
@@ -364,6 +364,7 @@ func (tg *TronGameView) Init() {
 			tg.mgr.RequestRender()
 
 		}
+
 		tg.gameRenderState = TronWinScreen
 		mu.Unlock()
 
@@ -377,14 +378,14 @@ func (tg *TronGameView) ProcessEvent(ev interface{}) {
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyEnter {
 			mu.RLock()
-
-			if tg.WorkingGameState.Ended {
-
-				tg.RaftServer.Kill()
-				arcade.Server.EndAllHeartbeats()
-				tg.mgr.SetView(NewGamesListView(tg.mgr))
+			if tg.CommitedGameState.Ended {
+				// tg.RaftServer.Kill()
+				// arcade.Server.EndAllHeartbeats()
+				lobby := tg.lobby
 				mu.RUnlock()
+				tg.mgr.SetView(NewLobbyView(tg.mgr, lobby))
 			}
+
 			return
 		}
 		tg.ProcessEventKey(ev)
@@ -434,7 +435,7 @@ func (tg *TronGameView) ProcessEventKey(ev *tcell.EventKey) {
 }
 
 func (tg *TronGameView) ProcessMessage(from *net.Client, p interface{}) interface{} {
-	return nil
+	return tg.RaftServer.ProcessMessage(from, p)
 }
 
 func (tg *TronGameView) Render(s *Screen) {
@@ -956,7 +957,8 @@ func (v *TronGameView) GetHeartbeatMetadata() encoding.BinaryMarshaler {
 	return nil
 }
 
-func (v *TronGameView) Unload() {
+func (tg *TronGameView) Unload() {
+	tg.RaftServer.Kill()
 }
 
 func readLogEntryAsTronCmd(entry interface{}) (TronCommand, bool) {

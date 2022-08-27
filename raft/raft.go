@@ -312,7 +312,8 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs) *RequestVoteReply {
 	}
 
 	if rf.log.LastTerm() > args.LastLogTerm || (rf.log.LastTerm() == args.LastLogTerm && rf.log.LastIndex() > args.LastLogIndex) {
-		log.Println("[RAFT]: RequestVote", "Reject, log not up to date")
+		log.Println("[RAFT]: RequestVote", "Reject, log not up to date", fmt.Sprintf("%d, %d, %d, %d\n", rf.log.LastTerm(), args.LastLogTerm, rf.log.LastIndex(), args.LastLogIndex))
+		log.Println("[RAFT]", rf.log)
 		return reply
 	}
 
@@ -646,13 +647,13 @@ func (rf *Raft) Start(command interface{}, timestep int) (int, int, bool) {
 				go func() {
 					rf.Lock()
 					// JANK: throws away return here
-					for len(rf.forwardedStartQueue) > 0 {
-						log.Println("[RAFT]", "ForwardedStartqueue len ", len(rf.forwardedStartQueue))
+					for len(rf.forwardedStartQueue) > 0 && !rf.killed() {
+						// log.Println("[RAFT]", "ForwardedStartqueue len ", len(rf.forwardedStartQueue))
 						args := rf.forwardedStartQueue[0]
 						rf.Unlock()
 						_, err := rf.network.SendAndReceive(leader, args)
 						for err != nil {
-							log.Println("[RAFT]", "ForwardedStart error", err, timestep)
+							// log.Println("[RAFT]", "ForwardedStart error", err, timestep)
 							_, err = rf.network.SendAndReceive(leader, args)
 
 						}
@@ -738,11 +739,14 @@ func (rf *Raft) StartTime() {
 
 func (rf *Raft) startTimestepCounter() {
 	go func() {
-		for {
+		for !rf.killed() {
+
 			// start := time.Now()
 			rf.Lock()
 			rf.timestep += 1
+			log.Println("[RAFT]", "timestep", rf.timestep)
 			rf.Unlock()
+
 			rf.timestepCond.Broadcast()
 			// log.Println("[RAFT]", "timestep lock", time.Since(start))
 			time.Sleep(time.Duration(rf.timestepPeriod) * time.Millisecond)
@@ -977,11 +981,13 @@ func (rf *Raft) sendAppendEntries(server int, peer *net.Client) {
 	}
 
 	go func() {
-		log.Println("[RAFT]", "AppendEntries", len(args.Entries))
 		reply, err := rf.network.SendAndReceive(peer, args)
 
 		if err != nil || len(entries) == 0 {
-			log.Println("[RAFT]", "AppendEntries error", err)
+			if err != nil {
+				// log.Println("[RAFT]", "AppendEntries ", err)
+			}
+
 			return
 		}
 
@@ -1135,9 +1141,12 @@ func (rf *Raft) GetLogLastIndex() int {
 	return rf.log.LastIndex()
 }
 
-func (rf *Raft) processMessage(from interface{}, data interface{}) interface{} {
+func (rf *Raft) ProcessMessage(from interface{}, data interface{}) interface{} {
 	// log.Println("IN PROCESSMESSAGE: ", data)
 	// c := from.(*net.Client)
+	if rf.killed() {
+		return nil
+	}
 	switch data := data.(type) {
 	case *RequestVoteArgs:
 		return rf.RequestVote(data)
@@ -1201,7 +1210,8 @@ func Make(peers []*net.Client, me int, applyCh chan ApplyMsg, network *net.Netwo
 	rf.commitIndex = rf.log.GetLastIncludedIndex()
 	rf.lastApplied = rf.log.GetLastIncludedIndex()
 
-	message.AddListener(message.Listener{Handle: rf.processMessage})
+	// message.AddListener(message.Listener{Handle: rf.processMessage})
 
+	log.Println("[RAFT", "NEW LOG: ", rf.log, rf.log.lastIncludedIndex, rf.log.lastIncludedIndex)
 	return rf
 }
