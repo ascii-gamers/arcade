@@ -189,14 +189,7 @@ func (v *LobbyView) Render(s *Screen) {
 	sty_bold := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorDarkGreen)
 
 	// Draw GAME header
-
-	game_header := pong_header
-	if v.Lobby.GameType == Tron {
-		game_header = tron_header
-	}
-	headerX := (width - utf8.RuneCountInString(game_header[0])) / 2
-	s.DrawText(headerX, 1, sty, game_header[0])
-	s.DrawText(headerX, 2, sty, game_header[1])
+	s.DrawBlockText(CenterX, 1, sty, "TRON", false)
 
 	// Draw box surrounding games list
 	s.DrawBox(lv_TableX1, lv_TableY1, lv_TableX2, lv_TableY2, sty, true)

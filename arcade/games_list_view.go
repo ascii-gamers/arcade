@@ -5,11 +5,9 @@ import (
 	"arcade/arcade/net"
 	"encoding"
 	"fmt"
-	"log"
 	"sort"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -272,12 +270,7 @@ func (v *GamesListView) Render(s *Screen) {
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 
 	// Draw ASCII ARCADE header
-	header := generateText("ASCII ARCADE", false)
-	log.Println(header[0])
-	log.Println(header[1])
-	headerX := (width - utf8.RuneCountInString(header[0])) / 2
-	s.DrawText(headerX, 1, sty, header[0])
-	s.DrawText(headerX, 2, sty, header[1])
+	s.DrawBlockText(CenterX, 1, sty, "ASCII ARCADE", false)
 
 	// Draw box surrounding games list
 	s.DrawBox(tableX1-1, 4, tableX2+1, tableY2+1, sty, true)

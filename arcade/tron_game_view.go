@@ -6,6 +6,7 @@ import (
 	"encoding"
 	"fmt"
 	"math"
+	"strconv"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -13,51 +14,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/google/uuid"
 )
-
-var COUNTDOWN_1 = []string{
-	"░░███╗░░",
-	"░████║░░",
-	"██╔██║░░",
-	"╚═╝██║░░",
-	"███████╗",
-	"╚══════╝",
-}
-
-var COUNTDOWN_2 = []string{
-	"██████╗░",
-	"╚════██╗",
-	"░░███╔═╝",
-	"██╔══╝░░",
-	"███████╗",
-	"╚══════╝",
-}
-
-var COUNTDOWN_3 = []string{
-	"██████╗░",
-	"╚════██╗",
-	"░█████╔╝",
-	"░╚═══██╗",
-	"██████╔╝",
-	"╚═════╝░",
-}
-
-var ASCII_GAME_OVER = []string{
-	"░██████╗░░█████╗░███╗░░░███╗███████╗  ░█████╗░██╗░░░██╗███████╗██████╗░",
-	"██╔════╝░██╔══██╗████╗░████║██╔════╝  ██╔══██╗██║░░░██║██╔════╝██╔══██╗",
-	"██║░░██╗░███████║██╔████╔██║█████╗░░  ██║░░██║╚██╗░██╔╝█████╗░░██████╔╝",
-	"██║░░╚██╗██╔══██║██║╚██╔╝██║██╔══╝░░  ██║░░██║░╚████╔╝░██╔══╝░░██╔══██╗",
-	"╚██████╔╝██║░░██║██║░╚═╝░██║███████╗  ╚█████╔╝░░╚██╔╝░░███████╗██║░░██║",
-	"░╚═════╝░╚═╝░░╚═╝╚═╝░░░░░╚═╝╚══════╝  ░╚════╝░░░░╚═╝░░░╚══════╝╚═╝░░╚═╝",
-}
-
-var ASCII_YOU_WON = []string{
-	"██╗░░░██╗░█████╗░██╗░░░██╗  ░██╗░░░░░░░██╗░█████╗░███╗░░██╗",
-	"╚██╗░██╔╝██╔══██╗██║░░░██║  ░██║░░██╗░░██║██╔══██╗████╗░██║",
-	"░╚████╔╝░██║░░██║██║░░░██║  ░╚██╗████╗██╔╝██║░░██║██╔██╗██║",
-	"░░╚██╔╝░░██║░░██║██║░░░██║  ░░████╔═████║░██║░░██║██║╚████║",
-	"░░░██║░░░╚█████╔╝╚██████╔╝  ░░╚██╔╝░╚██╔╝░╚█████╔╝██║░╚███║",
-	"░░░╚═╝░░░░╚════╝░░╚═════╝░  ░░░╚═╝░░░╚═╝░░░╚════╝░╚═╝░░╚══╝",
-}
 
 var returnToLobbyText = "Press [Enter] to return to lobby"
 
@@ -292,37 +248,16 @@ func (tg *TronGameView) Render(s *Screen) {
 		s.DrawText(myState.X, myState.Y, style, chr)
 
 		// draw countdown
-		var countdownAscii []string
-		switch countdownNum {
-		case 1:
-			countdownAscii = COUNTDOWN_1
-		case 2:
-			countdownAscii = COUNTDOWN_2
-		case 3:
-			countdownAscii = COUNTDOWN_3
-		}
-
-		headerY := (displayHeight - len(countdownAscii)) / 2
-		headerX := (displayWidth - utf8.RuneCountInString(countdownAscii[0])) / 2
-		for i := range countdownAscii {
-			s.DrawText(headerX, i+headerY, boxStyle, countdownAscii[i])
-		}
-
+		s.DrawBlockText(CenterX, CenterY, boxStyle, strconv.Itoa(countdownNum), true)
 	case TronGameScreen:
 		tg.renderGame(s)
 	case TronWinScreen:
 		tg.renderGame(s)
 
-		// draw countdown
-		endGameText := ASCII_GAME_OVER
 		if tg.GameState.Winner == tg.Me {
-			endGameText = ASCII_YOU_WON
-		}
-
-		headerY := (displayHeight - len(endGameText)) / 2
-		headerX := (displayWidth - utf8.RuneCountInString(endGameText[0])) / 2
-		for i := range endGameText {
-			s.DrawText(headerX, i+headerY, boxStyle, endGameText[i])
+			s.DrawBlockText(CenterX, CenterY, boxStyle, "YOU WON", true)
+		} else {
+			s.DrawBlockText(CenterX, CenterY, boxStyle, "GAME OVER", true)
 		}
 
 		s.DrawText((displayWidth-utf8.RuneCountInString(returnToLobbyText))/2, displayHeight-6, boxStyle, returnToLobbyText)

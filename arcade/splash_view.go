@@ -5,7 +5,6 @@ import (
 	"encoding"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -71,22 +70,8 @@ func (v *SplashView) Render(s *Screen) {
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 
 	// Draw ASCII ARCADE header
-	header1Y := 3
-	header2Y := 10
-
-	splashHeader1 := generateText("ASCII", true)
-	splashHeader2 := generateText("ARCADE", true)
-
-	header1X := (width - utf8.RuneCountInString(splashHeader1[0])) / 2
-	header2X := (width - utf8.RuneCountInString(splashHeader2[0])) / 2
-
-	for i := range splashHeader1 {
-		s.DrawText(header1X, i+header1Y, sty, splashHeader1[i])
-	}
-
-	for i := range splashHeader2 {
-		s.DrawText(header2X, i+header2Y, sty, splashHeader2[i])
-	}
+	s.DrawBlockText(CenterX, 3, sty, "ASCII", true)
+	s.DrawBlockText(CenterX, 10, sty, "ARCADE", true)
 
 	// Draw footer
 	v.mu.RLock()

@@ -7,6 +7,15 @@ big_letters = """
 ╚═╝░░╚═╝╚═════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░░░░░╚═════╝░╚═╝░░╚═╝╚═╝░╚════╝░╚═╝░░╚═╝╚══════╝╚═╝░░░░░╚═╝╚═╝░░╚══╝░╚════╝░╚═╝░░░░░░░░╚═╝░░░╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░░╚═════╝░░░░╚═╝░░░░░░╚═╝░░░╚═╝░░╚═╝░░╚═╝░░░╚═╝░░░╚══════╝
 """
 
+big_numbers = """
+░█████╗░░░███╗░░██████╗░██████╗░░░██╗██╗███████╗░█████╗░███████╗░█████╗░░█████╗░
+██╔══██╗░████║░░╚════██╗╚════██╗░██╔╝██║██╔════╝██╔═══╝░╚════██║██╔══██╗██╔══██╗
+██║░░██║██╔██║░░░░███╔═╝░█████╔╝██╔╝░██║██████╗░██████╗░░░░░██╔╝╚█████╔╝╚██████║
+██║░░██║╚═╝██║░░██╔══╝░░░╚═══██╗███████║╚════██╗██╔══██╗░░░██╔╝░██╔══██╗░╚═══██║
+╚█████╔╝███████╗███████╗██████╔╝╚════██║██████╔╝╚█████╔╝░░██╔╝░░╚█████╔╝░█████╔╝
+░╚════╝░╚══════╝╚══════╝╚═════╝░░░░░░╚═╝╚═════╝░░╚════╝░░░╚═╝░░░░╚════╝░░╚════╝░
+"""
+
 big_characters = """
 ██╗  ░█████╗░
 ██║  ██╔══██╗
@@ -17,6 +26,7 @@ big_characters = """
 """
 
 big_letter_widths = {"G": 9, "I": 3, "M": 11, "N": 9, "Q": 9, "T": 9, "U": 9, "V": 9, "W": 14, "Y": 9}
+big_number_widths = {}
 big_character_widths = [("!", 3), (" ", 2), ("?", 8)]
 
 def gen_big_characters_map():
@@ -31,10 +41,24 @@ def gen_big_characters_map():
 
         res += f"    '{c}': {{\n"
 
-        for letters in big_letters.split("\n")[1:-1]:
-            res += f"        \"{letters[width:width+big_letter_widths[c]]}\",\n"
+        for characters in big_letters.split("\n")[1:-1]:
+            res += f"        \"{characters[width:width+big_letter_widths[c]]}\",\n"
         
         width += big_letter_widths[c]
+        res += "    },\n"
+    
+    width = 0
+
+    for i in range(10):
+        if i not in big_number_widths:
+            big_number_widths[i] = 8
+        
+        res += f"    '{i}': {{\n"
+
+        for characters in big_numbers.split("\n")[1:-1]:
+            res += f"        \"{characters[width:width+big_number_widths[i]]}\",\n"
+        
+        width += big_number_widths[i]
         res += "    },\n"
     
     width = 0

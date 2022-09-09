@@ -45,16 +45,6 @@ var tron_graphic = []string{
 	"<_____________________________/   \\",
 }
 
-var pong_header = []string{
-	"█▀█ █▀█ █▄░█ █▀▀",
-	"█▀▀ █▄█ █░▀█ █▄█",
-}
-
-var tron_header = []string{
-	"▀█▀ █▀█ █▀█ █▄░█",
-	"░█░ █▀▄ █▄█ █░▀█",
-}
-
 type Game[GS any, CS any] struct {
 	ID        string
 	Name      string

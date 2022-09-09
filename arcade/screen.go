@@ -2,6 +2,7 @@ package arcade
 
 import (
 	"sync"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -16,6 +17,9 @@ type CursorStyle int
 const (
 	displayWidth  = 80
 	displayHeight = 24
+
+	CenterX = 100000
+	CenterY = 100001
 )
 
 func (s *Screen) displaySize() (int, int) {
@@ -49,13 +53,32 @@ func (s *Screen) offset() (int, int) {
 	return (currentWidth - displayWidth) / 2, (currentHeight - displayHeight) / 2
 }
 
+func (s *Screen) DrawBlockText(x, y int, style tcell.Style, text string, big bool) {
+	t := generateText(text, big)
+	w, h := s.displaySize()
+
+	switch x {
+	case CenterX:
+		x = (w - utf8.RuneCountInString(t[0])) / 2
+	}
+
+	switch y {
+	case CenterY:
+		y = (h - len(t)) / 2
+	}
+
+	for i := range t {
+		s.DrawText(x, i+y, style, t[i])
+	}
+}
+
 func (s *Screen) DrawText(x, y int, style tcell.Style, text string) {
 	startX, startY := s.offset()
 
 	row := y
 	col := x
 
-	for _, r := range []rune(text) {
+	for _, r := range text {
 		s.SetContent(startX+col, startY+row, r, nil, style)
 		col++
 
