@@ -5,6 +5,7 @@ import (
 	"arcade/arcade/net"
 	"encoding"
 	"fmt"
+	"log"
 	"sort"
 	"sync"
 	"time"
@@ -30,11 +31,6 @@ type GamesListView struct {
 	err_msg               string
 	glv_code_input_string string
 	glv_code              string
-}
-
-var header = []string{
-	"▄▀█ █▀ █▀▀ █ █   ▄▀█ █▀█ █▀▀ ▄▀█ █▀▄ █▀▀",
-	"█▀█ ▄█ █▄▄ █ █   █▀█ █▀▄ █▄▄ █▀█ █▄▀ ██▄",
 }
 
 var footer = []string{
@@ -276,6 +272,9 @@ func (v *GamesListView) Render(s *Screen) {
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 
 	// Draw ASCII ARCADE header
+	header := generateText("ASCII ARCADE", false)
+	log.Println(header[0])
+	log.Println(header[1])
 	headerX := (width - utf8.RuneCountInString(header[0])) / 2
 	s.DrawText(headerX, 1, sty, header[0])
 	s.DrawText(headerX, 2, sty, header[1])

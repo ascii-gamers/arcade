@@ -19,25 +19,6 @@ type SplashView struct {
 	stopTickerCh  chan bool
 }
 
-var splashHeader1 = []string{
-	"░█████╗░░██████╗░█████╗░██╗██╗",
-	"██╔══██╗██╔════╝██╔══██╗██║██║",
-	"███████║╚█████╗░██║░░╚═╝██║██║",
-	"██╔══██║░╚═══██╗██║░░██╗██║██║",
-	"██║░░██║██████╔╝╚█████╔╝██║██║",
-	"╚═╝░░╚═╝╚═════╝░░╚════╝░╚═╝╚═╝",
-}
-
-var splashHeader2 = []string{
-	"░█████╗░██████╗░░█████╗░░█████╗░██████╗░███████╗",
-	"██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝",
-	"███████║██████╔╝██║░░╚═╝███████║██║░░██║█████╗░░",
-	"██╔══██║██╔══██╗██║░░██╗██╔══██║██║░░██║██╔══╝░░",
-	"██╔══██║██╔══██╗██║░░██╗██╔══██║██║░░██║██╔══╝░░",
-	"██║░░██║██║░░██║╚█████╔╝██║░░██║██████╔╝███████╗",
-	"╚═╝░░╚═╝╚═╝░░╚═╝░╚════╝░╚═╝░░╚═╝╚═════╝░╚══════╝",
-}
-
 var splashFooter = "Press any key to start"
 
 func NewSplashView(mgr *ViewManager) *SplashView {
@@ -92,6 +73,9 @@ func (v *SplashView) Render(s *Screen) {
 	// Draw ASCII ARCADE header
 	header1Y := 3
 	header2Y := 10
+
+	splashHeader1 := generateText("ASCII", true)
+	splashHeader2 := generateText("ARCADE", true)
 
 	header1X := (width - utf8.RuneCountInString(splashHeader1[0])) / 2
 	header2X := (width - utf8.RuneCountInString(splashHeader2[0])) / 2
