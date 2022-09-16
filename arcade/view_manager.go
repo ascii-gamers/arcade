@@ -21,7 +21,7 @@ type ViewManager struct {
 }
 
 func NewViewManager() *ViewManager {
-	return &ViewManager{}
+	return &ViewManager{showDebug: false}
 }
 
 func (mgr *ViewManager) ProcessMessage(from interface{}, p interface{}) interface{} {
@@ -154,7 +154,7 @@ func (mgr *ViewManager) RequestRender() {
 	mgr.RUnlock()
 
 	if showDebug {
-		mgr.screen.Reset()
+		// mgr.screen.Reset()
 	}
 
 	if width < displayWidth || height < displayHeight {
@@ -169,6 +169,11 @@ func (mgr *ViewManager) RequestRender() {
 	if showDebug {
 		x, y := mgr.screen.offset()
 		w, h := mgr.screen.displaySize()
+
+		// clear debug sections
+		emptySty := tcell.StyleDefault.Background(tcell.ColorBlack)
+		mgr.screen.DrawEmpty(-x, -y, -x+22, -y+6, emptySty)
+		mgr.screen.DrawEmpty(-x, h+y-1, -x+40+22, h+y-2, emptySty)
 
 		debugSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorRed)
 

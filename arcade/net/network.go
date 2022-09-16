@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"net"
 	"reflect"
 	"sync"
@@ -32,7 +33,8 @@ type Network struct {
 }
 
 const maxTimeoutRetries = 1
-const sendAndReceiveTimeout = time.Second
+const timeoutInterval = time.Second
+const sendAndReceiveTimeout = 500 * time.Millisecond
 
 func NewNetwork(me string, port int, distributor bool) *Network {
 	message.Register(PingMessage{Message: message.Message{Type: "ping"}})
@@ -233,6 +235,7 @@ func (n *Network) SendRaw(client *Client, msg interface{}) bool {
 	servicer, ok := n.clients.Load(client.NextHop)
 
 	if !ok {
+		log.Println("Send Failed: load")
 		return false
 	}
 
@@ -256,6 +259,8 @@ func (n *Network) Send(client *Client, msg interface{}) bool {
 }
 
 func (n *Network) SendAndReceive(client *Client, msg interface{}) (interface{}, error) {
+
+	// log.Println("in SendAndReceive: ", msg)
 	// Set message ID
 	messageID := uuid.NewString()
 	reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("MessageID").Set(reflect.ValueOf(messageID))
@@ -411,6 +416,17 @@ func (n *Network) UpdateRoutes(from *Client, routingTable map[string]ClientRouti
 func (n *Network) handleMessages(c *Client) {
 	for {
 		data, ok := <-c.recvCh
+
+		// // Randomly drop packets if debugging
+		dropRate := n.GetDropRate()
+
+		if dropRate > 0 && rand.Float64() < dropRate {
+			continue
+		}
+
+		if !ok {
+			break
+		}
 
 		if !ok {
 			break

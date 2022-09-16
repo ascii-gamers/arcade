@@ -29,13 +29,6 @@ type LobbyView struct {
 
 // var simple_man = []string {" o ","/|\\","/ \\"};
 
-const (
-	lv_TableX1 = 20
-	lv_TableY1 = 4
-	lv_TableX2 = 59
-	lv_TableY2 = 12
-)
-
 var lobby_footer_host = []string{
 	"[S]tart game       [C]ancel",
 }
@@ -183,6 +176,18 @@ func (v *LobbyView) Render(s *Screen) {
 	defer v.Lobby.mu.Unlock()
 
 	width, height := s.displaySize()
+
+	const (
+		tableWidth  = 40
+		tableHeight = 8
+	)
+
+	var (
+		lv_TableX1 = (width - tableWidth) / 2 // 20
+		lv_TableY1 = 4
+		lv_TableX2 = width - (width-tableWidth)/2 // 59
+		lv_TableY2 = lv_TableY1 + tableHeight
+	)
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)

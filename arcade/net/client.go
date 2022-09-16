@@ -2,7 +2,6 @@ package net
 
 import (
 	"encoding"
-	"log"
 	"net"
 	"sync"
 )
@@ -130,7 +129,7 @@ func (c *Client) readPump() {
 func (c *Client) writePump() {
 	for {
 		data, ok := <-c.sendCh
-		log.Println("Sending message:", string(data))
+		// log.Println("Sending message:", string(data))
 
 		if !ok {
 			c.disconnect()
@@ -155,6 +154,7 @@ func (c *Client) Send(msg interface{}) bool {
 	}
 	c.RUnlock()
 
+	// log.Println("SENDING: ", msg)
 	data, _ := msg.(encoding.BinaryMarshaler).MarshalBinary()
 	c.sendCh <- data
 	return true

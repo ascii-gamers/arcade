@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"log"
 	"reflect"
 )
@@ -23,14 +24,30 @@ func AddListener(listener Listener) {
 }
 
 func Notify(c interface{}, data []byte) []interface{} {
+
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		log.Println("RECOVERED", len(data), data)
+	// 	}
+	// }()
+
 	msg, err := parse(data)
 	recipientID := reflect.ValueOf(msg).Elem().FieldByName("Message").FieldByName("RecipientID").String()
 
 	if err != nil {
-		panic(err)
+		log.Println("FUCKKKKK")
+		// panic(err)
+		res := struct {
+			Type string
+		}{}
+
+		if err := json.Unmarshal(data, &res); err != nil {
+			log.Println(res)
+		}
 	}
 
-	log.Println("Received message:", msg)
+	// log.Println("Received message:", msg)
+	// log.Println("notify parsed", msg, reflect.TypeOf(msg))
 
 	replies := make([]interface{}, 0)
 

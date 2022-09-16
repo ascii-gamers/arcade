@@ -6,21 +6,24 @@ import (
 	"sync"
 	"time"
 
+	"arcade/labrpc"
+
 	"github.com/google/uuid"
 )
 
 type Lobby struct {
 	mu sync.RWMutex
 
-	ID        string
-	Name      string
-	Code      string
-	Private   bool
-	GameType  string
-	Capacity  int
-	PlayerIDs []string
-	HostID    string
-	Ping      int
+	ID               string
+	Name             string
+	Code             string
+	Private          bool
+	GameType         string
+	Capacity         int
+	PlayerIDs        []string
+	HostID           string
+	Ping             int
+	PlayerClientEnds labrpc.ClientEnd
 }
 
 func NewLobby(name string, private bool, gameType string, capacity int, hostID string) *Lobby {
