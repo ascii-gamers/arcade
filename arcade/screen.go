@@ -74,6 +74,17 @@ func (s *Screen) DrawBlockText(x, y int, style tcell.Style, text string, big boo
 
 func (s *Screen) DrawText(x, y int, style tcell.Style, text string) {
 	startX, startY := s.offset()
+	w, h := s.displaySize()
+
+	switch x {
+	case CenterX:
+		x = (w - utf8.RuneCountInString(text)) / 2
+	}
+
+	switch y {
+	case CenterY:
+		y = (h - 1) / 2
+	}
 
 	row := y
 	col := x
