@@ -1,15 +1,11 @@
 package arcade
 
 import (
-	"sync"
-
 	"github.com/gdamore/tcell/v2"
 )
 
 type TextField struct {
-	sync.RWMutex
-
-	delegate ComponentDelegate
+	BaseComponent
 
 	sty         tcell.Style
 	x, y, width int
@@ -19,14 +15,13 @@ type TextField struct {
 	active      bool
 }
 
-func NewTextField(delegate ComponentDelegate, x, y, width int, label string) *TextField {
+func NewTextField(x, y, width int, label string) *TextField {
 	return &TextField{
-		delegate: delegate,
-		sty:      tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen),
-		x:        x,
-		y:        y,
-		width:    width,
-		label:    label,
+		sty:   tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen),
+		x:     x,
+		y:     y,
+		width: width,
+		label: label,
 	}
 }
 

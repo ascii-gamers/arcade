@@ -1,17 +1,13 @@
 package arcade
 
 import (
-	"sync"
-
 	"github.com/gdamore/tcell/v2"
 )
 
 const BUTTON_HEIGHT = 3
 
 type Button struct {
-	sync.RWMutex
-
-	delegate ComponentDelegate
+	BaseComponent
 
 	x, y, width int
 	title       string
@@ -19,14 +15,13 @@ type Button struct {
 	action      func()
 }
 
-func NewButton(delegate ComponentDelegate, x, y, width int, title string, action func()) *Button {
+func NewButton(x, y, width int, title string, action func()) *Button {
 	return &Button{
-		delegate: delegate,
-		x:        x,
-		y:        y,
-		width:    width,
-		title:    title,
-		action:   action,
+		x:      x,
+		y:      y,
+		width:  width,
+		title:  title,
+		action: action,
 	}
 }
 

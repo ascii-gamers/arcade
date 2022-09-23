@@ -1,8 +1,6 @@
 package arcade
 
 import (
-	"sync"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -10,9 +8,7 @@ const COLOR_PICKER_COLS = 4
 const COLOR_PICKER_ROWS = 2
 
 type ColorPicker struct {
-	sync.RWMutex
-
-	delegate ComponentDelegate
+	BaseComponent
 
 	x, y                     int
 	cursorCol, cursorRow     int
@@ -20,9 +16,8 @@ type ColorPicker struct {
 	active                   bool
 }
 
-func NewColorPicker(delegate ComponentDelegate, x, y int) *ColorPicker {
+func NewColorPicker(x, y int) *ColorPicker {
 	return &ColorPicker{
-		delegate:    delegate,
 		x:           x,
 		y:           y,
 		selectedCol: -1,
