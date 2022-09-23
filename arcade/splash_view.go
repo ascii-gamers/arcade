@@ -55,7 +55,11 @@ func (v *SplashView) Init() {
 func (v *SplashView) ProcessEvent(evt interface{}) {
 	switch evt.(type) {
 	case *tcell.EventKey:
-		v.mgr.SetView(NewProfileView(v.mgr))
+		if _, err := LoadProfile(); err != nil {
+			v.mgr.SetView(NewProfileView(v.mgr))
+		} else {
+			v.mgr.SetView(NewGamesListView(v.mgr))
+		}
 	}
 }
 

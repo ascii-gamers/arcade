@@ -4,16 +4,23 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-const COLOR_PICKER_COLS = 4
-const COLOR_PICKER_ROWS = 2
+type ColorPickerConfig struct {
+	Columns       int
+	Rows          int
+	TileWidth     int
+	TileHeight    int
+	VerticalGap   int
+	HorizontalGap int
+}
 
 type ColorPicker struct {
 	BaseComponent
-
 	x, y                     int
 	cursorCol, cursorRow     int
 	selectedCol, selectedRow int
 	active                   bool
+
+	config ColorPickerConfig
 }
 
 func NewColorPicker(x, y int) *ColorPicker {
@@ -22,7 +29,22 @@ func NewColorPicker(x, y int) *ColorPicker {
 		y:           y,
 		selectedCol: -1,
 		selectedRow: -1,
+		config: ColorPickerConfig{
+			Columns:       4,
+			Rows:          2,
+			TileWidth:     6,
+			TileHeight:    3,
+			VerticalGap:   1,
+			HorizontalGap: 2,
+		},
 	}
+}
+
+func (cp *ColorPicker) SelectedColor() string {
+	cp.RLock()
+	defer cp.RUnlock()
+
+	return TRON_COLORS[cp.selectedRow*cp.config.Columns+cp.selectedCol]
 }
 
 func (cp *ColorPicker) Focus() {
@@ -40,7 +62,7 @@ func (cp *ColorPicker) ProcessEvent(evt interface{}) {
 	case *tcell.EventKey:
 		switch evt.Key() {
 		case tcell.KeyDown:
-			if cp.cursorRow == COLOR_PICKER_ROWS-1 {
+			if cp.cursorRow == cp.config.Rows-1 {
 				if cp.delegate.NavigateForward() {
 					cp.active = false
 				}
@@ -66,7 +88,7 @@ func (cp *ColorPicker) ProcessEvent(evt interface{}) {
 
 			cp.cursorCol -= 1
 		case tcell.KeyRight:
-			if cp.cursorCol == COLOR_PICKER_COLS-1 {
+			if cp.cursorCol == cp.config.Columns-1 {
 				break
 			}
 
@@ -87,8 +109,8 @@ func (cp *ColorPicker) Render(s *Screen) {
 	startX := cp.x
 	startY := cp.y
 
-	componentW := COLOR_PICKER_COLS*4 - 1
-	componentH := COLOR_PICKER_ROWS*4 + 1
+	componentW := cp.config.Columns*(cp.config.TileWidth+cp.config.HorizontalGap) - 1
+	componentH := cp.config.Rows*(cp.config.TileHeight+cp.config.VerticalGap) + 1
 
 	switch startX {
 	case CenterX:
@@ -100,25 +122,25 @@ func (cp *ColorPicker) Render(s *Screen) {
 		startY = (screenH - componentH) / 2
 	}
 
-	for x := 0; x < COLOR_PICKER_COLS; x++ {
-		for y := 0; y < COLOR_PICKER_ROWS; y++ {
-			color := TRON_COLORS[y*4+x]
+	for x := 0; x < cp.config.Columns; x++ {
+		for y := 0; y < cp.config.Rows; y++ {
+			color := TRON_COLORS[y*cp.config.Columns+x]
 			sty := tcell.StyleDefault.Background(tcell.ColorNames[color])
-			s.DrawEmpty(startX+x*4, startY+y*4, startX+x*4+2, startY+y*4+2, sty)
+			s.DrawEmpty(startX+x*(cp.config.TileWidth+cp.config.HorizontalGap), startY+y*(cp.config.TileHeight+cp.config.VerticalGap), startX+x*(cp.config.TileWidth+cp.config.HorizontalGap)+(cp.config.TileWidth-1), startY+y*(cp.config.TileHeight+cp.config.VerticalGap)+(cp.config.TileHeight-1), sty)
 
 			if cp.active && cp.cursorCol == x && cp.cursorRow == y {
 				borderSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
-				s.DrawBox(startX+x*4-1, startY+y*4-1, startX+x*4+2+1, startY+y*4+2+1, borderSty, false)
+				s.DrawBox(startX+x*(cp.config.TileWidth+cp.config.HorizontalGap)-1, startY+y*(cp.config.TileHeight+cp.config.VerticalGap)-1, startX+x*(cp.config.TileWidth+cp.config.HorizontalGap)+(cp.config.TileWidth-1)+1, startY+y*(cp.config.TileHeight+cp.config.VerticalGap)+(cp.config.TileHeight-1)+1, borderSty, false)
 			}
 		}
 	}
 
 	// Use a second loop to ensure selected border is drawn on top of cursor border
-	for x := 0; x < COLOR_PICKER_COLS; x++ {
-		for y := 0; y < COLOR_PICKER_ROWS; y++ {
+	for x := 0; x < cp.config.Columns; x++ {
+		for y := 0; y < cp.config.Rows; y++ {
 			if cp.selectedCol == x && cp.selectedRow == y {
 				borderSty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorTeal)
-				s.DrawBox(startX+x*4-1, startY+y*4-1, startX+x*4+2+1, startY+y*4+2+1, borderSty, false)
+				s.DrawBox(startX+x*(cp.config.TileWidth+cp.config.HorizontalGap)-1, startY+y*(cp.config.TileHeight+cp.config.VerticalGap)-1, startX+x*(cp.config.TileWidth+cp.config.HorizontalGap)+(cp.config.TileWidth-1)+1, startY+y*(cp.config.TileHeight+cp.config.VerticalGap)+(cp.config.TileHeight-1)+1, borderSty, false)
 			}
 		}
 	}

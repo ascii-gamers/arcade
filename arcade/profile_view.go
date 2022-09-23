@@ -10,6 +10,9 @@ import (
 type ProfileView struct {
 	BaseView
 	View
+
+	nameField   *TextField
+	colorPicker *ColorPicker
 }
 
 func NewProfileView(mgr *ViewManager) *ProfileView {
@@ -17,10 +20,19 @@ func NewProfileView(mgr *ViewManager) *ProfileView {
 		BaseView: NewBaseView(mgr),
 	}
 
+	v.nameField = NewTextField(CenterX, 7, 30, "Pick a username")
+	v.colorPicker = NewColorPicker(CenterX, 11)
+
 	v.SetComponents(v, []Component{
-		NewTextField(CenterX, 7, 30, "Pick a username"),
-		NewColorPicker(CenterX, 11),
+		v.nameField,
+		v.colorPicker,
 		NewButton(CenterX, 19, 20, "CONTINUE", func() {
+			profile := &Profile{
+				Name:  v.nameField.value,
+				Color: v.colorPicker.SelectedColor(),
+			}
+			profile.Save()
+
 			mgr.SetView(NewGamesListView(mgr))
 		}),
 	})
