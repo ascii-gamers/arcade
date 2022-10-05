@@ -412,16 +412,16 @@ func (tg *TronGameView) Render(s *Screen) {
 		s.DrawText(myState.X, myState.Y, style, chr)
 
 		// draw countdown
-		s.DrawBlockText(CenterX, CenterY, boxStyle, strconv.Itoa(countdownNum), true)
+		s.DrawBlockText(CenterX(s.GetWidth()), CenterY(s.GetHeight()), boxStyle, strconv.Itoa(countdownNum), true)
 	case TronGameScreen:
 		tg.renderGame(s)
 	case TronWinScreen:
 		tg.renderGame(s)
 
 		if tg.WorkingGameState.Winner == tg.Me {
-			s.DrawBlockText(CenterX, CenterY, boxStyle, "YOU WON", true)
+			s.DrawBlockText(CenterX(s.GetWidth()), CenterY(s.GetHeight()), boxStyle, "YOU WON", true)
 		} else {
-			s.DrawBlockText(CenterX, CenterY, boxStyle, "GAME OVER", true)
+			s.DrawBlockText(CenterX(s.GetWidth()), CenterY(s.GetHeight()), boxStyle, "GAME OVER", true)
 		}
 
 		s.DrawText((displayWidth-utf8.RuneCountInString(returnToLobbyText))/2, displayHeight-6, boxStyle, returnToLobbyText)

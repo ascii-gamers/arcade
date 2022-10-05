@@ -194,7 +194,7 @@ func (v *LobbyView) Render(s *Screen) {
 	sty_bold := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorDarkGreen)
 
 	// Draw GAME header
-	s.DrawBlockText(CenterX, 1, sty, "TRON", false)
+	s.DrawBlockText(CenterX(s.GetWidth()), 1, sty, "TRON", false)
 
 	// Draw box surrounding games list
 	s.DrawBox(lv_TableX1, lv_TableY1, lv_TableX2, lv_TableY2, sty, true)

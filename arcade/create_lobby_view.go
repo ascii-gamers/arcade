@@ -19,16 +19,35 @@ func NewCreateLobbyView(mgr *ViewManager) *CreateLobbyView {
 		BaseView: NewBaseView(mgr),
 	}
 
-	v.nameField = NewTextField(CenterX, 6, 30, "Lobby Name")
-	v.capacitySelector = NewHorizontalSelector(CenterX, 11, 7, "Capacity", []int{2, 3, 4, 5, 6, 7, 8})
+	v.nameField = NewTextField(TextFieldOptions{
+		LayoutOptions: LayoutOptions{
+			X:            CenterX(mgr.screen.GetWidth()),
+			Y:            6,
+			ContentWidth: 24,
+		},
+		Alignment:    AlignLeft,
+		Border:       false,
+		Label:        "Lobby Name",
+		LabelPadding: 2,
+	})
+
+	v.capacitySelector = NewHorizontalSelector(HorizontalSelectorOptions[int]{
+		LayoutOptions: LayoutOptions{
+			X:            CenterX(mgr.screen.GetWidth()),
+			Y:            11,
+			ContentWidth: 7,
+		},
+		Label:  "Capacity",
+		Values: []int{2, 3, 4, 5, 6, 7, 8},
+	})
 
 	v.SetComponents(v, []Component{
 		v.nameField,
 		v.capacitySelector,
-		NewButton(15, 19, 20, "BACK", func() {
+		NewButton(15, 20, 20, "BACK", func() {
 
 		}),
-		NewButton(45, 19, 20, "CONTINUE", func() {
+		NewButton(45, 20, 20, "CONTINUE", func() {
 
 		}),
 	})
@@ -56,7 +75,7 @@ func (v *CreateLobbyView) Render(s *Screen) {
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
-	s.DrawBlockText(CenterX, 1, sty, "CREATE GAME", false)
+	s.DrawBlockText(CenterX(s.GetWidth()), 1, sty, "CREATE GAME", false)
 }
 
 func (v *CreateLobbyView) Unload() {

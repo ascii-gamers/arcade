@@ -4,25 +4,66 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+type TextAlignment int
+
+const (
+	AlignLeft TextAlignment = iota
+	AlignCenter
+	AlignRight
+)
+
+type TextFieldOptions struct {
+	LayoutOptions
+
+	Alignment    TextAlignment
+	Border       bool
+	Label        string
+	LabelPadding int
+}
+
 type TextField struct {
 	BaseComponent
 
-	sty         tcell.Style
-	x, y, width int
-	cursorPos   int
-	value       string
-	label       string
-	active      bool
+	contentX, contentY int
+	width, height      int
+	sty                tcell.Style
+	cursorPos          int
+	value              string
+	active             bool
+	TextFieldOptions
 }
 
-func NewTextField(x, y, width int, label string) *TextField {
-	return &TextField{
-		sty:   tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen),
-		x:     x,
-		y:     y,
-		width: width,
-		label: label,
+func NewTextField(opts TextFieldOptions) *TextField {
+	tf := &TextField{
+		sty:              tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen),
+		TextFieldOptions: opts,
 	}
+
+	if tf.Border {
+		tf.width = opts.ContentWidth + 4
+		tf.height = 3
+	} else {
+		tf.width = opts.ContentWidth
+		tf.height = 1
+	}
+
+	if opts.X >= CenterXPlaceholder {
+		tf.X = (opts.X - CenterXPlaceholder - tf.width) / 2
+	}
+
+	if opts.Y >= CenterYPlaceholder {
+		tf.Y = (opts.Y - CenterYPlaceholder - tf.height) / 2
+	}
+
+	if tf.Border {
+		tf.contentX = tf.X + 2
+		tf.contentY = tf.Y + 1
+	} else {
+		tf.contentX = tf.X
+		tf.contentY = tf.Y
+	}
+
+	return tf
 }
 
 func (tf *TextField) Focus() {
@@ -67,6 +108,10 @@ func (tf *TextField) ProcessEvent(evt interface{}) {
 			tf.value = tf.value[:tf.cursorPos-1] + tf.value[tf.cursorPos:]
 			tf.cursorPos -= 1
 		default:
+			if len(tf.value) >= tf.width {
+				break
+			}
+
 			tf.value += string(evt.Rune())
 			tf.cursorPos += 1
 		}
@@ -77,24 +122,18 @@ func (tf *TextField) Render(s *Screen) {
 	tf.RLock()
 	defer tf.RUnlock()
 
-	screenW, screenH := s.displaySize()
-
-	x := tf.x
-	y := tf.y
-
-	switch x {
-	case CenterX:
-		x = (screenW - tf.width) / 2
+	if tf.Border {
+		s.DrawBox(tf.X, tf.Y, tf.X+tf.width-1, tf.Y+tf.height-1, tf.sty, false)
 	}
 
-	switch y {
-	case CenterY:
-		y = (screenH - 2) / 2
+	switch tf.Alignment {
+	case AlignLeft:
+		s.DrawAlignedText(tf.contentX-tf.LabelPadding, tf.contentY, tf.sty, tf.Label, AlignRight)
+		s.DrawAlignedText(tf.contentX, tf.contentY, tf.sty, tf.value, AlignLeft)
+	case AlignCenter:
+		s.DrawAlignedText(tf.contentX+tf.ContentWidth/2, tf.contentY, tf.sty, tf.value, AlignCenter)
+		s.DrawAlignedText(tf.contentX+tf.ContentWidth/2, tf.Y-1, tf.sty, tf.Label, AlignCenter)
 	}
-
-	s.DrawText(x+(tf.width-len(tf.label))/2, y-1, tf.sty, tf.label)
-	s.DrawBox(x, y, x+tf.width-1, y+2, tf.sty, false)
-	s.DrawText(x+(tf.width-len(tf.value))/2, y+1, tf.sty, tf.value)
 
 	if tf.active {
 		// Draw selected character with gray background
@@ -105,12 +144,12 @@ func (tf *TextField) Render(s *Screen) {
 		}
 
 		selectedSty := tf.sty.Background(tcell.ColorGray)
-		cursorX := x + (tf.width-len(tf.value))/2 + tf.cursorPos
+		cursorX := tf.contentX + tf.cursorPos
 
-		if len(tf.value) == 0 {
-			cursorX -= 1
+		if tf.Alignment == AlignCenter {
+			cursorX = tf.contentX + tf.ContentWidth/2 - len(tf.value)/2 + tf.cursorPos
 		}
 
-		s.DrawText(cursorX, y+1, selectedSty, ch)
+		s.DrawText(cursorX, tf.contentY, selectedSty, ch)
 	}
 }

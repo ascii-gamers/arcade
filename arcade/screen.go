@@ -18,12 +18,28 @@ const (
 	displayWidth  = 80
 	displayHeight = 24
 
-	CenterX = 100000
-	CenterY = 100001
+	CenterXPlaceholder = 100000
+	CenterYPlaceholder = 100001
 )
+
+func CenterX(displayWidth int) int {
+	return CenterXPlaceholder + displayWidth
+}
+
+func CenterY(displayHeight int) int {
+	return CenterYPlaceholder + displayHeight
+}
 
 func (s *Screen) displaySize() (int, int) {
 	return displayWidth, displayHeight
+}
+
+func (s *Screen) GetWidth() int {
+	return displayWidth
+}
+
+func (s *Screen) GetHeight() int {
+	return displayHeight
 }
 
 func (s *Screen) Size() (int, int) {
@@ -55,16 +71,13 @@ func (s *Screen) offset() (int, int) {
 
 func (s *Screen) DrawBlockText(x, y int, style tcell.Style, text string, big bool) {
 	t := generateText(text, big)
-	w, h := s.displaySize()
 
-	switch x {
-	case CenterX:
-		x = (w - utf8.RuneCountInString(t[0])) / 2
+	if x >= CenterXPlaceholder {
+		x = (x - CenterXPlaceholder - utf8.RuneCountInString(t[0])) / 2
 	}
 
-	switch y {
-	case CenterY:
-		y = (h - len(t)) / 2
+	if y >= CenterYPlaceholder {
+		y = (y - CenterYPlaceholder - len(t)) / 2
 	}
 
 	for i := range t {
@@ -72,18 +85,32 @@ func (s *Screen) DrawBlockText(x, y int, style tcell.Style, text string, big boo
 	}
 }
 
-func (s *Screen) DrawText(x, y int, style tcell.Style, text string) {
-	startX, startY := s.offset()
-	w, h := s.displaySize()
-
-	switch x {
-	case CenterX:
-		x = (w - utf8.RuneCountInString(text)) / 2
+func (s *Screen) DrawAlignedText(x, y int, style tcell.Style, text string, alignment TextAlignment) {
+	switch alignment {
+	case AlignLeft:
+		break
+	case AlignCenter:
+		x -= len(text) / 2
+	case AlignRight:
+		x -= len(text)
 	}
 
-	switch y {
-	case CenterY:
-		y = (h - 1) / 2
+	s.DrawText(x, y, style, text)
+}
+
+func (s *Screen) DrawText(x, y int, style tcell.Style, text string) {
+	if len(text) == 0 {
+		return
+	}
+
+	startX, startY := s.offset()
+
+	if x >= CenterXPlaceholder {
+		x = (x - CenterXPlaceholder - utf8.RuneCountInString(text)) / 2
+	}
+
+	if y >= CenterYPlaceholder {
+		y = (y - CenterYPlaceholder - 1) / 2
 	}
 
 	row := y

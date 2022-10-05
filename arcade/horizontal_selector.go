@@ -6,25 +6,28 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+type HorizontalSelectorOptions[T int | string] struct {
+	LayoutOptions
+
+	Border       bool
+	Label        string
+	LabelPadding int
+	Values       []T
+}
+
 type HorizontalSelector[T int | string] struct {
 	BaseComponent
 
-	sty         tcell.Style
-	x, y, width int
-	index       int
-	values      []T
-	label       string
-	active      bool
+	sty    tcell.Style
+	index  int
+	active bool
+	HorizontalSelectorOptions[T]
 }
 
-func NewHorizontalSelector[T int | string](x, y, width int, label string, values []T) *HorizontalSelector[T] {
+func NewHorizontalSelector[T int | string](opts HorizontalSelectorOptions[T]) *HorizontalSelector[T] {
 	return &HorizontalSelector[T]{
-		sty:    tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen),
-		x:      x,
-		y:      y,
-		width:  width,
-		label:  label,
-		values: values,
+		sty:                       tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen),
+		HorizontalSelectorOptions: opts,
 	}
 }
 
@@ -57,7 +60,7 @@ func (s *HorizontalSelector[T]) ProcessEvent(evt interface{}) {
 
 			s.index -= 1
 		case tcell.KeyRight:
-			if s.index >= len(s.values)-1 {
+			if s.index >= len(s.Values)-1 {
 				break
 			}
 
@@ -70,25 +73,32 @@ func (sel *HorizontalSelector[T]) Render(s *Screen) {
 	sel.RLock()
 	defer sel.RUnlock()
 
-	screenW, screenH := s.displaySize()
+	// screenW, screenH := s.displaySize()
 
-	x := sel.x
-	y := sel.y
+	x := sel.X
+	y := sel.Y
 
-	switch x {
-	case CenterX:
-		x = (screenW - sel.width) / 2
-	}
+	// switch x {
+	// case CenterX:
+	// 	x = (screenW - sel.Width) / 2
+	// }
 
-	switch y {
-	case CenterY:
-		y = (screenH - 2) / 2
+	// switch y {
+	// case CenterY:
+	// 	y = (screenH - 2) / 2
+	// }
+
+	if sel.Border {
+		s.DrawBox(x, y, x+sel.ContentWidth-1, y+2, sel.sty, false)
+		s.DrawText(x+(sel.ContentWidth-len(sel.Label))/2, y-1, sel.sty, sel.Label)
+	} else {
+		s.DrawText(x-sel.LabelPadding-len(sel.Label), y, sel.sty, sel.Label)
 	}
 
 	text := ""
 
-	if len(sel.values) > 0 {
-		switch value := any(sel.values[sel.index]).(type) {
+	if len(sel.Values) > 0 {
+		switch value := any(sel.Values[sel.index]).(type) {
 		case int:
 			text = strconv.Itoa(value)
 		case string:
@@ -96,15 +106,13 @@ func (sel *HorizontalSelector[T]) Render(s *Screen) {
 		}
 	}
 
-	s.DrawText(x+(sel.width-len(sel.label))/2, y-1, sel.sty, sel.label)
-	s.DrawBox(x, y, x+sel.width-1, y+2, sel.sty, false)
-	s.DrawText(x+(sel.width-len(text))/2, y+1, sel.sty, text)
+	s.DrawText(x+(sel.ContentWidth-len(text))/2, y+1, sel.sty, text)
 
 	if sel.index > 0 {
 		s.DrawText(x-2, y+1, sel.sty, "◄")
 	}
 
-	if sel.index < len(sel.values)-1 {
-		s.DrawText(x+sel.width+1, y+1, sel.sty, "►")
+	if sel.index < len(sel.Values)-1 {
+		s.DrawText(x+sel.ContentWidth+1, y+1, sel.sty, "►")
 	}
 }

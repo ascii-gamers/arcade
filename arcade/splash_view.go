@@ -74,8 +74,8 @@ func (v *SplashView) Render(s *Screen) {
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 
 	// Draw ASCII ARCADE header
-	s.DrawBlockText(CenterX, 3, sty, "ASCII", true)
-	s.DrawBlockText(CenterX, 10, sty, "ARCADE", true)
+	s.DrawBlockText(CenterX(s.GetWidth()), 3, sty, "ASCII", true)
+	s.DrawBlockText(CenterX(s.GetWidth()), 10, sty, "ARCADE", true)
 
 	// Draw footer
 	v.mu.RLock()

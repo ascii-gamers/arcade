@@ -20,13 +20,23 @@ func NewProfileView(mgr *ViewManager) *ProfileView {
 		BaseView: NewBaseView(mgr),
 	}
 
-	v.nameField = NewTextField(CenterX, 7, 30, "Pick a username")
-	v.colorPicker = NewColorPicker(CenterX, 11)
+	v.nameField = NewTextField(TextFieldOptions{
+		LayoutOptions: LayoutOptions{
+			X:            CenterX(mgr.screen.GetWidth()),
+			Y:            7,
+			ContentWidth: 24,
+		},
+		Alignment: AlignCenter,
+		Border:    true,
+		Label:     "Pick a username",
+	})
+
+	v.colorPicker = NewColorPicker(CenterX(mgr.screen.GetWidth()), 11)
 
 	v.SetComponents(v, []Component{
 		v.nameField,
 		v.colorPicker,
-		NewButton(CenterX, 19, 20, "CONTINUE", func() {
+		NewButton(CenterX(mgr.screen.GetWidth()), 19, 20, "CONTINUE", func() {
 			profile := &Profile{
 				Name:  v.nameField.value,
 				Color: v.colorPicker.SelectedColor(),
@@ -64,7 +74,7 @@ func (v *ProfileView) Render(s *Screen) {
 
 	// Green text on default background
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
-	s.DrawBlockText(CenterX, 2, sty, "ASCII ARCADE", false)
+	s.DrawBlockText(CenterX(s.GetWidth()), 2, sty, "ASCII ARCADE", false)
 }
 
 func (v *ProfileView) Unload() {

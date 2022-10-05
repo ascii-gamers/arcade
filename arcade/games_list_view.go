@@ -309,7 +309,7 @@ func (v *GamesListView) Render(s *Screen) {
 	sty := tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorGreen)
 
 	// Draw ASCII ARCADE header
-	s.DrawBlockText(CenterX, 1, sty, "ASCII ARCADE", false)
+	s.DrawBlockText(CenterX(s.GetWidth()), 1, sty, "ASCII ARCADE", false)
 
 	// Draw box surrounding games list
 	s.DrawBox(tableX1-1, 4, tableX2+1, tableY2+1, sty, true)

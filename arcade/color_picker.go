@@ -104,22 +104,18 @@ func (cp *ColorPicker) Render(s *Screen) {
 	cp.RLock()
 	defer cp.RUnlock()
 
-	screenW, screenH := s.displaySize()
-
 	startX := cp.x
 	startY := cp.y
 
 	componentW := cp.config.Columns*(cp.config.TileWidth+cp.config.HorizontalGap) - 1
 	componentH := cp.config.Rows*(cp.config.TileHeight+cp.config.VerticalGap) + 1
 
-	switch startX {
-	case CenterX:
-		startX = (screenW - componentW) / 2
+	if startX >= CenterXPlaceholder {
+		startX = (startX - CenterXPlaceholder - componentW) / 2
 	}
 
-	switch startY {
-	case CenterY:
-		startY = (screenH - componentH) / 2
+	if startY >= CenterYPlaceholder {
+		startY = (startY - CenterYPlaceholder - componentH) / 2
 	}
 
 	for x := 0; x < cp.config.Columns; x++ {
