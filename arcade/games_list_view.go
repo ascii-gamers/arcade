@@ -186,7 +186,7 @@ func (v *GamesListView) ProcessEvent(evt interface{}) {
 				switch evt.Rune() {
 				case 'c':
 					v.glv_join_box = ""
-					v.mgr.SetView(NewLobbyCreateView(v.mgr))
+					v.mgr.SetView(NewCreateLobbyView(v.mgr))
 				case 'j':
 					if len(v.lobbies) != 0 {
 						v.mu.RLock()
